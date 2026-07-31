@@ -21,6 +21,8 @@ class ConversationAgent(Protocol):
 
     def stop(self) -> None: ...
 
+    def close(self) -> None: ...
+
 
 class MockConversationAgent:
     """A deterministic stand-in for the future OpenAI Realtime adapter."""
@@ -70,3 +72,5 @@ class MockConversationAgent:
         )
         self._started_at_ns = None
 
+    def close(self) -> None:
+        self.stop()

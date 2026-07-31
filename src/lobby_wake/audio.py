@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import queue
+import time
 import wave
 from collections.abc import Iterator
 from pathlib import Path
@@ -78,7 +79,13 @@ class MicrophoneSource:
 class WaveFileSource:
     """Streams a mono, 16-bit WAV file in realtime-sized chunks."""
 
-    def __init__(self, path: Path, block_duration_ms: int = 80) -> None:
+    def __init__(
+        self,
+        path: Path,
+        block_duration_ms: int = 80,
+        *,
+        pace_realtime: bool = False,
+    ) -> None:
         # The source owns this long-lived handle and releases it in close().
         self._wave = wave.open(str(path), "rb")  # noqa: SIM115
         if self._wave.getnchannels() != 1:
@@ -87,10 +94,15 @@ class WaveFileSource:
             raise ValueError("WAV input must use signed 16-bit samples")
         self.sample_rate = self._wave.getframerate()
         self._block_size = round(self.sample_rate * block_duration_ms / 1000)
+        self._pace_realtime = pace_realtime
 
     def frames(self) -> Iterator[FloatAudio]:
+        next_frame_at = time.monotonic()
         while raw := self._wave.readframes(self._block_size):
             yield np.frombuffer(raw, dtype=np.int16).astype(np.float32) / 32768.0
+            if self._pace_realtime:
+                next_frame_at += len(raw) / 2 / self.sample_rate
+                time.sleep(max(0, next_frame_at - time.monotonic()))
 
     def close(self) -> None:
         self._wave.close()

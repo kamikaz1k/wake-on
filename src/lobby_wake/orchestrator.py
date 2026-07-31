@@ -62,4 +62,4 @@ class Orchestrator:
             self._logger.emit("orchestrator.state", state=self.state)
 
     def close(self) -> None:
-        self._agent.stop()
+        self._agent.close()

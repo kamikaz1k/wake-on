@@ -1,14 +1,18 @@
 from __future__ import annotations
 
 import argparse
+import os
 import signal
 import time
 from pathlib import Path
+
+from dotenv import load_dotenv
 
 from .agent import MockConversationAgent
 from .audio import MicrophoneSource, WaveFileSource
 from .events import EventLogger
 from .orchestrator import Orchestrator
+from .realtime import DEFAULT_INSTRUCTIONS, OpenAIRealtimeAgent
 from .wake import SherpaWakeWordEngine
 
 DEFAULT_MODEL_DIR = Path("models/sherpa-onnx-kws-zipformer-gigaspeech-3.3M-2024-01-01")
@@ -27,20 +31,35 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--threshold", type=float, default=0.25)
     parser.add_argument("--threads", type=int, default=1)
     parser.add_argument("--model-variant", choices=("int8", "fp32"), default="int8")
+    parser.add_argument("--agent", choices=("openai", "mock"), default="openai")
     parser.add_argument("--mock-duration", type=float, default=3.0)
+    parser.add_argument("--realtime-model", default="gpt-realtime-2.1")
+    parser.add_argument("--voice", default="marin")
+    parser.add_argument("--instructions", default=DEFAULT_INSTRUCTIONS)
+    parser.add_argument("--session-timeout", type=float, default=30.0)
+    parser.add_argument("--output-device", help="sounddevice output device name or index")
+    parser.add_argument(
+        "--full-duplex",
+        action="store_true",
+        help="Send mic audio during playback (use headphones to avoid echo)",
+    )
     parser.add_argument("--log", type=Path, default=Path("latency.jsonl"))
     return parser
 
 
 def main() -> None:
+    load_dotenv()
     args = build_parser().parse_args()
     device: int | str | None = args.device
     if isinstance(device, str) and device.isdigit():
         device = int(device)
+    output_device: int | str | None = args.output_device
+    if isinstance(output_device, str) and output_device.isdigit():
+        output_device = int(output_device)
 
     logger = EventLogger(args.log)
     source = (
-        WaveFileSource(args.audio_file, args.block_ms)
+        WaveFileSource(args.audio_file, args.block_ms, pace_realtime=args.agent == "openai")
         if args.audio_file
         else MicrophoneSource(block_duration_ms=args.block_ms, device=device)
     )
@@ -58,7 +77,19 @@ def main() -> None:
         model_variant=args.model_variant,
         initialization_ms=(time.monotonic_ns() - model_load_started_ns) / 1_000_000,
     )
-    agent = MockConversationAgent(logger, duration_seconds=args.mock_duration)
+    if args.agent == "mock":
+        agent = MockConversationAgent(logger, duration_seconds=args.mock_duration)
+    else:
+        agent = OpenAIRealtimeAgent(
+            logger,
+            api_key=os.environ.get("OPENAI_API_KEY", ""),
+            model=args.realtime_model,
+            voice=args.voice,
+            instructions=args.instructions,
+            output_device=output_device,
+            inactivity_timeout_seconds=args.session_timeout,
+            full_duplex=args.full_duplex,
+        )
     orchestrator = Orchestrator(
         detector,
         agent,

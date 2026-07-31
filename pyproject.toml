@@ -13,11 +13,13 @@ dependencies = [
   "click>=8.1",
   "numpy>=1.26",
   "pypinyin>=0.53",
+  "python-dotenv>=1.0",
   "sentencepiece>=0.2",
   "sherpa-onnx==1.13.4",
   # uv 0.5 does not resolve sherpa-onnx's platform wheel dependency reliably.
   "sherpa-onnx-core==1.13.4; sys_platform == 'darwin'",
   "sounddevice>=0.5",
+  "websocket-client>=1.8",
 ]
 
 [project.optional-dependencies]
