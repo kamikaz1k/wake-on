@@ -189,6 +189,20 @@ noise can make it less accurate than an annotated audio fixture.
 See [the latency baseline and experiment protocol](docs/latency.md) before
 changing the runtime or wake-model settings.
 
+### Record a tuning dataset
+
+Run the guided recorder to test the microphone, record and approve each take,
+label quiet/noisy conditions, and collect positive and negative samples:
+
+```sh
+uv run lobby-record-samples --positive 30 --negative 30
+```
+
+Omit either count to be prompted for it. Approved mono 16 kHz PCM WAV files are
+stored under `recordings/` with a `manifest.jsonl`; rejected takes are discarded.
+Use `--input-device` or `--output-device` when the system defaults are not the
+devices you want.
+
 ## Tests
 
 ```sh

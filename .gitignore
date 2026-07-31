@@ -10,3 +10,4 @@ models/*.tar.bz2
 models/hey-lobby.txt
 models/sherpa-onnx-kws-zipformer-*/
 latency.jsonl
+recordings/
