@@ -1,0 +1,43 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "lobby-wake"
+version = "0.1.0"
+description = "Local wake-word detection and realtime voice-agent orchestration."
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "Apache-2.0" }
+dependencies = [
+  "click>=8.1",
+  "numpy>=1.26",
+  "pypinyin>=0.53",
+  "sentencepiece>=0.2",
+  "sherpa-onnx==1.13.4",
+  # uv 0.5 does not resolve sherpa-onnx's platform wheel dependency reliably.
+  "sherpa-onnx-core==1.13.4; sys_platform == 'darwin'",
+  "sounddevice>=0.5",
+]
+
+[project.optional-dependencies]
+dev = [
+  "pytest>=8",
+  "ruff>=0.11",
+]
+
+[project.scripts]
+lobby-wake = "lobby_wake.cli:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/lobby_wake"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM"]

@@ -1,0 +1,12 @@
+.DS_Store
+.env
+.env.*
+!.env.example
+.venv/
+__pycache__/
+.pytest_cache/
+*.egg-info/
+models/*.tar.bz2
+models/hey-lobby.txt
+models/sherpa-onnx-kws-zipformer-*/
+latency.jsonl
