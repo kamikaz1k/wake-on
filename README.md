@@ -102,8 +102,9 @@ uv run lobby-wake --device 1 --output-device 2 --voice marin
 
 A lower threshold or higher score makes activation easier and can also increase
 false triggers. The int8 model is used by default for lower startup and inference
-cost; use `--model-variant fp32` when comparing its accuracy. Every lifecycle
-event is printed as JSON and appended to `latency.jsonl`.
+cost; use `--model-variant fp32` when comparing its accuracy. Lifecycle events
+are printed as readable terminal logs while the full structured records are
+appended to `latency.jsonl`.
 
 ## Latency events
 

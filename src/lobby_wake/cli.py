@@ -123,6 +123,7 @@ def main() -> None:
         orchestrator.close()
         source.close()
         logger.emit("app.stopped")
+        logger.close()
 
 
 if __name__ == "__main__":
