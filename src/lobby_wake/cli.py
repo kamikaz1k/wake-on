@@ -10,6 +10,7 @@ from dotenv import load_dotenv
 
 from .agent import MockConversationAgent
 from .audio import MicrophoneSource, WaveFileSource
+from .conversation import ConversationController, EndSource
 from .events import EventLogger
 from .orchestrator import Orchestrator
 from .realtime import DEFAULT_INSTRUCTIONS, OpenAIRealtimeAgent
@@ -63,6 +64,7 @@ def main() -> None:
         output_device = int(output_device)
 
     logger = EventLogger(args.log)
+    conversation_controller = ConversationController(logger)
     source = (
         WaveFileSource(args.audio_file, args.block_ms, pace_realtime=args.agent == "openai")
         if args.audio_file
@@ -95,6 +97,7 @@ def main() -> None:
             inactivity_timeout_seconds=args.session_timeout,
             full_duplex=args.full_duplex,
             preconnect=not args.no_preconnect,
+            conversation_controller=conversation_controller,
         )
     orchestrator = Orchestrator(
         detector,
@@ -102,6 +105,7 @@ def main() -> None:
         logger,
         sample_rate=source.sample_rate,
         preroll_seconds=args.preroll_seconds,
+        conversation_controller=conversation_controller,
     )
 
     should_stop = False
@@ -110,14 +114,25 @@ def main() -> None:
         nonlocal should_stop
         should_stop = True
 
+    def emergency_end(_signum: int, _frame: object) -> None:
+        orchestrator.request_end(
+            source=EndSource.USER,
+            reason="emergency_stop",
+            immediate=True,
+        )
+
     signal.signal(signal.SIGINT, stop)
     signal.signal(signal.SIGTERM, stop)
+    if hasattr(signal, "SIGUSR1"):
+        signal.signal(signal.SIGUSR1, emergency_end)
 
     logger.emit(
         "app.started",
         source="wav" if args.audio_file else "microphone",
         sample_rate=source.sample_rate,
         model_dir=args.model_dir,
+        pid=os.getpid(),
+        emergency_end_signal="SIGUSR1" if hasattr(signal, "SIGUSR1") else None,
     )
     orchestrator.prepare()
     try:

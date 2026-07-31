@@ -19,6 +19,7 @@ The orchestrator owns one audio stream:
 
 - `LISTENING`: frames go to sherpa-onnx and a one-second rolling buffer.
 - `CONVERSATION`: buffered and live frames go to the agent adapter.
+- `ENDING`: microphone upload stops while a graceful farewell finishes.
 - When the conversation ends, the detector is reset and listening resumes.
 
 ## Setup
@@ -111,6 +112,39 @@ Select audio devices or change the response voice:
 ```sh
 uv run lobby-wake --device 1 --output-device 2 --voice marin
 ```
+
+## Ending conversations
+
+The Realtime agent can call the harness-owned `end_conversation` function when
+the user asks to stop or says goodbye. The harness acknowledges the tool,
+requests one tool-free farewell, waits for its audio to finish, and returns to
+wake listening. If graceful shutdown takes more than five seconds, it is forced.
+
+A long-running delegate receives a conversation-scoped handle:
+
+```python
+handle = orchestrator.conversation_handle
+handle.end(reason="task_complete", farewell="All done.")
+```
+
+For immediate cancellation:
+
+```python
+handle.kill(reason="cancelled")
+```
+
+Handles are scoped to the active conversation. A late completion from an old
+delegate cannot end a newer conversation.
+
+On macOS and other Unix systems, send `SIGUSR1` to immediately end only the
+active conversation while leaving wake listening running:
+
+```sh
+kill -USR1 <pid>
+```
+
+The application prints its PID at startup. `Ctrl-C` still stops the entire
+application.
 
 A lower threshold or higher score makes activation easier and can also increase
 false triggers. The int8 model is used by default for lower startup and inference

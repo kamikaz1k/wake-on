@@ -9,6 +9,12 @@ from typing import Any
 
 import numpy as np
 
+from .conversation import (
+    ConversationController,
+    EndConversationRequest,
+    EndMode,
+    EndSource,
+)
 from .events import EventLogger, WakeEvent
 from .playback import AudioPlayer
 from .ring_buffer import FloatAudio
@@ -17,8 +23,36 @@ REALTIME_SAMPLE_RATE = 24_000
 DEFAULT_INSTRUCTIONS = (
     "You are Lobby, a concise and friendly voice assistant. "
     "Respond naturally and briefly unless the user asks for detail. "
-    "The user may begin by saying your wake phrase, Hey Lobby."
+    "The user may begin by saying your wake phrase, Hey Lobby. "
+    "Call end_conversation when the user explicitly asks to stop or says goodbye. "
+    "You may also call it when a clearly delegated task is fully complete. "
+    "Do not end merely because you answered one ordinary conversational turn."
 )
+END_CONVERSATION_TOOL = {
+    "type": "function",
+    "name": "end_conversation",
+    "description": (
+        "Request that the wake-word harness end the active voice conversation. "
+        "Use when the user explicitly asks to stop or says goodbye, or when a clearly "
+        "delegated task is fully complete. Do not use after every ordinary answer."
+    ),
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "reason": {
+                "type": "string",
+                "enum": ["user_requested", "task_complete", "cancelled"],
+            },
+            "farewell": {
+                "type": "string",
+                "description": "An optional short, natural closing sentence.",
+            },
+        },
+        "required": ["reason"],
+        "additionalProperties": False,
+    },
+}
+GRACEFUL_END_TIMEOUT_NS = 5_000_000_000
 
 
 def resample_audio(samples: FloatAudio, source_rate: int, target_rate: int) -> FloatAudio:
@@ -50,6 +84,8 @@ def build_session_update(model: str, voice: str, instructions: str) -> dict[str,
             "model": model,
             "instructions": instructions,
             "output_modalities": ["audio"],
+            "tools": [END_CONVERSATION_TOOL],
+            "tool_choice": "auto",
             "audio": {
                 "input": {
                     "format": {"type": "audio/pcm", "rate": REALTIME_SAMPLE_RATE},
@@ -84,6 +120,7 @@ class OpenAIRealtimeAgent:
         inactivity_timeout_seconds: float = 30.0,
         full_duplex: bool = False,
         preconnect: bool = True,
+        conversation_controller: ConversationController | None = None,
     ) -> None:
         if not api_key:
             raise ValueError("OPENAI_API_KEY is not set")
@@ -95,6 +132,7 @@ class OpenAIRealtimeAgent:
         self._timeout_ns = round(inactivity_timeout_seconds * 1_000_000_000)
         self._full_duplex = full_duplex
         self._preconnect = preconnect
+        self._conversation = conversation_controller or ConversationController(logger)
         self._player = AudioPlayer(device=output_device)
         self._pending_audio: deque[bytes] = deque(maxlen=500)
         self._send_lock = threading.Lock()
@@ -113,6 +151,12 @@ class OpenAIRealtimeAgent:
         self._last_activity_ns: int | None = None
         self._first_response_received = False
         self._first_response_played = False
+        self._response_active = False
+        self._ending = False
+        self._end_request: EndConversationRequest | None = None
+        self._closing_response_requested = False
+        self._closing_response_done = False
+        self._end_deadline_ns: int | None = None
         self._transcript_parts: list[str] = []
 
     @property
@@ -147,6 +191,12 @@ class OpenAIRealtimeAgent:
             self._last_activity_ns = now_ns
             self._first_response_received = False
             self._first_response_played = False
+            self._response_active = False
+            self._ending = False
+            self._end_request = None
+            self._closing_response_requested = False
+            self._closing_response_done = False
+            self._end_deadline_ns = None
             self._transcript_parts.clear()
             self._pending_audio.clear()
             if not connection_ready:
@@ -189,6 +239,20 @@ class OpenAIRealtimeAgent:
                 self._pending_audio.append(pcm16)
 
     def poll(self) -> None:
+        if self._ending:
+            if self._closing_response_done and not self._player.playing:
+                self.stop()
+                return
+            if (
+                self._end_deadline_ns is not None
+                and time.monotonic_ns() >= self._end_deadline_ns
+            ):
+                self._logger.emit(
+                    "agent.graceful_end_timeout",
+                    adapter="openai_realtime",
+                )
+                self.stop()
+            return
         if not self._active or self._last_activity_ns is None:
             return
         if time.monotonic_ns() - self._last_activity_ns >= self._timeout_ns:
@@ -199,6 +263,27 @@ class OpenAIRealtimeAgent:
             )
             self.stop()
 
+    def request_end(self, request: EndConversationRequest) -> None:
+        self._logger.emit(
+            "agent.end_requested",
+            adapter="openai_realtime",
+            source=request.source,
+            reason=request.reason,
+            mode=request.mode,
+        )
+        if request.mode is EndMode.IMMEDIATE:
+            self.stop()
+            return
+        if self._ending:
+            return
+        self._ending = True
+        self._end_request = request
+        self._closing_response_requested = False
+        self._closing_response_done = False
+        self._end_deadline_ns = time.monotonic_ns() + GRACEFUL_END_TIMEOUT_NS
+        if not self._response_active:
+            self._begin_graceful_close()
+
     def stop(self) -> None:
         with self._state_lock:
             was_active = self._active
@@ -208,6 +293,12 @@ class OpenAIRealtimeAgent:
             self._ready_at_ns = None
             self._pending_audio.clear()
             ws, self._ws = self._ws, None
+            self._response_active = False
+            self._ending = False
+            self._end_request = None
+            self._closing_response_requested = False
+            self._closing_response_done = False
+            self._end_deadline_ns = None
         self._player.clear()
         if was_active:
             self._logger.emit(
@@ -325,6 +416,8 @@ class OpenAIRealtimeAgent:
                 )
             for pcm16 in pending:
                 self._send_audio(pcm16)
+        elif event_type == "response.created":
+            self._response_active = True
         elif event_type == "input_audio_buffer.speech_started":
             self._last_activity_ns = time.monotonic_ns()
             self._logger.emit("agent.user_speech_started")
@@ -340,9 +433,22 @@ class OpenAIRealtimeAgent:
             self._transcript_parts.clear()
             self._logger.emit("agent.response_transcript", transcript=transcript)
         elif event_type == "response.done":
+            self._response_active = False
             self._last_activity_ns = time.monotonic_ns()
-            status = event.get("response", {}).get("status")
-            self._logger.emit("agent.response_done", status=status)
+            response = event.get("response", {})
+            status = response.get("status")
+            metadata = response.get("metadata") or {}
+            self._logger.emit(
+                "agent.response_done",
+                status=status,
+                purpose=metadata.get("purpose"),
+            )
+            if metadata.get("purpose") == "conversation_close":
+                self._closing_response_done = True
+            else:
+                self._handle_function_calls(response.get("output") or [])
+                if self._ending and not self._closing_response_requested:
+                    self._begin_graceful_close()
         elif event_type == "error":
             error = event.get("error", {})
             self._logger.emit(
@@ -384,6 +490,70 @@ class OpenAIRealtimeAgent:
                 if self._started_at_ns is not None
                 else 0
             ),
+        )
+
+    def _handle_function_calls(self, output: list[dict[str, Any]]) -> None:
+        for item in output:
+            if item.get("type") != "function_call":
+                continue
+            if item.get("name") != "end_conversation":
+                continue
+            try:
+                arguments = json.loads(item.get("arguments") or "{}")
+            except json.JSONDecodeError:
+                arguments = {}
+                self._logger.emit(
+                    "agent.tool_arguments_error",
+                    tool="end_conversation",
+                )
+            reason = arguments.get("reason", "user_requested")
+            if reason not in {"user_requested", "task_complete", "cancelled"}:
+                reason = "user_requested"
+            farewell = arguments.get("farewell")
+            if not isinstance(farewell, str):
+                farewell = None
+            elif len(farewell) > 240:
+                farewell = farewell[:240]
+            self._conversation.request_end(
+                source=EndSource.MODEL,
+                reason=reason,
+                mode=EndMode.GRACEFUL,
+                farewell=farewell,
+                tool_call_id=item.get("call_id"),
+            )
+
+    def _begin_graceful_close(self) -> None:
+        request = self._end_request
+        if request is None or self._closing_response_requested:
+            return
+        if request.tool_call_id is not None:
+            self._send_event(
+                {
+                    "type": "conversation.item.create",
+                    "item": {
+                        "type": "function_call_output",
+                        "call_id": request.tool_call_id,
+                        "output": json.dumps({"status": "ending"}),
+                    },
+                }
+            )
+        closing_instruction = (
+            "Say one brief, natural closing sentence, then stop. "
+            "Do not ask a follow-up question. Do not call any tools."
+        )
+        if request.farewell:
+            closing_instruction += f" Use this closing message: {request.farewell}"
+        self._closing_response_requested = self._send_event(
+            {
+                "type": "response.create",
+                "response": {
+                    "instructions": closing_instruction,
+                    "output_modalities": ["audio"],
+                    "tools": [],
+                    "tool_choice": "none",
+                    "metadata": {"purpose": "conversation_close"},
+                },
+            }
         )
 
     def _send_audio(self, pcm16: bytes) -> bool:

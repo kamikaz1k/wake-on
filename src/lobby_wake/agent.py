@@ -3,6 +3,7 @@ from __future__ import annotations
 import time
 from typing import Protocol
 
+from .conversation import EndConversationRequest
 from .events import EventLogger, WakeEvent
 from .ring_buffer import FloatAudio
 
@@ -18,6 +19,8 @@ class ConversationAgent(Protocol):
     def send_audio(self, samples: FloatAudio, sample_rate: int) -> None: ...
 
     def poll(self) -> None: ...
+
+    def request_end(self, request: EndConversationRequest) -> None: ...
 
     def stop(self) -> None: ...
 
@@ -60,6 +63,16 @@ class MockConversationAgent:
             return
         if time.monotonic_ns() - self._started_at_ns >= self._duration_ns:
             self.stop()
+
+    def request_end(self, request: EndConversationRequest) -> None:
+        self._logger.emit(
+            "agent.end_requested",
+            adapter="mock",
+            source=request.source,
+            reason=request.reason,
+            mode=request.mode,
+        )
+        self.stop()
 
     def stop(self) -> None:
         if self._started_at_ns is None:

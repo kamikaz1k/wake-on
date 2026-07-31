@@ -6,8 +6,15 @@ import time
 
 import numpy as np
 
+from lobby_wake.conversation import (
+    ConversationController,
+    EndConversationRequest,
+    EndMode,
+    EndSource,
+)
 from lobby_wake.events import EventLogger, WakeEvent
 from lobby_wake.realtime import (
+    END_CONVERSATION_TOOL,
     REALTIME_SAMPLE_RATE,
     OpenAIRealtimeAgent,
     build_session_update,
@@ -47,6 +54,8 @@ def test_session_update_uses_realtime_audio_schema() -> None:
     }
     assert session["audio"]["input"]["turn_detection"]["type"] == "semantic_vad"
     assert session["audio"]["output"]["voice"] == "marin"
+    assert session["tools"] == [END_CONVERSATION_TOOL]
+    assert session["tool_choice"] == "auto"
 
 
 def test_prepare_starts_preconnection_by_default(monkeypatch) -> None:
@@ -158,5 +167,128 @@ def test_stopping_conversation_schedules_fresh_warm_session(monkeypatch) -> None
     agent.stop()
 
     assert scheduled_reasons == ["session_reset"]
+    agent.close()
+    logger.close()
+
+
+def test_model_end_tool_queues_harness_request() -> None:
+    class FakeSocket:
+        def send(self, _message: str) -> None:
+            pass
+
+        def close(self) -> None:
+            pass
+
+    logger = EventLogger(stream=io.StringIO())
+    controller = ConversationController(logger)
+    controller.begin()
+    agent = OpenAIRealtimeAgent(
+        logger,
+        api_key="test-key",
+        conversation_controller=controller,
+    )
+    socket = FakeSocket()
+    agent._ws = socket
+    response = {
+        "type": "response.done",
+        "response": {
+            "status": "completed",
+            "output": [
+                {
+                    "type": "function_call",
+                    "name": "end_conversation",
+                    "call_id": "call-123",
+                    "arguments": json.dumps(
+                        {
+                            "reason": "user_requested",
+                            "farewell": "Talk soon.",
+                        }
+                    ),
+                }
+            ],
+        },
+    }
+
+    agent._on_message(socket, json.dumps(response))
+    request = controller.take_request()
+
+    assert request is not None
+    assert request.source is EndSource.MODEL
+    assert request.tool_call_id == "call-123"
+    assert request.farewell == "Talk soon."
+    agent.close()
+    logger.close()
+
+
+def test_graceful_end_acknowledges_tool_and_requests_tool_free_farewell() -> None:
+    class FakeSocket:
+        def __init__(self) -> None:
+            self.sent: list[str] = []
+
+        def send(self, message: str) -> None:
+            self.sent.append(message)
+
+        def close(self) -> None:
+            pass
+
+    logger = EventLogger(stream=io.StringIO())
+    agent = OpenAIRealtimeAgent(logger, api_key="test-key")
+    socket = FakeSocket()
+    agent._ws = socket
+    agent._ready = True
+    agent._active = True
+    request = EndConversationRequest(
+        source=EndSource.MODEL,
+        reason="user_requested",
+        mode=EndMode.GRACEFUL,
+        requested_at_ns=time.monotonic_ns(),
+        farewell="Goodbye.",
+        tool_call_id="call-123",
+    )
+
+    agent.request_end(request)
+
+    events = [json.loads(message) for message in socket.sent]
+    assert events[0]["type"] == "conversation.item.create"
+    assert events[0]["item"]["call_id"] == "call-123"
+    assert events[1]["type"] == "response.create"
+    assert events[1]["response"]["tools"] == []
+    assert events[1]["response"]["tool_choice"] == "none"
+    assert events[1]["response"]["metadata"]["purpose"] == "conversation_close"
+    agent.close()
+    logger.close()
+
+
+def test_immediate_end_closes_without_farewell() -> None:
+    class FakeSocket:
+        def __init__(self) -> None:
+            self.sent: list[str] = []
+            self.closed = False
+
+        def send(self, message: str) -> None:
+            self.sent.append(message)
+
+        def close(self) -> None:
+            self.closed = True
+
+    logger = EventLogger(stream=io.StringIO())
+    agent = OpenAIRealtimeAgent(logger, api_key="test-key")
+    socket = FakeSocket()
+    agent._ws = socket
+    agent._ready = True
+    agent._active = True
+
+    agent.request_end(
+        EndConversationRequest(
+            source=EndSource.USER,
+            reason="emergency_stop",
+            mode=EndMode.IMMEDIATE,
+            requested_at_ns=time.monotonic_ns(),
+        )
+    )
+
+    assert not agent.active
+    assert socket.closed
+    assert socket.sent == []
     agent.close()
     logger.close()
