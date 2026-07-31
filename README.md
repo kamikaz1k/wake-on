@@ -15,6 +15,9 @@ testing without network usage.
 microphone/WAV -> rolling buffer -> sherpa-onnx KWS -> orchestrator -> agent
 ```
 
+See [docs/architecture.md](docs/architecture.md) for component, audio,
+connection, delegate, and shutdown lifecycle diagrams.
+
 The orchestrator owns one audio stream:
 
 - `LISTENING`: frames go to sherpa-onnx and a one-second rolling buffer.
