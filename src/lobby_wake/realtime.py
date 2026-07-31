@@ -83,6 +83,7 @@ class OpenAIRealtimeAgent:
         output_device: int | str | None = None,
         inactivity_timeout_seconds: float = 30.0,
         full_duplex: bool = False,
+        preconnect: bool = True,
     ) -> None:
         if not api_key:
             raise ValueError("OPENAI_API_KEY is not set")
@@ -93,14 +94,21 @@ class OpenAIRealtimeAgent:
         self._instructions = instructions
         self._timeout_ns = round(inactivity_timeout_seconds * 1_000_000_000)
         self._full_duplex = full_duplex
+        self._preconnect = preconnect
         self._player = AudioPlayer(device=output_device)
         self._pending_audio: deque[bytes] = deque(maxlen=500)
         self._send_lock = threading.Lock()
         self._state_lock = threading.Lock()
         self._ws = None
         self._thread: threading.Thread | None = None
+        self._reconnect_timer: threading.Timer | None = None
+        self._prepared = False
+        self._closing = False
+        self._connecting = False
         self._active = False
         self._ready = False
+        self._connection_started_at_ns: int | None = None
+        self._ready_at_ns: int | None = None
         self._started_at_ns: int | None = None
         self._last_activity_ns: int | None = None
         self._first_response_received = False
@@ -113,28 +121,36 @@ class OpenAIRealtimeAgent:
 
     def prepare(self) -> None:
         self._player.start()
+        self._prepared = True
         self._logger.emit(
             "agent.prepared",
             adapter="openai_realtime",
             model=self._model,
             voice=self._voice,
             full_duplex=self._full_duplex,
+            preconnect=self._preconnect,
         )
+        if self._preconnect:
+            self._logger.emit("agent.preconnection_started", adapter="openai_realtime")
+            self._ensure_connection()
 
     def start(self, initial_audio: FloatAudio, sample_rate: int, wake: WakeEvent) -> None:
         if self._active:
             return
         now_ns = time.monotonic_ns()
+        initial_pcm16 = float_audio_to_pcm16(initial_audio, sample_rate)
         with self._state_lock:
+            connection_ready = self._ready and self._ws is not None
+            ready_at_ns = self._ready_at_ns
             self._active = True
-            self._ready = False
             self._started_at_ns = now_ns
             self._last_activity_ns = now_ns
             self._first_response_received = False
             self._first_response_played = False
             self._transcript_parts.clear()
             self._pending_audio.clear()
-            self._pending_audio.append(float_audio_to_pcm16(initial_audio, sample_rate))
+            if not connection_ready:
+                self._pending_audio.append(initial_pcm16)
         self._logger.emit(
             "agent.started",
             adapter="openai_realtime",
@@ -142,12 +158,21 @@ class OpenAIRealtimeAgent:
             wake_to_agent_start_ms=(now_ns - wake.detected_at_ns) / 1_000_000,
             initial_audio_ms=initial_audio.size / sample_rate * 1000,
         )
-        self._thread = threading.Thread(
-            target=self._connect,
-            name="lobby-realtime-websocket",
-            daemon=True,
-        )
-        self._thread.start()
+        if connection_ready:
+            self._logger.emit(
+                "agent.connection_reused",
+                adapter="openai_realtime",
+                wake_to_connection_ready_ms=(time.monotonic_ns() - now_ns) / 1_000_000,
+                preconnected_for_ms=(
+                    (now_ns - ready_at_ns) / 1_000_000 if ready_at_ns is not None else 0
+                ),
+            )
+            if not self._send_audio(initial_pcm16):
+                with self._state_lock:
+                    self._pending_audio.appendleft(initial_pcm16)
+                self._ensure_connection()
+        else:
+            self._ensure_connection()
 
     def send_audio(self, samples: FloatAudio, sample_rate: int) -> None:
         if not self._active:
@@ -159,7 +184,9 @@ class OpenAIRealtimeAgent:
             if not self._ready:
                 self._pending_audio.append(pcm16)
                 return
-        self._send_audio(pcm16)
+        if not self._send_audio(pcm16):
+            with self._state_lock:
+                self._pending_audio.append(pcm16)
 
     def poll(self) -> None:
         if not self._active or self._last_activity_ns is None:
@@ -173,35 +200,58 @@ class OpenAIRealtimeAgent:
             self.stop()
 
     def stop(self) -> None:
-        if not self._active and self._ws is None:
-            return
-        started_at_ns = self._started_at_ns
-        self._active = False
-        self._ready = False
-        ws, self._ws = self._ws, None
+        with self._state_lock:
+            was_active = self._active
+            started_at_ns = self._started_at_ns
+            self._active = False
+            self._ready = False
+            self._ready_at_ns = None
+            self._pending_audio.clear()
+            ws, self._ws = self._ws, None
+        self._player.clear()
+        if was_active:
+            self._logger.emit(
+                "agent.stopped",
+                adapter="openai_realtime",
+                duration_ms=(
+                    (time.monotonic_ns() - started_at_ns) / 1_000_000
+                    if started_at_ns is not None
+                    else 0
+                ),
+            )
+        self._started_at_ns = None
+        if was_active and self._prepared and self._preconnect and not self._closing:
+            self._schedule_reconnect(reason="session_reset")
         if ws is not None:
             ws.close()
-        self._player.clear()
-        self._logger.emit(
-            "agent.stopped",
-            adapter="openai_realtime",
-            duration_ms=(
-                (time.monotonic_ns() - started_at_ns) / 1_000_000
-                if started_at_ns is not None
-                else 0
-            ),
-        )
-        self._started_at_ns = None
 
     def close(self) -> None:
+        self._closing = True
+        self._prepared = False
+        if self._reconnect_timer is not None:
+            self._reconnect_timer.cancel()
+            self._reconnect_timer = None
         self.stop()
         self._player.close()
+
+    def _ensure_connection(self) -> None:
+        with self._state_lock:
+            if self._closing or self._connecting or self._ready:
+                return
+            self._connecting = True
+            self._connection_started_at_ns = time.monotonic_ns()
+        self._thread = threading.Thread(
+            target=self._connect,
+            name="lobby-realtime-websocket",
+            daemon=True,
+        )
+        self._thread.start()
 
     def _connect(self) -> None:
         import websocket
 
         url = f"wss://api.openai.com/v1/realtime?model={self._model}"
-        self._ws = websocket.WebSocketApp(
+        ws = websocket.WebSocketApp(
             url,
             header={"Authorization": f"Bearer {self._api_key}"},
             on_open=self._on_open,
@@ -209,12 +259,30 @@ class OpenAIRealtimeAgent:
             on_error=self._on_error,
             on_close=self._on_close,
         )
-        self._ws.run_forever()
+        with self._state_lock:
+            if self._closing:
+                self._connecting = False
+                return
+            self._ws = ws
+        try:
+            ws.run_forever()
+        finally:
+            with self._state_lock:
+                if self._ws is ws:
+                    self._ws = None
+                    self._ready = False
+                    self._ready_at_ns = None
+                self._connecting = False
+                should_reconnect = self._prepared and self._preconnect and not self._closing
+            if should_reconnect:
+                self._schedule_reconnect(reason="connection_closed")
 
     def _on_open(self, ws: Any) -> None:
         self._send_event(build_session_update(self._model, self._voice, self._instructions), ws)
 
-    def _on_message(self, _ws: Any, raw_message: str) -> None:
+    def _on_message(self, ws: Any, raw_message: str) -> None:
+        if ws is not self._ws:
+            return
         try:
             event = json.loads(raw_message)
         except json.JSONDecodeError:
@@ -223,22 +291,38 @@ class OpenAIRealtimeAgent:
 
         event_type = event.get("type")
         if event_type == "session.updated":
+            now_ns = time.monotonic_ns()
             with self._state_lock:
                 self._ready = True
+                self._ready_at_ns = now_ns
                 pending = list(self._pending_audio)
                 self._pending_audio.clear()
-            now_ns = time.monotonic_ns()
-            self._last_activity_ns = now_ns
-            self._logger.emit(
-                "agent.connection_ready",
-                adapter="openai_realtime",
-                connection_ms=(
-                    (now_ns - self._started_at_ns) / 1_000_000
-                    if self._started_at_ns is not None
-                    else 0
-                ),
-                buffered_chunks=len(pending),
+                active = self._active
+                connection_started_at_ns = self._connection_started_at_ns
+            connection_setup_ms = (
+                (now_ns - connection_started_at_ns) / 1_000_000
+                if connection_started_at_ns is not None
+                else 0
             )
+            if active:
+                self._last_activity_ns = now_ns
+                self._logger.emit(
+                    "agent.connection_ready",
+                    adapter="openai_realtime",
+                    wake_to_connection_ready_ms=(
+                        (now_ns - self._started_at_ns) / 1_000_000
+                        if self._started_at_ns is not None
+                        else 0
+                    ),
+                    connection_setup_ms=connection_setup_ms,
+                    buffered_chunks=len(pending),
+                )
+            else:
+                self._logger.emit(
+                    "agent.preconnection_ready",
+                    adapter="openai_realtime",
+                    connection_setup_ms=connection_setup_ms,
+                )
             for pcm16 in pending:
                 self._send_audio(pcm16)
         elif event_type == "input_audio_buffer.speech_started":
@@ -302,33 +386,70 @@ class OpenAIRealtimeAgent:
             ),
         )
 
-    def _send_audio(self, pcm16: bytes) -> None:
-        self._send_event(
+    def _send_audio(self, pcm16: bytes) -> bool:
+        return self._send_event(
             {
                 "type": "input_audio_buffer.append",
                 "audio": base64.b64encode(pcm16).decode("ascii"),
             }
         )
 
-    def _send_event(self, event: dict[str, Any], ws: Any | None = None) -> None:
+    def _send_event(self, event: dict[str, Any], ws: Any | None = None) -> bool:
         socket = ws or self._ws
         if socket is None:
+            return False
+        try:
+            with self._send_lock:
+                socket.send(json.dumps(event, separators=(",", ":")))
+        except Exception as error:
+            self._logger.emit("agent.send_error", detail=str(error))
+            with self._state_lock:
+                if self._ws is socket:
+                    self._ready = False
+                    self._ready_at_ns = None
+            socket.close()
+            return False
+        return True
+
+    def _on_error(self, ws: Any, error: object) -> None:
+        if ws is not self._ws or self._closing:
             return
-        with self._send_lock:
-            socket.send(json.dumps(event, separators=(",", ":")))
-
-    def _on_error(self, _ws: Any, error: object) -> None:
         self._logger.emit("agent.connection_error", detail=str(error))
-        self._active = False
 
-    def _on_close(self, _ws: Any, status_code: int | None, message: str | None) -> None:
-        was_active = self._active
-        self._ready = False
-        self._ws = None
+    def _on_close(self, ws: Any, status_code: int | None, message: str | None) -> None:
+        with self._state_lock:
+            if ws is not self._ws:
+                return
+            was_active = self._active
+            self._ready = False
+            self._ready_at_ns = None
+            self._ws = None
+            if was_active:
+                self._active = False
         if was_active:
             self._logger.emit(
                 "agent.connection_closed",
                 status_code=status_code,
                 detail=message,
             )
-            self._active = False
+
+    def _schedule_reconnect(self, *, reason: str) -> None:
+        with self._state_lock:
+            if self._closing:
+                return
+            if self._reconnect_timer is not None:
+                return
+            timer = threading.Timer(0.5, self._run_scheduled_reconnect)
+            timer.daemon = True
+            self._reconnect_timer = timer
+            timer.start()
+        self._logger.emit(
+            "agent.preconnection_scheduled",
+            reason=reason,
+            retry_in_ms=500,
+        )
+
+    def _run_scheduled_reconnect(self) -> None:
+        with self._state_lock:
+            self._reconnect_timer = None
+        self._ensure_connection()

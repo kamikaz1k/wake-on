@@ -37,6 +37,11 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--voice", default="marin")
     parser.add_argument("--instructions", default=DEFAULT_INSTRUCTIONS)
     parser.add_argument("--session-timeout", type=float, default=30.0)
+    parser.add_argument(
+        "--no-preconnect",
+        action="store_true",
+        help="Connect only after wake detection for cold-start latency comparisons",
+    )
     parser.add_argument("--output-device", help="sounddevice output device name or index")
     parser.add_argument(
         "--full-duplex",
@@ -89,6 +94,7 @@ def main() -> None:
             output_device=output_device,
             inactivity_timeout_seconds=args.session_timeout,
             full_duplex=args.full_duplex,
+            preconnect=not args.no_preconnect,
         )
     orchestrator = Orchestrator(
         detector,

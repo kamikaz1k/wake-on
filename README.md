@@ -63,9 +63,11 @@ uv run lobby-wake
 ```
 
 Say **“Hey Lobby”**, then continue with your request. The wake detector remains
-local. Once triggered, the one-second preroll and subsequent microphone audio
-are sent to `gpt-realtime-2.1`, and response audio is played through the default
-macOS output device.
+local. While it listens, the app keeps a configured Realtime session warm. Once
+triggered, the one-second preroll and subsequent microphone audio are sent
+immediately, and response audio is played through the default macOS output
+device. After a conversation ends, the app opens a fresh warm session so the
+next interaction does not inherit the previous conversation.
 
 Use a mono, signed 16-bit WAV file:
 
@@ -78,6 +80,16 @@ Run only the local wake and handoff path:
 ```sh
 uv run lobby-wake --agent mock
 ```
+
+Disable preconnection to compare cold-start latency:
+
+```sh
+uv run lobby-wake --no-preconnect
+```
+
+OpenAI Realtime sessions have a maximum duration of 60 minutes. If a warm
+session closes or expires while the app is listening, the app reconnects
+automatically.
 
 Useful tuning controls:
 
@@ -113,7 +125,9 @@ The latency log records:
 - `wake.detected`
 - `wake.engine_ready`, including model initialization time
 - `agent.started`, including `wake_to_agent_start_ms`
-- `agent.connection_ready`, including Realtime connection setup time
+- `agent.preconnection_ready`, including warm-session setup time
+- `agent.connection_reused`, including time saved at wake
+- `agent.connection_ready`, when using a cold connection
 - `agent.first_response_received`
 - `agent.first_response_played`
 - response transcripts and conversation lifecycle events
