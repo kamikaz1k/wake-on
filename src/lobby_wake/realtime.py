@@ -151,6 +151,8 @@ class OpenAIRealtimeAgent:
         self._last_activity_ns: int | None = None
         self._first_response_received = False
         self._first_response_played = False
+        self._first_input_audio_sent = False
+        self._wake_detected_at_ns: int | None = None
         self._response_active = False
         self._ending = False
         self._end_request: EndConversationRequest | None = None
@@ -191,6 +193,8 @@ class OpenAIRealtimeAgent:
             self._last_activity_ns = now_ns
             self._first_response_received = False
             self._first_response_played = False
+            self._first_input_audio_sent = False
+            self._wake_detected_at_ns = wake.detected_at_ns
             self._response_active = False
             self._ending = False
             self._end_request = None
@@ -557,12 +561,31 @@ class OpenAIRealtimeAgent:
         )
 
     def _send_audio(self, pcm16: bytes) -> bool:
-        return self._send_event(
+        sent = self._send_event(
             {
                 "type": "input_audio_buffer.append",
                 "audio": base64.b64encode(pcm16).decode("ascii"),
             }
         )
+        if not sent:
+            return False
+        with self._state_lock:
+            first_audio = self._active and not self._first_input_audio_sent
+            if first_audio:
+                self._first_input_audio_sent = True
+                wake_detected_at_ns = self._wake_detected_at_ns
+            else:
+                wake_detected_at_ns = None
+        if first_audio:
+            self._logger.emit(
+                "agent.first_audio_sent",
+                wake_to_first_audio_sent_ms=(
+                    (time.monotonic_ns() - wake_detected_at_ns) / 1_000_000
+                    if wake_detected_at_ns is not None
+                    else 0
+                ),
+            )
+        return True
 
     def _send_event(self, event: dict[str, Any], ws: Any | None = None) -> bool:
         socket = ws or self._ws

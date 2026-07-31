@@ -30,6 +30,13 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--block-ms", type=int, default=80)
     parser.add_argument("--score", type=float, default=1.5)
     parser.add_argument("--threshold", type=float, default=0.25)
+    parser.add_argument(
+        "--trailing-blanks",
+        type=int,
+        choices=range(0, 11),
+        default=1,
+        help="Sherpa blank frames required after a keyword (default: 1)",
+    )
     parser.add_argument("--threads", type=int, default=1)
     parser.add_argument("--model-variant", choices=("int8", "fp32"), default="int8")
     parser.add_argument("--agent", choices=("openai", "mock"), default="openai")
@@ -77,6 +84,7 @@ def main() -> None:
         num_threads=args.threads,
         keywords_score=args.score,
         keywords_threshold=args.threshold,
+        num_trailing_blanks=args.trailing_blanks,
         model_variant=args.model_variant,
     )
     logger.emit(
@@ -130,6 +138,8 @@ def main() -> None:
         "app.started",
         source="wav" if args.audio_file else "microphone",
         sample_rate=source.sample_rate,
+        audio_block_ms=args.block_ms,
+        wake_trailing_blanks=args.trailing_blanks,
         model_dir=args.model_dir,
         pid=os.getpid(),
         emergency_end_signal="SIGUSR1" if hasattr(signal, "SIGUSR1") else None,

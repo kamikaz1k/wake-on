@@ -11,7 +11,7 @@ from .conversation import (
     EndSource,
 )
 from .events import EventLogger
-from .ring_buffer import AudioRingBuffer, FloatAudio
+from .ring_buffer import AudioRingBuffer, FloatAudio, estimate_speech_tail
 from .wake import WakeWordEngine
 
 
@@ -55,15 +55,34 @@ class Orchestrator:
     def process(self, samples: FloatAudio) -> None:
         self._ring.append(samples)
         if self.state is State.LISTENING:
+            detector_call_started_ns = time.monotonic_ns()
             wake = self._detector.process(samples, self._sample_rate)
+            detector_call_ms = (time.monotonic_ns() - detector_call_started_ns) / 1_000_000
             if wake is None:
                 return
-            initial_audio = self._ring.snapshot()
             self._logger.emit(
                 "wake.detected",
                 phrase=wake.phrase,
-                buffered_audio_ms=initial_audio.size / self._sample_rate * 1000,
+                wake_detected_at_ns=wake.detected_at_ns,
+                buffered_audio_ms=self._ring.sample_count / self._sample_rate * 1000,
+                audio_frame_ms=samples.size / self._sample_rate * 1000,
+                detector_call_ms=detector_call_ms,
             )
+            self._logger.emit(
+                "activation.listening",
+                wake_to_feedback_ms=(time.monotonic_ns() - wake.detected_at_ns) / 1_000_000,
+            )
+            initial_audio = self._ring.snapshot()
+            speech_tail = estimate_speech_tail(initial_audio, self._sample_rate)
+            if speech_tail is not None:
+                self._logger.emit(
+                    "wake.speech_tail_estimated",
+                    estimated_speech_end_to_wake_ms=(
+                        speech_tail.trailing_silence_ms + detector_call_ms
+                    ),
+                    trailing_silence_ms=speech_tail.trailing_silence_ms,
+                    speech_rms_threshold=speech_tail.rms_threshold,
+                )
             self._conversation.begin()
             self._agent.start(initial_audio, self._sample_rate, wake)
             self.state = State.CONVERSATION

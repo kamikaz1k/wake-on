@@ -159,17 +159,35 @@ appended to `latency.jsonl`.
 
 The latency log records:
 
-- `wake.detected`
+- `wake.detected`, including the detector-call time
+- `wake.speech_tail_estimated`, an in-memory estimate of speech-end-to-wake
+  latency
+- `activation.listening`, the first visible listening feedback
 - `wake.engine_ready`, including model initialization time
 - `agent.started`, including `wake_to_agent_start_ms`
 - `agent.preconnection_ready`, including warm-session setup time
 - `agent.connection_reused`, including time saved at wake
 - `agent.connection_ready`, when using a cold connection
+- `agent.first_audio_sent`
 - `agent.first_response_received`
 - `agent.first_response_played`
 - response transcripts and conversation lifecycle events
 - `agent.stopped`
 - orchestration state changes
+
+Summarize one or more logs with percentile distributions:
+
+```sh
+uv run lobby-latency-report latency.jsonl
+uv run lobby-latency-report latency.jsonl other-run.jsonl
+```
+
+The speech-end measurement is an estimate based on 10 ms RMS windows in the
+in-memory preroll. It is useful for relative detector tuning, but background
+noise can make it less accurate than an annotated audio fixture.
+
+See [the latency baseline and experiment protocol](docs/latency.md) before
+changing the runtime or wake-model settings.
 
 ## Tests
 

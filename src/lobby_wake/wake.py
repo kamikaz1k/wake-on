@@ -25,6 +25,7 @@ class SherpaWakeWordEngine:
         num_threads: int = 1,
         keywords_score: float = 1.5,
         keywords_threshold: float = 0.25,
+        num_trailing_blanks: int = 1,
         model_variant: str = "int8",
     ) -> None:
         import sherpa_onnx
@@ -48,6 +49,7 @@ class SherpaWakeWordEngine:
             keywords_file=str(keywords_file),
             keywords_score=keywords_score,
             keywords_threshold=keywords_threshold,
+            num_trailing_blanks=num_trailing_blanks,
             provider="cpu",
         )
         self._stream = self._spotter.create_stream()

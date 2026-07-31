@@ -30,6 +30,7 @@ dev = [
 
 [project.scripts]
 lobby-wake = "lobby_wake.cli:main"
+lobby-latency-report = "lobby_wake.latency:main"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/lobby_wake"]
