@@ -55,6 +55,32 @@ Audio callback blocks of 20, 40, and 80 ms all emitted the wake at approximately
 the same point in the fixture: 547, 545, and 551 ms after estimated phrase end.
 Callback size is therefore not the first tuning target.
 
+## Wake-model latency investigation
+
+The original GigaSpeech model is exported with `chunk_size=16`. [Sherpa's model
+documentation](https://k2-fsa.github.io/sherpa/onnx/kws/pretrained_models/index.html)
+identifies chunk-16 as 320 ms streaming latency and chunk-8 as 160 ms. Trigger
+timestamps from the local recordings followed the same 320 ms inference cadence,
+confirming that Python's audio callback size was not responsible for the delay.
+
+Sherpa's newer English-capable model includes a `chunk_size=8` export documented
+at 160 ms model latency. On the same 32 approved positive recordings:
+
+| Configuration | Detected | Estimated phrase-end → wake p50 | p95 |
+| --- | ---: | ---: | ---: |
+| Original GigaSpeech chunk-16 defaults | 13/32 | 530 ms | 760 ms |
+| New chunk-8 low-latency defaults | 29/32 | 320 ms | 504 ms |
+
+The default low-latency profile is chunk-8 int8 inference, 16 active paths, zero
+trailing blanks, score `2.0`, and threshold `0.1`. A single fixture improved from
+approximately 545 ms to 343 ms. These phrase-end values use the RMS estimator,
+so the relative result is more reliable than the absolute number, particularly
+for recordings containing continuous background noise.
+
+The chunk-8 model recovers about 200 ms at p50 while keeping inference comfortably
+faster than real time on the development Mac. The remaining delay is primarily
+model finalization and the 160 ms chunk cadence, not Python orchestration.
+
 ## Measurement protocol
 
 For a useful distribution:
@@ -77,13 +103,14 @@ Do not rewrite the harness in Swift or C++ for latency yet. Sherpa's Python
 package already invokes its native inference engine, and measured Python
 orchestration after wake is about 1–2 ms. A native macOS layer may still be
 worthwhile later for distribution, launch-at-login integration, audio-session
-control, power usage, and UI feedback, but it cannot recover the roughly
-545 ms currently spent before the detector emits.
+control, power usage, and UI feedback, but it cannot recover time spent inside
+the wake model's inference cadence and finalization.
 
-Sherpa's `num_trailing_blanks` is exposed through `--trailing-blanks`. An
-initial fixture run at `0`, `1`, and `2` produced the same approximate 545 ms
-result, so the value remains at Sherpa's default of `1`.
+Sherpa's `num_trailing_blanks` is exposed through `--trailing-blanks`. On the
+chunk-8 model, reducing it from `1` to `0` recovered roughly 10–30 ms without
+reducing detections in the positive set, so the low-latency profile uses `0`.
 
-The next experiment should collect a representative phrase and negative-audio
-set, then compare keyword score, threshold, and candidate wake models while
-recording both latency and accuracy.
+The next core latency boundary is model choice: a wake model with a shorter
+inference cadence or a phrase-specific classifier. Negative audio is needed
+before declaring the more sensitive decoder settings production-safe, but it
+is not required to continue measuring activation latency.

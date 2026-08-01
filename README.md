@@ -35,7 +35,8 @@ Requirements:
 - A working microphone for live testing
 - An OpenAI API key with Realtime API access
 
-Install dependencies and download the English GigaSpeech keyword model:
+Install dependencies and download Sherpa's English-capable chunk-8 keyword
+model:
 
 ```sh
 uv sync --extra dev
@@ -50,13 +51,14 @@ The prototype pins sherpa-onnx and its macOS runtime package to the same
 version. It also declares sherpa's CLI dependencies explicitly. These declarations
 work around incomplete transitive dependency metadata in the current wheels.
 
-The setup script generates a sherpa keyword token file from:
+The setup script generates a phone-tokenized Sherpa keyword file from:
 
 ```text
-HEY LOBBY :1.5 #0.25
+HEY LOBBY @HEY_LOBBY
 ```
 
-The score and threshold are initial tuning values, not production defaults.
+Score and threshold are runtime settings, so `--score` and `--threshold`
+actually change the decoder rather than being overridden by the keyword file.
 
 ## Run
 
@@ -98,8 +100,17 @@ automatically.
 Useful tuning controls:
 
 ```sh
-uv run lobby-wake --score 1.5 --threshold 0.25 --preroll-seconds 1
+uv run lobby-wake \
+  --model-chunk 8 \
+  --max-active-paths 16 \
+  --trailing-blanks 0 \
+  --score 2 \
+  --threshold 0.1
 ```
+
+The low-latency defaults use Sherpa's 160 ms chunk-8 model. Use
+`--model-chunk 16` for its 320 ms model when comparing the accuracy/latency
+tradeoff.
 
 By default, microphone upload pauses while the assistant is speaking. This
 prevents feedback when using laptop speakers, but it also disables barge-in

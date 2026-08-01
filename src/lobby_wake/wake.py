@@ -23,18 +23,20 @@ class SherpaWakeWordEngine:
         keywords_file: Path,
         *,
         num_threads: int = 1,
-        keywords_score: float = 1.5,
-        keywords_threshold: float = 0.25,
-        num_trailing_blanks: int = 1,
+        keywords_score: float = 2.0,
+        keywords_threshold: float = 0.1,
+        max_active_paths: int = 16,
+        num_trailing_blanks: int = 0,
+        model_chunk: int | None = 8,
         model_variant: str = "int8",
     ) -> None:
         import sherpa_onnx
 
         if model_variant not in {"int8", "fp32"}:
             raise ValueError("model_variant must be 'int8' or 'fp32'")
-        encoder = self._find_component(model_dir, "encoder", model_variant)
-        decoder = self._find_component(model_dir, "decoder", model_variant)
-        joiner = self._find_component(model_dir, "joiner", model_variant)
+        encoder = self._find_component(model_dir, "encoder", model_variant, model_chunk)
+        decoder = self._find_component(model_dir, "decoder", model_variant, model_chunk)
+        joiner = self._find_component(model_dir, "joiner", model_variant, model_chunk)
         tokens = model_dir / "tokens.txt"
         for required in (tokens, keywords_file):
             if not required.is_file():
@@ -46,6 +48,7 @@ class SherpaWakeWordEngine:
             decoder=str(decoder),
             joiner=str(joiner),
             num_threads=num_threads,
+            max_active_paths=max_active_paths,
             keywords_file=str(keywords_file),
             keywords_score=keywords_score,
             keywords_threshold=keywords_threshold,
@@ -61,7 +64,7 @@ class SherpaWakeWordEngine:
         result = self._spotter.get_result(self._stream)
         if not result:
             return None
-        event = WakeEvent(phrase=result, detected_at_ns=time.monotonic_ns())
+        event = WakeEvent(phrase=result.replace("_", " "), detected_at_ns=time.monotonic_ns())
         self._spotter.reset_stream(self._stream)
         return event
 
@@ -69,12 +72,27 @@ class SherpaWakeWordEngine:
         self._spotter.reset_stream(self._stream)
 
     @staticmethod
-    def _find_component(directory: Path, component: str, variant: str) -> Path:
+    def _find_component(
+        directory: Path,
+        component: str,
+        variant: str,
+        model_chunk: int | None,
+    ) -> Path:
         matches = sorted(directory.glob(f"{component}-*.onnx"))
+        if model_chunk is not None:
+            matches = [path for path in matches if f"chunk-{model_chunk}-" in path.name]
         if variant == "int8":
-            matches = [path for path in matches if path.name.endswith(".int8.onnx")]
+            int8_matches = [path for path in matches if path.name.endswith(".int8.onnx")]
+            # Sherpa's newer KWS releases intentionally ship the decoder only as
+            # fp32 because quantizing this small component provides little benefit.
+            matches = int8_matches or (
+                [path for path in matches if not path.name.endswith(".int8.onnx")]
+                if component == "decoder"
+                else []
+            )
         else:
             matches = [path for path in matches if not path.name.endswith(".int8.onnx")]
         if not matches:
-            raise FileNotFoundError(f"No {variant} {component} model in {directory}")
+            chunk = f" chunk-{model_chunk}" if model_chunk is not None else ""
+            raise FileNotFoundError(f"No {variant}{chunk} {component} model in {directory}")
         return matches[0]

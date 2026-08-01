@@ -16,7 +16,7 @@ from .orchestrator import Orchestrator
 from .realtime import DEFAULT_INSTRUCTIONS, OpenAIRealtimeAgent
 from .wake import SherpaWakeWordEngine
 
-DEFAULT_MODEL_DIR = Path("models/sherpa-onnx-kws-zipformer-gigaspeech-3.3M-2024-01-01")
+DEFAULT_MODEL_DIR = Path("models/sherpa-onnx-kws-zipformer-zh-en-3M-2025-12-20")
 DEFAULT_KEYWORDS_FILE = Path("models/hey-lobby.txt")
 
 
@@ -28,14 +28,16 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--device", help="sounddevice input device name or index")
     parser.add_argument("--preroll-seconds", type=float, default=1.0)
     parser.add_argument("--block-ms", type=int, default=80)
-    parser.add_argument("--score", type=float, default=1.5)
-    parser.add_argument("--threshold", type=float, default=0.25)
+    parser.add_argument("--score", type=float, default=2.0)
+    parser.add_argument("--threshold", type=float, default=0.1)
+    parser.add_argument("--max-active-paths", type=int, default=16)
+    parser.add_argument("--model-chunk", type=int, choices=(8, 16), default=8)
     parser.add_argument(
         "--trailing-blanks",
         type=int,
         choices=range(0, 11),
-        default=1,
-        help="Sherpa blank frames required after a keyword (default: 1)",
+        default=0,
+        help="Sherpa blank frames required after a keyword (default: 0)",
     )
     parser.add_argument("--threads", type=int, default=1)
     parser.add_argument("--model-variant", choices=("int8", "fp32"), default="int8")
@@ -84,7 +86,9 @@ def main() -> None:
         num_threads=args.threads,
         keywords_score=args.score,
         keywords_threshold=args.threshold,
+        max_active_paths=args.max_active_paths,
         num_trailing_blanks=args.trailing_blanks,
+        model_chunk=args.model_chunk,
         model_variant=args.model_variant,
     )
     logger.emit(
@@ -139,6 +143,10 @@ def main() -> None:
         source="wav" if args.audio_file else "microphone",
         sample_rate=source.sample_rate,
         audio_block_ms=args.block_ms,
+        wake_model_chunk=args.model_chunk,
+        wake_max_active_paths=args.max_active_paths,
+        wake_score=args.score,
+        wake_threshold=args.threshold,
         wake_trailing_blanks=args.trailing_blanks,
         model_dir=args.model_dir,
         pid=os.getpid(),

@@ -1,7 +1,7 @@
 #!/bin/sh
 set -eu
 
-model_name="sherpa-onnx-kws-zipformer-gigaspeech-3.3M-2024-01-01"
+model_name="sherpa-onnx-kws-zipformer-zh-en-3M-2025-12-20"
 model_archive="${model_name}.tar.bz2"
 model_url="https://github.com/k2-fsa/sherpa-onnx/releases/download/kws-models/${model_archive}"
 repo_root=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
@@ -17,11 +17,10 @@ fi
 
 uv run sherpa-onnx-cli text2token \
   --tokens "${model_dir}/tokens.txt" \
-  --tokens-type bpe \
-  --bpe-model "${model_dir}/bpe.model" \
+  --tokens-type phone+ppinyin \
+  --lexicon "${model_dir}/en.phone" \
   "${models_dir}/keywords.raw.txt" \
   "${models_dir}/hey-lobby.txt"
 
 echo "Model ready: ${model_dir}"
 echo "Keyword tokens: ${models_dir}/hey-lobby.txt"
-
