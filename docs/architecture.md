@@ -4,6 +4,10 @@ Lobby Wake is a macOS-first harness that listens locally for **“Hey Lobby”**
 starts one long-running voice delegate, and owns that conversation until it
 finishes or is forcibly ended.
 
+Architectural decisions:
+
+- [ADR 0001: Use Sherpa's chunk-8 wake model](adr/0001-use-chunk-8-wake-model.md)
+
 ## System overview
 
 ```mermaid

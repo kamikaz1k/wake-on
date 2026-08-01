@@ -1,5 +1,8 @@
 # Latency baseline
 
+The accepted model-selection decision and complete experiment rationale are in
+[ADR 0001: Use Sherpa's chunk-8 wake model](adr/0001-use-chunk-8-wake-model.md).
+
 Lobby Wake records timestamps at each boundary so perceived activation delay
 can be attributed to the wake detector, local harness, network connection,
 Realtime speech detection, model response, or playback.
