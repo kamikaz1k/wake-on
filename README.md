@@ -19,6 +19,7 @@ See [docs/architecture.md](docs/architecture.md) for component, audio,
 connection, delegate, and shutdown lifecycle diagrams.
 The wake-model latency investigation and decision are recorded in
 [ADR 0001](docs/adr/0001-use-chunk-8-wake-model.md).
+Current priorities are tracked in [TODO.md](TODO.md).
 
 The orchestrator owns one audio stream:
 
@@ -128,11 +129,16 @@ tradeoff.
 By default, microphone upload pauses while the assistant is speaking. This
 prevents feedback when using laptop speakers, but it also disables barge-in
 during playback. With headphones or an echo-cancelled audio device, enable
-full-duplex conversation:
+continuous microphone upload:
 
 ```sh
 uv run lobby-wake --full-duplex
 ```
+
+Correct WebSocket barge-in still requires immediate playback cancellation and
+conversation-item truncation. Laptop speaker/microphone support additionally
+requires acoustic echo cancellation; both are tracked in the
+[roadmap](TODO.md) and [research note](docs/research/laptop-speaker-barge-in.md).
 
 Select audio devices or change the response voice:
 

@@ -8,6 +8,11 @@ Architectural decisions:
 
 - [ADR 0001: Use Sherpa's chunk-8 wake model](adr/0001-use-chunk-8-wake-model.md)
 
+Planned work and research:
+
+- [Roadmap](../TODO.md)
+- [Laptop speaker/microphone barge-in](research/laptop-speaker-barge-in.md)
+
 ## System overview
 
 ```mermaid
@@ -290,7 +295,10 @@ flowchart LR
 
 Laptop-speaker mode is half-duplex by default: microphone upload pauses while
 assistant audio is queued or playing to reduce feedback. `--full-duplex`
-enables barge-in for headphones or an echo-cancelled audio device.
+continues upload for headphones or an already echo-cancelled audio device, but
+correct WebSocket playback cancellation and item truncation are still planned.
+Built-in speaker/microphone full duplex also requires an AEC media path; see the
+[research note](research/laptop-speaker-barge-in.md).
 
 ## Key invariants
 
