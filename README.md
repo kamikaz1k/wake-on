@@ -17,8 +17,10 @@ microphone/WAV -> rolling buffer -> sherpa-onnx KWS -> orchestrator -> agent
 
 See [docs/architecture.md](docs/architecture.md) for component, audio,
 connection, delegate, and shutdown lifecycle diagrams.
-The wake-model latency investigation and decision are recorded in
-[ADR 0001](docs/adr/0001-use-chunk-8-wake-model.md).
+See the [canonical latency pipeline](docs/latency-pipeline.md) for the current
+measurements at a glance. The wake-model decision is recorded in
+[ADR 0001](docs/adr/0001-use-chunk-8-wake-model.md), with experiment history in
+[the latency notebook](docs/latency.md).
 Current priorities are tracked in [TODO.md](TODO.md).
 
 The orchestrator owns one audio stream:

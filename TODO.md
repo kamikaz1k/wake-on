@@ -24,7 +24,8 @@ results belong in `docs/`; this file tracks what remains.
 - [ ] **Measure the full user-turn handoff.** Add a local estimate of the final
   voiced microphone frame so reports include actual-speech-end → server
   `speech_stopped`, then server `speech_stopped` → playback. Compare server VAD
-  at 200/300/500 ms and semantic VAD high using live speech.
+  at 200/300/500 ms and semantic VAD high using live speech. Keep the
+  [canonical latency pipeline](docs/latency-pipeline.md) current with the result.
 
 ## Next: finish the delegate/library boundary
 

@@ -1,5 +1,9 @@
 # Latency baseline
 
+The canonical at-a-glance state of every latency boundary is
+[Current latency pipeline](latency-pipeline.md). This document retains the
+experiment history, rationale, and measurement protocol behind that snapshot.
+
 The accepted model-selection decision and complete experiment rationale are in
 [ADR 0001: Use Sherpa's chunk-8 wake model](adr/0001-use-chunk-8-wake-model.md).
 

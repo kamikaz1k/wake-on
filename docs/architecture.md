@@ -10,6 +10,7 @@ Architectural decisions:
 
 Planned work and research:
 
+- [Canonical current latency pipeline](latency-pipeline.md)
 - [Roadmap](../TODO.md)
 - [Laptop speaker/microphone barge-in](research/laptop-speaker-barge-in.md)
 
