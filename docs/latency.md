@@ -54,6 +54,38 @@ comes from one repeatable WAV fixture and uses an in-memory RMS estimate.
 | Speech stop → first response audio | 586 ms on latest run; 576 ms historical p50 | Remote response path |
 | Response received → playback | 0.92 ms on latest run; 0.40 ms historical p50 | Local playback handoff is negligible |
 
+## Realtime turn handoff
+
+The original integration explicitly used semantic VAD with high eagerness.
+Historical logs measured approximately 576 ms p50 and 694 ms p95 from the
+server's `input_audio_buffer.speech_stopped` event to first response audio. They
+did not measure how long semantic VAD waited between the user's actual final
+word and that event.
+
+Server VAD is now the trial default for a more deterministic handoff:
+[OpenAI's VAD guide](https://developers.openai.com/api/docs/guides/realtime-vad)
+defines `silence_duration_ms` as the silence required to detect speech stop and
+notes that shorter values detect turns faster.
+
+| Setting | Default |
+| --- | ---: |
+| Mode | `server_vad` |
+| Silence duration | 300 ms |
+| Activation threshold | 0.5 |
+| Prefix padding | 300 ms |
+
+The accepted Realtime session configuration and speech events include the VAD
+mode in structured logs. Compare the previous behavior with:
+
+```sh
+uv run lobby-wake --realtime-vad semantic_vad --vad-eagerness high
+```
+
+Shorter `--vad-silence-ms` values can reduce handoff time but increase the risk
+of ending a turn during a natural pause. This should be evaluated by speaking,
+pausing mid-sentence, and recording both perceived interruption and the existing
+speech-stop-to-playback metric.
+
 Audio callback blocks of 20, 40, and 80 ms all emitted the wake at approximately
 the same point in the fixture: 547, 545, and 551 ms after estimated phrase end.
 Callback size is therefore not the first tuning target.

@@ -76,7 +76,35 @@ def float_audio_to_pcm16(
     return (clipped * 32767).astype("<i2").tobytes()
 
 
-def build_session_update(model: str, voice: str, instructions: str) -> dict[str, Any]:
+def build_session_update(
+    model: str,
+    voice: str,
+    instructions: str,
+    *,
+    vad_mode: str = "server_vad",
+    vad_threshold: float = 0.5,
+    vad_prefix_padding_ms: int = 300,
+    vad_silence_duration_ms: int = 300,
+    vad_eagerness: str = "high",
+) -> dict[str, Any]:
+    if vad_mode == "server_vad":
+        turn_detection: dict[str, Any] = {
+            "type": "server_vad",
+            "threshold": vad_threshold,
+            "prefix_padding_ms": vad_prefix_padding_ms,
+            "silence_duration_ms": vad_silence_duration_ms,
+            "create_response": True,
+            "interrupt_response": True,
+        }
+    elif vad_mode == "semantic_vad":
+        turn_detection = {
+            "type": "semantic_vad",
+            "eagerness": vad_eagerness,
+            "create_response": True,
+            "interrupt_response": True,
+        }
+    else:
+        raise ValueError("vad_mode must be 'server_vad' or 'semantic_vad'")
     return {
         "type": "session.update",
         "session": {
@@ -89,12 +117,7 @@ def build_session_update(model: str, voice: str, instructions: str) -> dict[str,
             "audio": {
                 "input": {
                     "format": {"type": "audio/pcm", "rate": REALTIME_SAMPLE_RATE},
-                    "turn_detection": {
-                        "type": "semantic_vad",
-                        "eagerness": "high",
-                        "create_response": True,
-                        "interrupt_response": True,
-                    },
+                    "turn_detection": turn_detection,
                 },
                 "output": {
                     "format": {"type": "audio/pcm", "rate": REALTIME_SAMPLE_RATE},
@@ -120,6 +143,11 @@ class OpenAIRealtimeAgent:
         inactivity_timeout_seconds: float = 30.0,
         full_duplex: bool = False,
         preconnect: bool = True,
+        vad_mode: str = "server_vad",
+        vad_threshold: float = 0.5,
+        vad_prefix_padding_ms: int = 300,
+        vad_silence_duration_ms: int = 300,
+        vad_eagerness: str = "high",
         conversation_controller: ConversationController | None = None,
     ) -> None:
         if not api_key:
@@ -132,6 +160,11 @@ class OpenAIRealtimeAgent:
         self._timeout_ns = round(inactivity_timeout_seconds * 1_000_000_000)
         self._full_duplex = full_duplex
         self._preconnect = preconnect
+        self._vad_mode = vad_mode
+        self._vad_threshold = vad_threshold
+        self._vad_prefix_padding_ms = vad_prefix_padding_ms
+        self._vad_silence_duration_ms = vad_silence_duration_ms
+        self._vad_eagerness = vad_eagerness
         self._conversation = conversation_controller or ConversationController(logger)
         self._player = AudioPlayer(device=output_device)
         self._pending_audio: deque[bytes] = deque(maxlen=500)
@@ -175,6 +208,15 @@ class OpenAIRealtimeAgent:
             voice=self._voice,
             full_duplex=self._full_duplex,
             preconnect=self._preconnect,
+            vad_mode=self._vad_mode,
+            vad_threshold=self._vad_threshold if self._vad_mode == "server_vad" else None,
+            vad_prefix_padding_ms=(
+                self._vad_prefix_padding_ms if self._vad_mode == "server_vad" else None
+            ),
+            vad_silence_duration_ms=(
+                self._vad_silence_duration_ms if self._vad_mode == "server_vad" else None
+            ),
+            vad_eagerness=self._vad_eagerness if self._vad_mode == "semantic_vad" else None,
         )
         if self._preconnect:
             self._logger.emit("agent.preconnection_started", adapter="openai_realtime")
@@ -373,7 +415,19 @@ class OpenAIRealtimeAgent:
                 self._schedule_reconnect(reason="connection_closed")
 
     def _on_open(self, ws: Any) -> None:
-        self._send_event(build_session_update(self._model, self._voice, self._instructions), ws)
+        self._send_event(
+            build_session_update(
+                self._model,
+                self._voice,
+                self._instructions,
+                vad_mode=self._vad_mode,
+                vad_threshold=self._vad_threshold,
+                vad_prefix_padding_ms=self._vad_prefix_padding_ms,
+                vad_silence_duration_ms=self._vad_silence_duration_ms,
+                vad_eagerness=self._vad_eagerness,
+            ),
+            ws,
+        )
 
     def _on_message(self, ws: Any, raw_message: str) -> None:
         if ws is not self._ws:
@@ -424,10 +478,20 @@ class OpenAIRealtimeAgent:
             self._response_active = True
         elif event_type == "input_audio_buffer.speech_started":
             self._last_activity_ns = time.monotonic_ns()
-            self._logger.emit("agent.user_speech_started")
+            self._logger.emit(
+                "agent.user_speech_started",
+                audio_start_ms=event.get("audio_start_ms"),
+                item_id=event.get("item_id"),
+                vad_mode=self._vad_mode,
+            )
         elif event_type == "input_audio_buffer.speech_stopped":
             self._last_activity_ns = time.monotonic_ns()
-            self._logger.emit("agent.user_speech_stopped")
+            self._logger.emit(
+                "agent.user_speech_stopped",
+                audio_end_ms=event.get("audio_end_ms"),
+                item_id=event.get("item_id"),
+                vad_mode=self._vad_mode,
+            )
         elif event_type == "response.output_audio.delta":
             self._handle_audio_delta(event)
         elif event_type == "response.output_audio_transcript.delta":

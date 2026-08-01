@@ -41,7 +41,7 @@ def test_float_audio_to_pcm16_clips_and_encodes_little_endian() -> None:
     np.testing.assert_array_equal(decoded, [-32767, -32767, 0, 32767, 32767])
 
 
-def test_session_update_uses_realtime_audio_schema() -> None:
+def test_session_update_uses_server_vad_by_default() -> None:
     event = build_session_update("gpt-realtime-2.1", "marin", "Be helpful.")
     session = event["session"]
 
@@ -52,10 +52,34 @@ def test_session_update_uses_realtime_audio_schema() -> None:
         "type": "audio/pcm",
         "rate": REALTIME_SAMPLE_RATE,
     }
-    assert session["audio"]["input"]["turn_detection"]["type"] == "semantic_vad"
+    assert session["audio"]["input"]["turn_detection"] == {
+        "type": "server_vad",
+        "threshold": 0.5,
+        "prefix_padding_ms": 300,
+        "silence_duration_ms": 300,
+        "create_response": True,
+        "interrupt_response": True,
+    }
     assert session["audio"]["output"]["voice"] == "marin"
     assert session["tools"] == [END_CONVERSATION_TOOL]
     assert session["tool_choice"] == "auto"
+
+
+def test_session_update_can_use_semantic_vad() -> None:
+    event = build_session_update(
+        "gpt-realtime-2.1",
+        "marin",
+        "Be helpful.",
+        vad_mode="semantic_vad",
+        vad_eagerness="high",
+    )
+
+    assert event["session"]["audio"]["input"]["turn_detection"] == {
+        "type": "semantic_vad",
+        "eagerness": "high",
+        "create_response": True,
+        "interrupt_response": True,
+    }
 
 
 def test_prepare_starts_preconnection_by_default(monkeypatch) -> None:

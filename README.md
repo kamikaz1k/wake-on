@@ -95,6 +95,17 @@ Disable preconnection to compare cold-start latency:
 uv run lobby-wake --no-preconnect
 ```
 
+Realtime turn handoff uses silence-based server VAD by default, with 300 ms of
+silence required to end a user turn. Compare it with semantic VAD using:
+
+```sh
+uv run lobby-wake --realtime-vad semantic_vad --vad-eagerness high
+```
+
+Tune the server-VAD handoff with `--vad-silence-ms`, `--vad-threshold`, and
+`--vad-prefix-ms`. Shorter silence values respond faster but can end a turn
+during a natural pause.
+
 OpenAI Realtime sessions have a maximum duration of 60 minutes. If a warm
 session closes or expires while the app is listening, the app reconnects
 automatically.

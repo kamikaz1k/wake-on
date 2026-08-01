@@ -48,6 +48,19 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--instructions", default=DEFAULT_INSTRUCTIONS)
     parser.add_argument("--session-timeout", type=float, default=30.0)
     parser.add_argument(
+        "--realtime-vad",
+        choices=("server_vad", "semantic_vad"),
+        default="server_vad",
+    )
+    parser.add_argument("--vad-threshold", type=float, default=0.5)
+    parser.add_argument("--vad-prefix-ms", type=int, default=300)
+    parser.add_argument("--vad-silence-ms", type=int, default=300)
+    parser.add_argument(
+        "--vad-eagerness",
+        choices=("low", "medium", "high", "auto"),
+        default="high",
+    )
+    parser.add_argument(
         "--no-preconnect",
         action="store_true",
         help="Connect only after wake detection for cold-start latency comparisons",
@@ -109,6 +122,11 @@ def main() -> None:
             inactivity_timeout_seconds=args.session_timeout,
             full_duplex=args.full_duplex,
             preconnect=not args.no_preconnect,
+            vad_mode=args.realtime_vad,
+            vad_threshold=args.vad_threshold,
+            vad_prefix_padding_ms=args.vad_prefix_ms,
+            vad_silence_duration_ms=args.vad_silence_ms,
+            vad_eagerness=args.vad_eagerness,
             conversation_controller=conversation_controller,
         )
     orchestrator = Orchestrator(
