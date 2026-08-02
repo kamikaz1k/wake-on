@@ -16,7 +16,7 @@ from .conversation import (
     EndSource,
 )
 from .events import EventLogger, WakeEvent
-from .playback import AudioPlayer
+from .playback import AudioPlayer, PlaybackPosition
 from .ring_buffer import FloatAudio
 
 REALTIME_SAMPLE_RATE = 24_000
@@ -141,7 +141,7 @@ class OpenAIRealtimeAgent:
         instructions: str = DEFAULT_INSTRUCTIONS,
         output_device: int | str | None = None,
         inactivity_timeout_seconds: float = 30.0,
-        full_duplex: bool = False,
+        full_duplex: bool = True,
         preconnect: bool = True,
         vad_mode: str = "server_vad",
         vad_threshold: float = 0.5,
@@ -193,6 +193,9 @@ class OpenAIRealtimeAgent:
         self._closing_response_done = False
         self._end_deadline_ns: int | None = None
         self._transcript_parts: list[str] = []
+        self._active_output_item_id: str | None = None
+        self._active_output_content_index = 0
+        self._interrupted_output_items: set[str] = set()
 
     @property
     def active(self) -> bool:
@@ -244,6 +247,9 @@ class OpenAIRealtimeAgent:
             self._closing_response_done = False
             self._end_deadline_ns = None
             self._transcript_parts.clear()
+            self._active_output_item_id = None
+            self._active_output_content_index = 0
+            self._interrupted_output_items.clear()
             self._pending_audio.clear()
             if not connection_ready:
                 self._pending_audio.append(initial_pcm16)
@@ -345,6 +351,9 @@ class OpenAIRealtimeAgent:
             self._closing_response_requested = False
             self._closing_response_done = False
             self._end_deadline_ns = None
+            self._active_output_item_id = None
+            self._active_output_content_index = 0
+            self._interrupted_output_items.clear()
         self._player.clear()
         if was_active:
             self._logger.emit(
@@ -476,14 +485,17 @@ class OpenAIRealtimeAgent:
                 self._send_audio(pcm16)
         elif event_type == "response.created":
             self._response_active = True
+            self._active_output_item_id = None
+            self._active_output_content_index = 0
         elif event_type == "input_audio_buffer.speech_started":
             self._last_activity_ns = time.monotonic_ns()
-            self._logger.emit(
+            speech_started_at_ns = self._logger.emit(
                 "agent.user_speech_started",
                 audio_start_ms=event.get("audio_start_ms"),
                 item_id=event.get("item_id"),
                 vad_mode=self._vad_mode,
             )
+            self._interrupt_response_playback(speech_started_at_ns)
         elif event_type == "input_audio_buffer.speech_stopped":
             self._last_activity_ns = time.monotonic_ns()
             self._logger.emit(
@@ -494,6 +506,13 @@ class OpenAIRealtimeAgent:
             )
         elif event_type == "response.output_audio.delta":
             self._handle_audio_delta(event)
+        elif event_type == "conversation.item.truncated":
+            self._logger.emit(
+                "agent.item_truncation_confirmed",
+                item_id=event.get("item_id"),
+                content_index=event.get("content_index"),
+                audio_end_ms=event.get("audio_end_ms"),
+            )
         elif event_type == "response.output_audio_transcript.delta":
             self._transcript_parts.append(event.get("delta", ""))
         elif event_type == "response.output_audio_transcript.done":
@@ -527,12 +546,24 @@ class OpenAIRealtimeAgent:
             )
 
     def _handle_audio_delta(self, event: dict[str, Any]) -> None:
+        item_id = event.get("item_id")
+        content_index = event.get("content_index")
+        if not isinstance(item_id, str) or not isinstance(content_index, int):
+            self._logger.emit(
+                "agent.protocol_error",
+                detail="output audio delta missing item_id or content_index",
+            )
+            return
+        if item_id in self._interrupted_output_items:
+            return
         try:
             pcm16 = base64.b64decode(event["delta"])
         except (KeyError, ValueError):
             self._logger.emit("agent.protocol_error", detail="invalid output audio delta")
             return
         self._last_activity_ns = time.monotonic_ns()
+        self._active_output_item_id = item_id
+        self._active_output_content_index = content_index
         if not self._first_response_received:
             self._first_response_received = True
             received_ns = time.monotonic_ns()
@@ -544,7 +575,44 @@ class OpenAIRealtimeAgent:
                     else 0
                 ),
             )
-        self._player.enqueue(pcm16, self._mark_first_playback)
+        self._player.enqueue(
+            pcm16,
+            self._mark_first_playback,
+            item_id=item_id,
+            content_index=content_index,
+        )
+
+    def _interrupt_response_playback(self, speech_started_at_ns: int) -> None:
+        item_id = self._active_output_item_id
+        if item_id is None or not (self._response_active or self._player.playing):
+            return
+        content_index = self._active_output_content_index
+        self._interrupted_output_items.add(item_id)
+        position = self._player.interrupt(item_id, content_index)
+        playback_stopped_at_ns = time.monotonic_ns()
+        if position is None:
+            position = PlaybackPosition(item_id, content_index, 0)
+        self._logger.emit(
+            "agent.playback_interrupted",
+            item_id=position.item_id,
+            content_index=position.content_index,
+            audio_end_ms=position.audio_end_ms,
+            vad_to_playback_stop_ms=(playback_stopped_at_ns - speech_started_at_ns) / 1_000_000,
+        )
+        if self._send_event(
+            {
+                "type": "conversation.item.truncate",
+                "item_id": position.item_id,
+                "content_index": position.content_index,
+                "audio_end_ms": position.audio_end_ms,
+            }
+        ):
+            self._logger.emit(
+                "agent.item_truncation_sent",
+                item_id=position.item_id,
+                content_index=position.content_index,
+                audio_end_ms=position.audio_end_ms,
+            )
 
     def _mark_first_playback(self) -> None:
         if self._first_response_played:

@@ -94,6 +94,22 @@ Audio callback blocks of 20, 40, and 80 ms all emitted the wake at approximately
 the same point in the fixture: 547, 545, and 551 ms after estimated phrase end.
 Callback size is therefore not the first tuning target.
 
+## Interruption latency
+
+WebSocket barge-in logs `agent.playback_interrupted` with
+`vad_to_playback_stop_ms`, measured from receipt/logging of the server's
+`input_audio_buffer.speech_started` event until the local playback stream has
+been aborted. The latency report includes this boundary as **VAD speech start →
+playback stopped**.
+
+The initial live synthetic smoke test measured 116.83 ms. Realtime cancelled the
+active response, confirmed `conversation.item.truncate` at 559 ms of heard
+audio, and completed a response to the interrupting turn. This single result
+validates the protocol path but is not a performance baseline; collect at least
+30 headphone interruptions before using p50 or p95. The measurement also starts
+after remote VAD detection, so perceived user-speech-start → playback-stop
+latency will be higher until a local near-end detector is added.
+
 ## Wake-model latency investigation
 
 The original GigaSpeech model is exported with `chunk_size=16`. [Sherpa's model

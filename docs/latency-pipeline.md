@@ -1,6 +1,6 @@
 # Current latency pipeline
 
-**Canonical snapshot — 2026-08-01.** This page is the at-a-glance source of
+**Canonical snapshot — 2026-08-02.** This page is the at-a-glance source of
 truth for the latency work. It separates measurements we can act on from
 configured delays and boundaries we still do not measure. See
 [the latency notebook](latency.md) for experiment history and methodology.
@@ -67,7 +67,7 @@ therefore not target either dominant delay.
 | Actual final voiced frame → `agent.user_speech_stopped` | **Not measured** | Server VAD configured with 300 ms silence | Add a local voiced-frame timestamp; compare 200/300/500 ms and semantic VAD high |
 | `agent.user_speech_stopped` → first response audio | 571 ms median; 414–905 ms range | 3 current server-VAD conversations | Insufficient sample; collect per-turn first-audio events |
 | First response received → first response played | <1 ms | Instrumented local runs | High; not a tuning target |
-| User speech during assistant playback → playback stopped | **Not implemented** | Default mode is half-duplex | Requires barge-in plus an echo-cancelled input path |
+| Server VAD speech-start event → playback stopped | 117 ms initial smoke test | One synthetic live interruption; `agent.playback_interrupted` records `vad_to_playback_stop_ms` | Collect a real headphone distribution; laptop speakers still require AEC |
 
 ## Current runtime profile
 
@@ -77,7 +77,7 @@ therefore not target either dominant delay.
 | Wake decoder | 16 active paths, 0 trailing blanks, score 2.0, threshold 0.1 |
 | Realtime connection | Preconnected and reused on wake |
 | Turn detection | `server_vad`, threshold 0.5, 300 ms silence, 300 ms prefix padding |
-| Duplex behavior | Half-duplex; microphone input is discarded during assistant playback |
+| Duplex behavior | Full-duplex WebSocket barge-in; `--no-full-duplex` fallback |
 
 ## Canonical event boundaries
 
@@ -98,6 +98,10 @@ sequenceDiagram
     Note over Mic,RT: Missing: actual final voiced frame → user_speech_stopped
     RT-->>Harness: first_response_received
     Harness->>Speaker: first_response_played
+    RT-->>Harness: user_speech_started during playback
+    Harness->>Speaker: abort current + queued audio
+    Harness->>RT: conversation.item.truncate(audio_end_ms)
+    RT-->>Harness: conversation.item.truncated
 ```
 
 Refresh the event-derived report after a run with:

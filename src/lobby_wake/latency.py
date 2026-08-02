@@ -30,6 +30,7 @@ METRICS = (
     Metric("speech_stop_to_playback", "Speech stop → first playback"),
     Metric("wake_to_first_playback", "Wake → first playback"),
     Metric("response_to_playback", "Response received → playback"),
+    Metric("vad_to_playback_stop", "VAD speech start → playback stopped"),
 )
 
 
@@ -153,6 +154,10 @@ def extract_metrics(records: Iterable[dict[str, Any]]) -> dict[str, list[float]]
                 values["response_to_playback"].append(
                     _milliseconds(response_received_ns, now_ns)
                 )
+        elif event == "agent.playback_interrupted":
+            interruption_ms = record.get("vad_to_playback_stop_ms")
+            if isinstance(interruption_ms, int | float):
+                values["vad_to_playback_stop"].append(float(interruption_ms))
 
     return values
 

@@ -1,6 +1,6 @@
 # Laptop speaker/microphone barge-in research
 
-- **Status:** Planned; transport decision not yet accepted
+- **Status:** WebSocket barge-in complete; laptop AEC transport decision pending
 - **Date:** 2026-08-01
 - **Related roadmap item:** [Lobby Wake roadmap](../../TODO.md)
 
@@ -36,15 +36,21 @@ geometry, and distance. It is not a reliable source-separation mechanism.
 
 ## Current harness behavior
 
-The default is intentionally half-duplex. While `AudioPlayer.playing` is true,
-`OpenAIRealtimeAgent.send_audio()` discards microphone frames. This prevents
-speaker feedback but makes interruption impossible: Realtime receives no audio,
-so VAD cannot emit `input_audio_buffer.speech_started`.
+Full duplex and WebSocket barge-in are now the default for headphones or an
+already echo-cancelled input. On `input_audio_buffer.speech_started`, the client
+aborts current and queued playback, estimates the heard offset from PCM playback
+progress, sends `conversation.item.truncate`, ignores late audio deltas for the
+interrupted item, and logs VAD-to-playback-stop latency and truncation state.
 
-`--full-duplex` removes that local gate and is usable with headphones or an
-already echo-cancelled input. It does not currently complete WebSocket barge-in:
-the client logs `speech_started`, but it does not stop current/queued playback,
-track the played offset, or send `conversation.item.truncate`.
+`--no-full-duplex` retains the previous half-duplex behavior for unprocessed
+laptop speakers. It prevents speaker feedback by discarding microphone frames
+during playback, so interruption is unavailable in that fallback mode.
+
+An initial synthetic live test exercised the complete WebSocket path: remote VAD
+detected the interrupt, local playback stopped in 116.83 ms, Realtime cancelled
+the active response, truncation was confirmed at a 559 ms heard offset, and the
+interrupting utterance received a completed response. This validates protocol
+ownership only; it does not validate microphone acoustics or AEC.
 
 OpenAI's [interruption and truncation guide][openai-interruption] distinguishes
 the transports:
@@ -78,9 +84,8 @@ documentation][apple-voice].
 
 ## Recommended sequence
 
-1. Complete transport-independent WebSocket barge-in using headphones:
-   continuous mic upload, playback abort, item tracking, played-offset tracking,
-   truncation, and latency logs.
+1. Validate the completed transport-independent WebSocket barge-in using
+   headphones and collect interruption latency samples.
 2. Build the smallest possible WebRTC AEC spike using the built-in MacBook
    microphone and speakers. Measure it rather than assuming browser AEC quality.
 3. Build a native voice-processing spike only if WebRTC's runtime/packaging

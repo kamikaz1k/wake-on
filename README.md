@@ -128,19 +128,22 @@ The low-latency defaults use Sherpa's 160 ms chunk-8 model. Use
 `--model-chunk 16` for its 320 ms model when comparing the accuracy/latency
 tradeoff.
 
-By default, microphone upload pauses while the assistant is speaking. This
-prevents feedback when using laptop speakers, but it also disables barge-in
-during playback. With headphones or an echo-cancelled audio device, enable
-continuous microphone upload:
+Microphone upload continues while the assistant is speaking so server VAD can
+detect an interruption. On `input_audio_buffer.speech_started`, the WebSocket
+client immediately stops queued/current playback and truncates the assistant
+item to the estimated amount actually heard. Use headphones or an already
+echo-cancelled device for this mode until laptop-speaker AEC is implemented.
+
+Temporarily fall back to half duplex when using unprocessed laptop speakers:
 
 ```sh
-uv run lobby-wake --full-duplex
+uv run lobby-wake --no-full-duplex
 ```
 
-Correct WebSocket barge-in still requires immediate playback cancellation and
-conversation-item truncation. Laptop speaker/microphone support additionally
-requires acoustic echo cancellation; both are tracked in the
-[roadmap](TODO.md) and [research note](docs/research/laptop-speaker-barge-in.md).
+Half duplex prevents speaker feedback, but it also prevents interruption while
+the assistant is speaking. Laptop speaker/microphone full duplex remains the
+separate acoustic echo-cancellation item in the [roadmap](TODO.md) and
+[research note](docs/research/laptop-speaker-barge-in.md).
 
 Select audio devices or change the response voice:
 
@@ -203,6 +206,9 @@ The latency log records:
 - `agent.first_audio_sent`
 - `agent.first_response_received`
 - `agent.first_response_played`
+- `agent.playback_interrupted`, including VAD-to-playback-stop latency and the
+  estimated heard audio offset
+- `agent.item_truncation_sent` and `agent.item_truncation_confirmed`
 - response transcripts and conversation lifecycle events
 - `agent.stopped`
 - orchestration state changes

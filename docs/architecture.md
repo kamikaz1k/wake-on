@@ -165,6 +165,32 @@ Preconnection is the default. `--no-preconnect` preserves the cold path for
 latency comparisons. Every completed conversation receives a fresh session so
 conversation history is not inherited by the next wake.
 
+## WebSocket barge-in lifecycle
+
+```mermaid
+sequenceDiagram
+    participant Mic as Microphone
+    participant Agent as Realtime agent
+    participant API as OpenAI Realtime
+    participant Player as AudioPlayer
+
+    API-->>Agent: response.output_audio.delta<br/>item_id · content_index
+    Agent->>Player: enqueue tagged PCM
+    Player-->>Player: track heard PCM offset
+    Mic->>API: continuous input_audio_buffer.append
+    API-->>Agent: input_audio_buffer.speech_started
+    Note over API: active response automatically cancelled
+    Agent->>Player: interrupt current + queued playback
+    Player-->>Agent: item_id + audio_end_ms
+    Agent->>API: conversation.item.truncate
+    API-->>Agent: conversation.item.truncated
+    Note over Agent,API: late deltas for interrupted item are discarded
+```
+
+This lifecycle is enabled by default for headphones and echo-cancelled inputs.
+`--no-full-duplex` disables microphone upload during playback as a temporary
+laptop-speaker fallback; that mode cannot support interruption.
+
 ## Unified end-request lifecycle
 
 All termination sources become an `EndConversationRequest`:
@@ -294,11 +320,12 @@ flowchart LR
     Queue --> Speaker
 ```
 
-Laptop-speaker mode is half-duplex by default: microphone upload pauses while
-assistant audio is queued or playing to reduce feedback. `--full-duplex`
-continues upload for headphones or an already echo-cancelled audio device, but
-correct WebSocket playback cancellation and item truncation are still planned.
-Built-in speaker/microphone full duplex also requires an AEC media path; see the
+Full duplex is the default so server VAD can hear an interruption. On
+`input_audio_buffer.speech_started`, the WebSocket client aborts current and
+queued playback, estimates the audio duration heard for the active assistant
+item, and sends `conversation.item.truncate`. `--no-full-duplex` is the
+half-duplex fallback for unprocessed speaker output. Built-in
+speaker/microphone full duplex still requires an AEC media path; see the
 [research note](research/laptop-speaker-barge-in.md).
 
 ## Key invariants

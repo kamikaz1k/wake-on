@@ -26,6 +26,11 @@ def test_build_report_extracts_activation_stages() -> None:
         {"event": "agent.user_speech_stopped", "monotonic_ns": 1_100_000_000},
         {"event": "agent.first_response_received", "monotonic_ns": 1_300_000_000},
         {"event": "agent.first_response_played", "monotonic_ns": 1_305_000_000},
+        {
+            "event": "agent.playback_interrupted",
+            "monotonic_ns": 1_400_000_000,
+            "vad_to_playback_stop_ms": 4.5,
+        },
     ]
 
     report = build_report(records)
@@ -43,6 +48,7 @@ def test_build_report_extracts_activation_stages() -> None:
     assert report["speech_stop_to_playback"]["p50"] == 205.0
     assert report["wake_to_first_playback"]["p50"] == 305.0
     assert report["response_to_playback"]["p50"] == 5.0
+    assert report["vad_to_playback_stop"]["p50"] == 4.5
 
 
 def test_percentile_interpolates() -> None:

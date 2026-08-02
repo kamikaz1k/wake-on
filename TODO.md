@@ -5,7 +5,7 @@ results belong in `docs/`; this file tracks what remains.
 
 ## Now: complete realtime conversation behavior
 
-- [ ] **Implement correct WebSocket barge-in for echo-cancelled inputs.**
+- [x] **Implement correct WebSocket barge-in for echo-cancelled inputs.**
   Continue microphone upload during assistant playback; track the active
   assistant item and played audio offset; on
   `input_audio_buffer.speech_started`, immediately stop local playback and send
@@ -59,5 +59,6 @@ results belong in `docs/`; this file tracks what remains.
 - [x] Readable terminal logs plus structured latency events.
 - [x] Harness-owned graceful and emergency conversation ending.
 - [x] Configurable server/semantic Realtime VAD.
+- [x] Headphone/echo-cancelled WebSocket barge-in with playback truncation.
 - [x] Guided positive/negative sample recorder.
 - [x] Architecture, lifecycle, latency, and wake-model decision documentation.

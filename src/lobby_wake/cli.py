@@ -68,8 +68,12 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--output-device", help="sounddevice output device name or index")
     parser.add_argument(
         "--full-duplex",
-        action="store_true",
-        help="Send mic audio during playback (use headphones to avoid echo)",
+        action=argparse.BooleanOptionalAction,
+        default=True,
+        help=(
+            "Send mic audio during playback for interruption (default: enabled; "
+            "use headphones until echo cancellation is available)"
+        ),
     )
     parser.add_argument("--log", type=Path, default=Path("latency.jsonl"))
     return parser
