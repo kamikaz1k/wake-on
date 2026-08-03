@@ -12,7 +12,7 @@ testing without network usage.
 ## Architecture
 
 ```text
-microphone/WAV -> rolling buffer -> sherpa-onnx KWS -> orchestrator -> agent
+microphone/WAV -> rolling buffer -> sherpa-onnx KWS -> wake route -> delegate
 ```
 
 See [docs/architecture.md](docs/architecture.md) for component, audio,
@@ -23,12 +23,17 @@ measurements at a glance. The wake-model decision is recorded in
 [the latency notebook](docs/latency.md).
 Current priorities are tracked in [TODO.md](TODO.md).
 
-The orchestrator owns one audio stream:
+The wake router owns one audio stream:
 
 - `LISTENING`: frames go to sherpa-onnx and a one-second rolling buffer.
 - `CONVERSATION`: buffered and live frames go to the agent adapter.
 - `ENDING`: microphone upload stops while a graceful farewell finishes.
 - When the conversation ends, the detector is reset and listening resumes.
+
+The current CLI installs one immutable route, `hey_lobby → lobby`. The public
+API also models a single-daemon route registry so future triggers can select
+different supervised delegates without competing microphone listeners. See the
+[routed library API](docs/library-api.md).
 
 ## Setup
 

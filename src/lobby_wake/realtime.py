@@ -287,6 +287,7 @@ class OpenAIRealtimeAgent:
         self._logger.emit(
             "agent.started",
             adapter="openai_realtime",
+            route_id=context.route_id,
             wake_phrase=wake.phrase,
             wake_to_agent_start_ms=(now_ns - wake.detected_at_ns) / 1_000_000,
             initial_audio_ms=initial_audio.size / sample_rate * 1000,

@@ -3,7 +3,19 @@ from __future__ import annotations
 import io
 import json
 
-from lobby_wake.events import EventLogger
+from lobby_wake.events import EventLogger, WakeEvent
+
+
+def test_wake_event_derives_stable_trigger_id() -> None:
+    event = WakeEvent("Hey, Lobby!", 123)
+
+    assert event.trigger_id == "hey_lobby"
+
+
+def test_wake_event_normalizes_explicit_decoder_label() -> None:
+    event = WakeEvent("Hey Lobby", 123, trigger_id="HEY_LOBBY")
+
+    assert event.trigger_id == "hey_lobby"
 
 
 def test_console_output_is_human_readable() -> None:

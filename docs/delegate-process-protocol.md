@@ -70,7 +70,12 @@ Sent immediately after launch, before wake listening begins.
   "v": 1,
   "type": "start",
   "activation_id": "opaque-id",
-  "wake": {"phrase": "HEY LOBBY", "detected_at_ns": 1234},
+  "route_id": "lobby",
+  "wake": {
+    "phrase": "HEY LOBBY",
+    "trigger_id": "hey_lobby",
+    "detected_at_ns": 1234
+  },
   "sample_rate": 16000,
   "initial_audio": {
     "encoding": "float32le",

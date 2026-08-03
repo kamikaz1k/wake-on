@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import logging
+import re
 import sys
 import time
 from dataclasses import asdict, dataclass
@@ -13,6 +14,19 @@ from typing import Any, TextIO
 class WakeEvent:
     phrase: str
     detected_at_ns: int
+    trigger_id: str | None = None
+
+    def __post_init__(self) -> None:
+        trigger_id = normalize_trigger_id(self.trigger_id or self.phrase)
+        if not trigger_id:
+            raise ValueError("wake trigger_id cannot be empty")
+        object.__setattr__(self, "trigger_id", trigger_id)
+
+
+def normalize_trigger_id(value: str) -> str:
+    """Convert a spoken or decoder label into a stable routing key."""
+
+    return re.sub(r"[^a-z0-9]+", "_", value.casefold()).strip("_")
 
 
 class HumanEventFormatter(logging.Formatter):

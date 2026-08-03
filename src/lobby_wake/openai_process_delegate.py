@@ -179,24 +179,31 @@ class OpenAIProcessWorker:
         activation_id = message.get("activation_id")
         wake = message.get("wake")
         sample_rate = message.get("sample_rate")
+        route_id = message.get("route_id", "default")
         if not isinstance(activation_id, str) or not isinstance(wake, dict):
             raise ValueError("start requires activation and wake metadata")
         if not isinstance(sample_rate, int) or sample_rate <= 0:
             raise ValueError("start requires a positive sample rate")
+        if not isinstance(route_id, str) or not route_id:
+            raise ValueError("start requires a route ID")
         phrase = wake.get("phrase")
         detected_at_ns = wake.get("detected_at_ns")
+        trigger_id = wake.get("trigger_id")
         if not isinstance(phrase, str) or not isinstance(detected_at_ns, int):
             raise ValueError("wake metadata is invalid")
+        if trigger_id is not None and not isinstance(trigger_id, str):
+            raise ValueError("wake trigger ID is invalid")
         initial_audio = decode_float_audio(message.get("initial_audio"))
         self._controller.finish()
         self._controller.begin()
         self._activation_id = activation_id
         agent.start(
             DelegateStartContext(
-                wake=WakeEvent(phrase, detected_at_ns),
+                wake=WakeEvent(phrase, detected_at_ns, trigger_id=trigger_id),
                 conversation=self._controller.handle,
                 sample_rate=sample_rate,
                 initial_audio=initial_audio,
+                route_id=route_id,
             )
         )
         self._writer.emit("started", activation_id=activation_id)

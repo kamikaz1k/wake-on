@@ -12,13 +12,15 @@ from .agent import AudioInputOwnership, MockConversationAgent
 from .audio import MicrophoneSource, WaveFileSource
 from .conversation import ConversationController, EndSource
 from .events import EventLogger
-from .orchestrator import Orchestrator
+from .orchestrator import WakeListener
 from .process_delegate import ProcessConversationDelegate
 from .realtime import DEFAULT_INSTRUCTIONS, OpenAIRealtimeAgent
 from .wake import SherpaWakeWordEngine
 
 DEFAULT_MODEL_DIR = Path("models/sherpa-onnx-kws-zipformer-zh-en-3M-2025-12-20")
 DEFAULT_KEYWORDS_FILE = Path("models/hey-lobby.txt")
+DEFAULT_ROUTE_ID = "lobby"
+DEFAULT_TRIGGER_ID = "hey_lobby"
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -154,11 +156,13 @@ def main() -> None:
             vad_eagerness=args.vad_eagerness,
             conversation_controller=conversation_controller,
         )
-    orchestrator = Orchestrator(
+    orchestrator = WakeListener(
         detector,
         agent,
         logger,
         sample_rate=source.sample_rate,
+        trigger_id=DEFAULT_TRIGGER_ID,
+        route_id=DEFAULT_ROUTE_ID,
         preroll_seconds=args.preroll_seconds,
         conversation_controller=conversation_controller,
     )

@@ -1,8 +1,10 @@
 # Lobby Wake Architecture
 
-Lobby Wake is a macOS-first harness that listens locally for **“Hey Lobby”**,
-starts one long-running voice delegate, and owns that conversation until it
-finishes or is forcibly ended.
+Lobby Wake is a macOS-first harness that listens locally for wake triggers,
+routes a match to one long-running delegate, and owns that exclusive
+conversation until it finishes or is forcibly ended. The current application
+configures only **“Hey Lobby”**; the library API preserves the routed daemon
+boundary for additional assistants.
 
 Architectural decisions:
 
@@ -12,6 +14,7 @@ Planned work and research:
 
 - [Canonical current latency pipeline](latency-pipeline.md)
 - [Delegate process protocol](delegate-process-protocol.md)
+- [Routed library API](library-api.md)
 - [Roadmap](../TODO.md)
 - [Laptop speaker/microphone barge-in](research/laptop-speaker-barge-in.md)
 
@@ -25,7 +28,8 @@ flowchart LR
         Source["MicrophoneSource<br/>or WaveFileSource"]
         Ring["AudioRingBuffer<br/>1 second preroll"]
         KWS["SherpaWakeWordEngine<br/>local keyword spotting"]
-        Harness["Orchestrator<br/>lifecycle owner"]
+        Harness["WakeRouter<br/>lifecycle + routing owner"]
+        Routes["WakeRoute registry<br/>trigger_id → delegate"]
         Control["ConversationController<br/>serialized end requests"]
         Handle["ConversationHandle<br/>delegate-scoped capability"]
         Contract["ConversationDelegate<br/>backend-neutral contract"]
@@ -44,8 +48,9 @@ flowchart LR
     Source -->|"float32 frames"| Harness
     Harness --> Ring
     Harness -->|"LISTENING frames"| KWS
-    KWS -->|"WakeEvent"| Harness
-    Harness --> Contract
+    KWS -->|"WakeEvent + trigger_id"| Harness
+    Harness --> Routes
+    Routes -->|"selected route"| Contract
     Contract --> Agent
     Harness -->|"buffered + live audio"| Agent
     Agent <-->|"24 kHz PCM + events"| Realtime
@@ -72,7 +77,9 @@ only after a wake has been accepted.
 
 | Component | Owns | Does not own |
 | --- | --- | --- |
-| `Orchestrator` | Top-level state, audio routing, detector reset, lifecycle transitions | WebSocket protocol details |
+| `WakeRouter` | Top-level state, trigger routing, exclusive activation, detector reset | Backend protocol details |
+| `WakeRoute` | Immutable trigger ownership and delegate selection | Conversation state |
+| `WakeListener` | One-route convenience API over `WakeRouter` | A separate lifecycle implementation |
 | `ConversationController` | One active generation and serialized end requests | Audio or delegate execution |
 | `ConversationHandle` | A restricted, generation-scoped delegate capability | Harness internals |
 | `ConversationDelegate` | Pre-wake preparation, activation, status, audio ownership, and shutdown contract | Any backend protocol |
@@ -82,9 +89,30 @@ only after a wake has been accepted.
 | `EventLogger` | Human terminal logs and structured JSONL events | Audio content |
 
 The harness depends on `ConversationDelegate`, not OpenAI Realtime. The current
-Realtime class implements that contract in-process. A future child-process
-supervisor can translate the same lifecycle into messages without changing the
-wake detector or orchestrator.
+Realtime class implements that contract in-process, and the supervised adapter
+translates the same lifecycle to child-process messages. Routing does not alter
+the delegate contract.
+
+## Routed daemon boundary
+
+```mermaid
+flowchart LR
+    Mic["One microphone stream"] --> Buffer["One preroll buffer"]
+    Buffer --> KWS["Multi-keyword detector"]
+    KWS -->|"trigger_id"| Router["WakeRouter"]
+    Router --> Registry["Immutable WakeRoute registry"]
+    Registry --> Lobby["lobby supervisor"]
+    Registry --> Timbo["timbo supervisor"]
+    Registry --> Jigs["jigs supervisor"]
+    Router --> Lease["One active generation lease"]
+    Lease -->|"selected route only"| Active["Conversation audio + lifecycle"]
+```
+
+The daemon replaces several competing listeners; it does not coordinate
+multiple wake daemons. Each trigger has exactly one route owner, and all routes
+share one conversation controller. The current CLI creates only the `lobby`
+route. Direct delegate-to-delegate handoff is reserved for a future atomic
+router operation.
 
 ## Delegate contract
 
@@ -147,7 +175,7 @@ stateDiagram-v2
         LocalWakeDetection --> WakeAccepted: "Hey Lobby"
     }
 
-    LISTENING --> CONVERSATION: WakeEvent<br/>begin generation<br/>start agent
+    LISTENING --> CONVERSATION: WakeEvent.trigger_id<br/>select route<br/>begin generation
     CONVERSATION --> CONVERSATION: stream mic audio<br/>play assistant audio
     CONVERSATION --> ENDING: accepted graceful end
     CONVERSATION --> ENDING: accepted immediate end
@@ -162,6 +190,7 @@ Important consequences:
 
 - Wake detection runs only in `LISTENING`.
 - A second wake cannot create an overlapping conversation.
+- Only the active route receives conversation audio.
 - Microphone upload stops in `ENDING`.
 - An immediate end can collapse `ENDING → LISTENING` in the same audio tick.
 - Inactivity and unexpected disconnection may stop the agent directly and
@@ -174,7 +203,8 @@ sequenceDiagram
     autonumber
     actor User
     participant Source as Audio source
-    participant Harness as Orchestrator
+    participant Harness as WakeRouter
+    participant Routes as WakeRoute registry
     participant Ring as AudioRingBuffer
     participant KWS as Sherpa KWS
     participant Agent as Realtime agent
@@ -187,6 +217,8 @@ sequenceDiagram
     Harness->>Ring: append frame
     Harness->>KWS: process frame locally
     KWS-->>Harness: WakeEvent
+    Harness->>Routes: resolve trigger_id
+    Routes-->>Harness: selected route
     Harness->>Ring: snapshot preroll
     Harness->>Harness: begin conversation generation
     Harness->>Agent: start(context: wake, handle, sample rate, preroll)
@@ -399,7 +431,7 @@ speaker/microphone full duplex still requires an AEC media path; see the
 
 | Area | File |
 | --- | --- |
-| Top-level lifecycle and routing | `src/lobby_wake/orchestrator.py` |
+| Routed lifecycle and public listener API | `src/lobby_wake/orchestrator.py` |
 | Delegate lifecycle contract | `src/lobby_wake/agent.py` |
 | End requests and delegate capability | `src/lobby_wake/conversation.py` |
 | Realtime connection, tools, and audio | `src/lobby_wake/realtime.py` |

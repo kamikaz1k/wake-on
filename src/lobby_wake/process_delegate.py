@@ -138,8 +138,10 @@ class ProcessConversationDelegate:
             "wake": {
                 "phrase": context.wake.phrase,
                 "detected_at_ns": context.wake.detected_at_ns,
+                "trigger_id": context.wake.trigger_id,
             },
             "sample_rate": context.sample_rate,
+            "route_id": context.route_id,
         }
         if context.initial_audio is not None:
             message["initial_audio"] = encode_float_audio(context.initial_audio)
@@ -153,6 +155,7 @@ class ProcessConversationDelegate:
         self._logger.emit(
             "delegate.activation_sent",
             adapter="process",
+            route_id=context.route_id,
             activation_id=activation_id,
             wake_to_delegate_start_ms=(
                 time.monotonic_ns() - context.wake.detected_at_ns

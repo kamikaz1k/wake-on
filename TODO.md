@@ -21,11 +21,25 @@ results belong in `docs/`; this file tracks what remains.
   supports pre-wake warming, explicit health, streamed or delegate-owned audio,
   generation-scoped end requests, bounded graceful end, emergency termination,
   and crash recovery without exposing shell execution or secrets in logs.
-- [ ] **Extract a stable library API.** Separate reusable wake/listen lifecycle
-  components from the current CLI assembly so another macOS application can
-  embed the harness and select its own delegate.
+- [x] **Extract a stable routed library API.** `WakeListener` provides the
+  current one-agent embedding, while `WakeRouter`, immutable `WakeRoute`s, and
+  stable trigger IDs preserve a single-daemon multiplexer boundary. The CLI
+  intentionally configures only the `lobby` route in this phase. Atomic
+  delegate handoff and multi-route configuration remain later extensions.
 
-## Next: complete the reference realtime experience
+## Next: explore computer use in the reference delegate
+
+- [ ] **Define the computer-use boundary and safety model.** Keep computer use
+  inside the selected conversation delegate rather than the wake core. Specify
+  user-visible action feedback, authorization, cancellation, emergency end,
+  sensitive-screen handling, and how a long-running task retains its
+  generation-scoped conversation capability.
+- [ ] **Build one bounded computer-use prototype.** Let Lobby perform a small,
+  reversible desktop task while the voice conversation remains interruptible.
+  Measure tool startup, action feedback latency, cancellation, and process
+  failure behavior before broadening the action surface.
+
+## Follow-up: complete the reference realtime experience
 
 - [ ] **Choose the laptop speaker/microphone echo-cancellation path.** Run a
   bounded spike comparing a WebRTC media client with a native macOS

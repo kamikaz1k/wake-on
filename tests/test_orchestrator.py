@@ -3,6 +3,7 @@ from __future__ import annotations
 import time
 
 import numpy as np
+import pytest
 
 from lobby_wake.agent import (
     AudioInputOwnership,
@@ -15,20 +16,27 @@ from lobby_wake.agent import (
 )
 from lobby_wake.conversation import ConversationController, EndConversationRequest, EndMode
 from lobby_wake.events import EventLogger, WakeEvent
-from lobby_wake.orchestrator import Orchestrator, State
+from lobby_wake.orchestrator import (
+    Orchestrator,
+    State,
+    WakeListener,
+    WakeRoute,
+    WakeRouter,
+)
 
 
 class TriggerOnce:
-    def __init__(self) -> None:
+    def __init__(self, phrase: str = "HEY LOBBY") -> None:
         self.triggered = False
         self.reset_count = 0
+        self.phrase = phrase
 
     def process(self, samples: np.ndarray, sample_rate: int) -> WakeEvent | None:
         del samples, sample_rate
         if self.triggered:
             return None
         self.triggered = True
-        return WakeEvent("HEY LOBBY", time.monotonic_ns())
+        return WakeEvent(self.phrase, time.monotonic_ns())
 
     def reset(self) -> None:
         self.reset_count += 1
@@ -169,6 +177,71 @@ def test_unavailable_delegate_does_not_begin_conversation() -> None:
     assert orchestrator.state is State.LISTENING
     assert agent.start_context is None
     assert detector.reset_count == 1
+    logger.close()
+
+
+def test_single_route_listener_rejects_an_unrouted_trigger() -> None:
+    detector = TriggerOnce("HEY TIMBO")
+    logger = EventLogger()
+    agent = EndingAgent()
+    listener = WakeListener(
+        detector,
+        agent,
+        logger,
+        sample_rate=16_000,
+        trigger_id="hey_lobby",
+        route_id="lobby",
+    )
+    listener.prepare()
+
+    listener.process_audio(np.ones(320, dtype=np.float32))
+
+    assert listener.state is State.LISTENING
+    assert listener.active_route_id is None
+    assert agent.start_context is None
+    assert detector.reset_count == 1
+    logger.close()
+
+
+def test_router_dispatches_only_the_matching_route() -> None:
+    detector = TriggerOnce("HEY TIMBO")
+    logger = EventLogger()
+    lobby = EndingAgent()
+    timbo = EndingAgent()
+    router = WakeRouter(
+        detector,
+        [
+            WakeRoute.for_trigger("lobby", "hey_lobby", lobby),
+            WakeRoute.for_trigger("timbo", "hey_timbo", timbo),
+        ],
+        logger,
+        sample_rate=16_000,
+    )
+    router.prepare()
+
+    router.process_audio(np.ones(320, dtype=np.float32))
+
+    assert router.state is State.CONVERSATION
+    assert router.active_route_id == "timbo"
+    assert lobby.start_context is None
+    assert timbo.start_context is not None
+    assert timbo.start_context.route_id == "timbo"
+    logger.close()
+
+
+def test_router_rejects_duplicate_trigger_ownership() -> None:
+    logger = EventLogger()
+
+    with pytest.raises(ValueError, match="owned by multiple routes"):
+        WakeRouter(
+            TriggerOnce(),
+            [
+                WakeRoute.for_trigger("lobby", "hey_lobby", EndingAgent()),
+                WakeRoute.for_trigger("backup", "hey_lobby", EndingAgent()),
+            ],
+            logger,
+            sample_rate=16_000,
+        )
     logger.close()
 
 

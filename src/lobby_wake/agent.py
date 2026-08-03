@@ -55,6 +55,7 @@ class DelegateStartContext:
     conversation: ConversationHandle
     sample_rate: int
     initial_audio: FloatAudio | None
+    route_id: str = "default"
 
 
 class ConversationDelegate(Protocol):
@@ -139,6 +140,7 @@ class MockConversationAgent:
         self._logger.emit(
             "delegate.started",
             adapter="mock",
+            route_id=context.route_id,
             wake_phrase=context.wake.phrase,
             wake_to_agent_start_ms=(
                 self._started_at_ns - context.wake.detected_at_ns
