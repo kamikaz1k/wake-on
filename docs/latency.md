@@ -58,6 +58,68 @@ comes from one repeatable WAV fixture and uses an in-memory RMS estimate.
 | Speech stop → first response audio | 586 ms on latest run; 576 ms historical p50 | Remote response path |
 | Response received → playback | 0.92 ms on latest run; 0.40 ms historical p50 | Local playback handoff is negligible |
 
+## Delegate boundary benchmark
+
+The delegate contract and supervised process adapter were benchmarked locally
+on 2026-08-02 with 100 activations and a one-second, 16 kHz float32 preroll:
+
+```sh
+.venv/bin/python scripts/benchmark_delegate_latency.py \
+  --iterations 100 \
+  --preroll-ms 1000
+```
+
+| Boundary | p50 | p95 | max |
+| --- | ---: | ---: | ---: |
+| Existing in-process OpenAI warm `start()` | 0.370 ms | 0.443 ms | 1.064 ms |
+| Process delegate parent `start()` | 0.366 ms | 0.450 ms | 0.862 ms |
+| Process send → child `started` acknowledgement | 0.489 ms | 0.610 ms | 1.000 ms |
+
+The external process boundary adds roughly 0.12 ms at p50 relative to the
+in-process call completing, which is negligible beside the measured wake-model
+and remote-response stages. This is a synthetic local dispatch benchmark, not
+a replacement for trigger-to-first-audio testing: it excludes Sherpa wake
+detection, network connection state, VAD endpointing, model inference, and
+playback. The OpenAI reference remains in-process, so this change did not put
+IPC into its current audio path.
+
+Process delegate logs now expose `wake_to_delegate_start_ms`,
+`protocol_write_ms`, and `activation_dispatch_ms`; the standard latency report
+includes the first and third boundaries.
+
+### Live OpenAI Realtime process comparison
+
+The actual OpenAI Realtime reference was then run both in-process and behind
+the supervised process adapter on 2026-08-02. Both paths used warm
+`gpt-realtime-2.1` sessions, server VAD at 300 ms, the same three-second
+`positive-002-quiet.wav` input, and real response playback. Three activations
+were collected per path:
+
+```sh
+.venv/bin/python scripts/compare_openai_delegate_latency.py \
+  --runs 3 \
+  --timeout 20
+```
+
+| Boundary | In-process p50 | Process p50 | Process range |
+| --- | ---: | ---: | ---: |
+| Wake → first audio uploaded | 26.66 ms | 27.58 ms | 24.26–28.34 ms |
+| Server speech stop → first response audio | 457.57 ms | 496.42 ms | 346.10–928.67 ms |
+| Wake → first response audio | 707.17 ms | 784.08 ms | 735.73–1238.24 ms |
+| Wake → first playback | 707.55 ms | 784.51 ms | 736.03–1238.28 ms |
+
+The process boundary adds approximately **0.92 ms p50** at the first-upload
+boundary. That is the controlled local comparison and shows no material IPC
+regression. End-to-end response p50 was 76.9 ms slower in this six-request
+smoke test, but the difference occurs after server speech stop and the process
+runs ranged by 582.6 ms there. With only three samples, it is server-response
+variance rather than evidence of a transport regression. Use at least 30
+interleaved requests before comparing remote-response percentiles.
+
+Raw structured logs are written to `/tmp/wake-on-openai-inprocess.jsonl` and
+`/tmp/wake-on-openai-process.jsonl`. They contain timing metadata, not API keys
+or audio content.
+
 ## Realtime turn handoff
 
 The original integration explicitly used semantic VAD with high eagerness.

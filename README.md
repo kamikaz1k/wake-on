@@ -151,6 +151,42 @@ Select audio devices or change the response voice:
 uv run lobby-wake --device 1 --output-device 2 --voice marin
 ```
 
+## Delegate lifecycle
+
+The wake harness targets the backend-neutral `ConversationDelegate` protocol.
+Before it begins listening, it calls `prepare()` so a delegate can load local
+resources, start a worker, or preconnect a network session. Readiness reports
+both whether the delegate can accept a cold activation and whether its warm
+path is ready.
+
+On wake, the delegate receives a structured activation containing the wake
+event, buffered audio, source sample rate, and a generation-scoped conversation
+handle. Delegates may choose harness-streamed microphone audio or declare that
+they own their conversation media path—for example, a WebRTC client. The
+OpenAI Realtime implementation is the reference delegate, not a dependency of
+the wake-word contract. See [the architecture](docs/architecture.md#delegate-contract).
+
+An external long-running backend can be launched with `--agent process`. Wake
+On starts it before listening, supervises crashes, and communicates over the
+[versioned delegate process protocol](docs/delegate-process-protocol.md):
+
+```sh
+uv run lobby-wake \
+  --agent process \
+  --delegate-command python path/to/delegate.py
+```
+
+The command is executed directly without a shell. Put every Wake On option
+before `--delegate-command`; remaining arguments belong to the child.
+
+Run the existing OpenAI Realtime reference behind the supervised boundary with:
+
+```sh
+uv run lobby-wake \
+  --agent process \
+  --delegate-command python -m lobby_wake.openai_process_delegate
+```
+
 ## Ending conversations
 
 The Realtime agent can call the harness-owned `end_conversation` function when

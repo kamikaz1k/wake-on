@@ -20,6 +20,16 @@ def test_build_report_extracts_activation_stages() -> None:
         },
         {"event": "activation.listening", "monotonic_ns": 1_001_000_000},
         {"event": "agent.started", "monotonic_ns": 1_002_000_000},
+        {
+            "event": "delegate.activation_sent",
+            "monotonic_ns": 1_002_500_000,
+            "wake_to_delegate_start_ms": 2.5,
+        },
+        {
+            "event": "delegate.activation_started",
+            "monotonic_ns": 1_002_800_000,
+            "activation_dispatch_ms": 0.3,
+        },
         {"event": "agent.connection_reused", "monotonic_ns": 1_003_000_000},
         {"event": "agent.first_audio_sent", "monotonic_ns": 1_004_000_000},
         {"event": "agent.user_speech_started", "monotonic_ns": 1_010_000_000},
@@ -40,6 +50,8 @@ def test_build_report_extracts_activation_stages() -> None:
     assert report["wake_detector_call"]["p50"] == 2.5
     assert report["wake_to_feedback"]["p50"] == 1.0
     assert report["wake_to_agent_start"]["p50"] == 2.0
+    assert report["wake_to_delegate_start"]["p50"] == 2.5
+    assert report["delegate_dispatch"]["p50"] == 0.3
     assert report["wake_to_warm_connection"]["p50"] == 3.0
     assert report["wake_to_cold_connection"]["count"] == 0
     assert report["wake_to_first_audio_sent"]["p50"] == 4.0

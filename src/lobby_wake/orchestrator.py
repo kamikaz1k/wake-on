@@ -3,7 +3,12 @@ from __future__ import annotations
 import time
 from enum import StrEnum
 
-from .agent import ConversationAgent
+from .agent import (
+    AudioInputOwnership,
+    ConversationDelegate,
+    DelegatePrepareContext,
+    DelegateStartContext,
+)
 from .conversation import (
     ConversationController,
     ConversationHandle,
@@ -27,7 +32,7 @@ class Orchestrator:
     def __init__(
         self,
         detector: WakeWordEngine,
-        agent: ConversationAgent,
+        agent: ConversationDelegate,
         logger: EventLogger,
         *,
         sample_rate: int,
@@ -49,12 +54,19 @@ class Orchestrator:
         return self._conversation.handle
 
     def prepare(self) -> None:
-        self._agent.prepare()
-        self._logger.emit("orchestrator.ready", state=self.state)
+        self._agent.prepare(DelegatePrepareContext(sample_rate=self._sample_rate))
+        status = self._agent.status
+        self._logger.emit(
+            "orchestrator.ready",
+            state=self.state,
+            delegate_health=status.health,
+            delegate_warm=status.warm,
+        )
 
     def process(self, samples: FloatAudio) -> None:
         self._ring.append(samples)
         if self.state is State.LISTENING:
+            self._agent.poll()
             detector_call_started_ns = time.monotonic_ns()
             wake = self._detector.process(samples, self._sample_rate)
             detector_call_ms = (time.monotonic_ns() - detector_call_started_ns) / 1_000_000
@@ -68,6 +80,16 @@ class Orchestrator:
                 audio_frame_ms=samples.size / self._sample_rate * 1000,
                 detector_call_ms=detector_call_ms,
             )
+            delegate_status = self._agent.status
+            if not delegate_status.accepting_activation:
+                self._logger.emit(
+                    "activation.unavailable",
+                    delegate_health=delegate_status.health,
+                    detail=delegate_status.detail,
+                )
+                self._detector.reset()
+                self._ring.clear()
+                return
             self._logger.emit(
                 "activation.listening",
                 wake_to_feedback_ms=(time.monotonic_ns() - wake.detected_at_ns) / 1_000_000,
@@ -84,7 +106,19 @@ class Orchestrator:
                     speech_rms_threshold=speech_tail.rms_threshold,
                 )
             self._conversation.begin()
-            self._agent.start(initial_audio, self._sample_rate, wake)
+            delegate_audio = (
+                initial_audio
+                if self._agent.capabilities.audio_input is AudioInputOwnership.HARNESS
+                else None
+            )
+            self._agent.start(
+                DelegateStartContext(
+                    wake=wake,
+                    conversation=self._conversation.handle,
+                    sample_rate=self._sample_rate,
+                    initial_audio=delegate_audio,
+                )
+            )
             self.state = State.CONVERSATION
             self._logger.emit("orchestrator.state", state=self.state)
             return
@@ -102,7 +136,10 @@ class Orchestrator:
                 end_mode=request.mode,
             )
 
-        if self.state is State.CONVERSATION:
+        if (
+            self.state is State.CONVERSATION
+            and self._agent.capabilities.audio_input is AudioInputOwnership.HARNESS
+        ):
             self._agent.send_audio(samples, self._sample_rate)
         self._agent.poll()
         if not self._agent.active:

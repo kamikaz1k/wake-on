@@ -3,7 +3,7 @@
 This is the canonical prioritized work list. Architecture rationale and measured
 results belong in `docs/`; this file tracks what remains.
 
-## Now: complete realtime conversation behavior
+## Now: finish the delegate/library boundary
 
 - [x] **Implement correct WebSocket barge-in for echo-cancelled inputs.**
   Continue microphone upload during assistant playback; track the active
@@ -11,6 +11,22 @@ results belong in `docs/`; this file tracks what remains.
   `input_audio_buffer.speech_started`, immediately stop local playback and send
   `conversation.item.truncate`; log detection-to-playback-stop latency. This is
   required for headphones and for any future AEC input path.
+- [x] **Define the in-process delegate contract.** The backend-neutral contract
+  now includes idempotent pre-wake preparation, readiness/warm status, a
+  conversation-scoped start payload and end handle, declared microphone
+  ownership, graceful end, emergency end, and failure health. The OpenAI
+  Realtime implementation remains an in-process reference delegate.
+- [x] **Add a supervised delegate adapter.** The harness can launch and monitor
+  an external long-running process through a versioned JSONL protocol. It
+  supports pre-wake warming, explicit health, streamed or delegate-owned audio,
+  generation-scoped end requests, bounded graceful end, emergency termination,
+  and crash recovery without exposing shell execution or secrets in logs.
+- [ ] **Extract a stable library API.** Separate reusable wake/listen lifecycle
+  components from the current CLI assembly so another macOS application can
+  embed the harness and select its own delegate.
+
+## Next: complete the reference realtime experience
+
 - [ ] **Choose the laptop speaker/microphone echo-cancellation path.** Run a
   bounded spike comparing a WebRTC media client with a native macOS
   `AVAudioEngine` voice-processing adapter. Record measured interruption
@@ -26,18 +42,6 @@ results belong in `docs/`; this file tracks what remains.
   `speech_stopped`, then server `speech_stopped` → playback. Compare server VAD
   at 200/300/500 ms and semantic VAD high using live speech. Keep the
   [canonical latency pipeline](docs/latency-pipeline.md) current with the result.
-
-## Next: finish the delegate/library boundary
-
-- [ ] **Define the delegate process contract.** Specify start payload, streamed
-  audio ownership, health/ready events, graceful end, emergency kill, crash
-  recovery, and generation-scoped authorization.
-- [ ] **Add a supervised delegate adapter.** Allow the wake harness to launch
-  and monitor an external long-running process rather than coupling the product
-  to `OpenAIRealtimeAgent` in-process.
-- [ ] **Extract a stable library API.** Separate reusable wake/listen lifecycle
-  components from the current CLI assembly so another macOS application can
-  embed the harness and select its own delegate.
 
 ## Later: production hardening
 

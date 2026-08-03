@@ -9,13 +9,20 @@ from typing import Any
 
 import numpy as np
 
+from .agent import (
+    DelegateCapabilities,
+    DelegateHealth,
+    DelegatePrepareContext,
+    DelegateStartContext,
+    DelegateStatus,
+)
 from .conversation import (
     ConversationController,
     EndConversationRequest,
     EndMode,
     EndSource,
 )
-from .events import EventLogger, WakeEvent
+from .events import EventLogger
 from .playback import AudioPlayer, PlaybackPosition
 from .ring_buffer import FloatAudio
 
@@ -201,11 +208,30 @@ class OpenAIRealtimeAgent:
     def active(self) -> bool:
         return self._active
 
-    def prepare(self) -> None:
+    @property
+    def capabilities(self) -> DelegateCapabilities:
+        return DelegateCapabilities()
+
+    @property
+    def status(self) -> DelegateStatus:
+        with self._state_lock:
+            if self._closing:
+                return DelegateStatus(DelegateHealth.CLOSED, accepting_activation=False)
+            if not self._prepared:
+                return DelegateStatus(DelegateHealth.CREATED, accepting_activation=False)
+            return DelegateStatus(
+                DelegateHealth.READY,
+                accepting_activation=True,
+                warm=self._ready and self._ws is not None,
+                detail="preconnecting" if self._preconnect and not self._ready else None,
+            )
+
+    def prepare(self, context: DelegatePrepareContext) -> None:
+        del context
         self._player.start()
         self._prepared = True
         self._logger.emit(
-            "agent.prepared",
+            "delegate.prepared",
             adapter="openai_realtime",
             model=self._model,
             voice=self._voice,
@@ -225,9 +251,14 @@ class OpenAIRealtimeAgent:
             self._logger.emit("agent.preconnection_started", adapter="openai_realtime")
             self._ensure_connection()
 
-    def start(self, initial_audio: FloatAudio, sample_rate: int, wake: WakeEvent) -> None:
+    def start(self, context: DelegateStartContext) -> None:
         if self._active:
             return
+        if context.initial_audio is None:
+            raise ValueError("OpenAIRealtimeAgent requires harness-owned input audio")
+        initial_audio = context.initial_audio
+        sample_rate = context.sample_rate
+        wake = context.wake
         now_ns = time.monotonic_ns()
         initial_pcm16 = float_audio_to_pcm16(initial_audio, sample_rate)
         with self._state_lock:

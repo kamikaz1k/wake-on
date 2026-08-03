@@ -32,6 +32,7 @@ dev = [
 lobby-wake = "lobby_wake.cli:main"
 lobby-latency-report = "lobby_wake.latency:main"
 lobby-record-samples = "lobby_wake.sample_recorder:main"
+lobby-openai-delegate = "lobby_wake.openai_process_delegate:main"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/lobby_wake"]

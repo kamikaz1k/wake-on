@@ -22,6 +22,8 @@ METRICS = (
     Metric("wake_detector_call", "Wake detector call"),
     Metric("wake_to_feedback", "Wake → listening feedback"),
     Metric("wake_to_agent_start", "Wake → agent start"),
+    Metric("wake_to_delegate_start", "Wake → process delegate send"),
+    Metric("delegate_dispatch", "Process delegate send → started"),
     Metric("wake_to_warm_connection", "Wake → warm connection"),
     Metric("wake_to_cold_connection", "Wake → cold connection"),
     Metric("wake_to_first_audio_sent", "Wake → first audio sent"),
@@ -119,6 +121,14 @@ def extract_metrics(records: Iterable[dict[str, Any]]) -> dict[str, list[float]]
             values["wake_to_agent_start"].append(
                 _field_or_delta(record, "wake_to_agent_start_ms", wake_ns, now_ns)
             )
+        elif event == "delegate.activation_sent":
+            values["wake_to_delegate_start"].append(
+                _field_or_delta(record, "wake_to_delegate_start_ms", wake_ns, now_ns)
+            )
+        elif event == "delegate.activation_started":
+            dispatch_ms = record.get("activation_dispatch_ms")
+            if isinstance(dispatch_ms, int | float):
+                values["delegate_dispatch"].append(float(dispatch_ms))
         elif event == "agent.connection_reused":
             values["wake_to_warm_connection"].append(
                 _field_or_delta(record, "wake_to_connection_ready_ms", wake_ns, now_ns)

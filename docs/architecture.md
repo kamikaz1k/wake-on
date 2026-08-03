@@ -11,6 +11,7 @@ Architectural decisions:
 Planned work and research:
 
 - [Canonical current latency pipeline](latency-pipeline.md)
+- [Delegate process protocol](delegate-process-protocol.md)
 - [Roadmap](../TODO.md)
 - [Laptop speaker/microphone barge-in](research/laptop-speaker-barge-in.md)
 
@@ -27,7 +28,8 @@ flowchart LR
         Harness["Orchestrator<br/>lifecycle owner"]
         Control["ConversationController<br/>serialized end requests"]
         Handle["ConversationHandle<br/>delegate-scoped capability"]
-        Agent["OpenAIRealtimeAgent<br/>audio and tool adapter"]
+        Contract["ConversationDelegate<br/>backend-neutral contract"]
+        Agent["OpenAIRealtimeAgent<br/>reference delegate"]
         Player["AudioPlayer<br/>queued PCM playback"]
         Delegate["Long-running delegate<br/>extension point"]
         Signal["SIGUSR1<br/>emergency end"]
@@ -43,6 +45,8 @@ flowchart LR
     Harness --> Ring
     Harness -->|"LISTENING frames"| KWS
     KWS -->|"WakeEvent"| Harness
+    Harness --> Contract
+    Contract --> Agent
     Harness -->|"buffered + live audio"| Agent
     Agent <-->|"24 kHz PCM + events"| Realtime
     Agent --> Player
@@ -71,15 +75,65 @@ only after a wake has been accepted.
 | `Orchestrator` | Top-level state, audio routing, detector reset, lifecycle transitions | WebSocket protocol details |
 | `ConversationController` | One active generation and serialized end requests | Audio or delegate execution |
 | `ConversationHandle` | A restricted, generation-scoped delegate capability | Harness internals |
+| `ConversationDelegate` | Pre-wake preparation, activation, status, audio ownership, and shutdown contract | Any backend protocol |
 | `OpenAIRealtimeAgent` | Realtime connection, audio conversion, model events, graceful farewell | Top-level lifecycle state |
 | `SherpaWakeWordEngine` | Local wake detection | Conversation audio |
 | `AudioPlayer` | Non-blocking assistant playback | Microphone capture |
 | `EventLogger` | Human terminal logs and structured JSONL events | Audio content |
 
-The harness exposes the delegate seam through
-`orchestrator.conversation_handle`. It does not yet prescribe how the delegate
-is spawned; an in-process worker or child-process supervisor can receive the
-same restricted handle.
+The harness depends on `ConversationDelegate`, not OpenAI Realtime. The current
+Realtime class implements that contract in-process. A future child-process
+supervisor can translate the same lifecycle into messages without changing the
+wake detector or orchestrator.
+
+## Delegate contract
+
+The delegate lifecycle deliberately begins before the wake event:
+
+```mermaid
+sequenceDiagram
+    participant App
+    participant Harness as Wake harness
+    participant Delegate
+    participant Backend
+
+    App->>Harness: prepare()
+    Harness->>Delegate: prepare(sample_rate)
+    Delegate->>Backend: optional model load / process start / connection
+    Note over Harness,Delegate: Wake listening starts immediately<br/>warming may finish asynchronously
+    Delegate-->>Harness: status(accepting_activation, warm, health)
+    Harness->>Delegate: start(wake, generation handle, audio context)
+    alt Harness owns conversation microphone input
+        Harness->>Delegate: preroll + live audio frames
+    else Delegate owns conversation microphone input
+        Delegate->>Delegate: open/capture its media path
+    end
+    Delegate-->>Harness: active=false when complete
+    Harness->>Delegate: close() on application shutdown
+```
+
+Contract semantics:
+
+- `prepare(context)` is idempotent and is called before wake listening. A
+  delegate may load a local model, start a worker, authenticate, or preconnect a
+  socket. Preparation can be asynchronous; `status.warm` reports whether the
+  optimized path is ready.
+- `status.accepting_activation` is separate from `status.warm`. A delegate can
+  accept a wake on a cold path while warming is still in progress. If it is
+  false, the harness records the unavailable activation and remains in wake
+  listening rather than creating a broken conversation generation.
+- `start(context)` receives the wake event, source sample rate, optional
+  buffered audio, and a generation-scoped `ConversationHandle`. It must never
+  cause a second overlapping activation.
+- `AudioInputOwnership.HARNESS` receives the preroll and subsequent frames.
+  `DELEGATE` receives no audio from the harness and may own a WebRTC or native
+  conversation media path instead.
+- Graceful and immediate end requests flow from the harness to
+  `request_end`. The scoped handle allows the delegate to request the reverse
+  transition without gaining access to orchestrator internals.
+- `FAILED` status distinguishes a delegate failure from a normal completion.
+  The supervised process adapter restarts failed workers without putting that
+  policy into the wake-word core.
 
 ## Harness lifecycle
 
@@ -127,7 +181,7 @@ sequenceDiagram
     participant API as OpenAI Realtime
     participant Player as AudioPlayer
 
-    Note over Agent,API: Session is preconnected while LISTENING
+    Note over Agent,API: prepare() may preconnect while LISTENING
     User->>Source: "Hey Lobby..."
     Source->>Harness: audio frame
     Harness->>Ring: append frame
@@ -135,7 +189,7 @@ sequenceDiagram
     KWS-->>Harness: WakeEvent
     Harness->>Ring: snapshot preroll
     Harness->>Harness: begin conversation generation
-    Harness->>Agent: start(preroll, sample rate, wake)
+    Harness->>Agent: start(context: wake, handle, sample rate, preroll)
     Agent->>API: input_audio_buffer.append
     Harness->>Agent: subsequent live frames
     Agent->>API: stream 24 kHz PCM
@@ -346,6 +400,7 @@ speaker/microphone full duplex still requires an AEC media path; see the
 | Area | File |
 | --- | --- |
 | Top-level lifecycle and routing | `src/lobby_wake/orchestrator.py` |
+| Delegate lifecycle contract | `src/lobby_wake/agent.py` |
 | End requests and delegate capability | `src/lobby_wake/conversation.py` |
 | Realtime connection, tools, and audio | `src/lobby_wake/realtime.py` |
 | Wake detection | `src/lobby_wake/wake.py` |

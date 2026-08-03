@@ -8,11 +8,12 @@ from pathlib import Path
 
 from dotenv import load_dotenv
 
-from .agent import MockConversationAgent
+from .agent import AudioInputOwnership, MockConversationAgent
 from .audio import MicrophoneSource, WaveFileSource
 from .conversation import ConversationController, EndSource
 from .events import EventLogger
 from .orchestrator import Orchestrator
+from .process_delegate import ProcessConversationDelegate
 from .realtime import DEFAULT_INSTRUCTIONS, OpenAIRealtimeAgent
 from .wake import SherpaWakeWordEngine
 
@@ -41,8 +42,19 @@ def build_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument("--threads", type=int, default=1)
     parser.add_argument("--model-variant", choices=("int8", "fp32"), default="int8")
-    parser.add_argument("--agent", choices=("openai", "mock"), default="openai")
+    parser.add_argument("--agent", choices=("openai", "mock", "process"), default="openai")
     parser.add_argument("--mock-duration", type=float, default=3.0)
+    parser.add_argument(
+        "--delegate-audio-input",
+        choices=tuple(AudioInputOwnership),
+        default=AudioInputOwnership.HARNESS,
+        help="Who captures conversation audio for --agent process (default: harness)",
+    )
+    parser.add_argument(
+        "--delegate-command",
+        nargs=argparse.REMAINDER,
+        help="External delegate executable and arguments; must be the final wake-on option",
+    )
     parser.add_argument("--realtime-model", default="gpt-realtime-2.1")
     parser.add_argument("--voice", default="marin")
     parser.add_argument("--instructions", default=DEFAULT_INSTRUCTIONS)
@@ -81,7 +93,10 @@ def build_parser() -> argparse.ArgumentParser:
 
 def main() -> None:
     load_dotenv()
-    args = build_parser().parse_args()
+    parser = build_parser()
+    args = parser.parse_args()
+    if args.agent == "process" and not args.delegate_command:
+        parser.error("--agent process requires --delegate-command")
     device: int | str | None = args.device
     if isinstance(device, str) and device.isdigit():
         device = int(device)
@@ -92,7 +107,7 @@ def main() -> None:
     logger = EventLogger(args.log)
     conversation_controller = ConversationController(logger)
     source = (
-        WaveFileSource(args.audio_file, args.block_ms, pace_realtime=args.agent == "openai")
+        WaveFileSource(args.audio_file, args.block_ms, pace_realtime=args.agent != "mock")
         if args.audio_file
         else MicrophoneSource(block_duration_ms=args.block_ms, device=device)
     )
@@ -115,6 +130,12 @@ def main() -> None:
     )
     if args.agent == "mock":
         agent = MockConversationAgent(logger, duration_seconds=args.mock_duration)
+    elif args.agent == "process":
+        agent = ProcessConversationDelegate(
+            logger,
+            args.delegate_command,
+            audio_input=AudioInputOwnership(args.delegate_audio_input),
+        )
     else:
         agent = OpenAIRealtimeAgent(
             logger,

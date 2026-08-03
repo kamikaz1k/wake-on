@@ -7,6 +7,7 @@ import time
 
 import numpy as np
 
+from lobby_wake.agent import DelegateHealth, DelegatePrepareContext, DelegateStartContext
 from lobby_wake.conversation import (
     ConversationController,
     EndConversationRequest,
@@ -92,9 +93,14 @@ def test_prepare_starts_preconnection_by_default(monkeypatch) -> None:
     monkeypatch.setattr(agent._player, "start", lambda: None)
     monkeypatch.setattr(agent, "_ensure_connection", lambda: connection_attempts.append(True))
 
-    agent.prepare()
+    assert agent.status.health is DelegateHealth.CREATED
+    assert not agent.status.accepting_activation
+
+    agent.prepare(DelegatePrepareContext(sample_rate=16_000))
 
     assert connection_attempts == [True]
+    assert agent.status.accepting_activation
+    assert not agent.status.warm
     assert "Agent preconnection started" in stream.getvalue()
     agent.close()
     logger.close()
@@ -107,7 +113,7 @@ def test_prepare_can_preserve_cold_start_mode(monkeypatch) -> None:
     monkeypatch.setattr(agent._player, "start", lambda: None)
     monkeypatch.setattr(agent, "_ensure_connection", lambda: connection_attempts.append(True))
 
-    agent.prepare()
+    agent.prepare(DelegatePrepareContext(sample_rate=16_000))
 
     assert connection_attempts == []
     agent.close()
@@ -136,10 +142,15 @@ def test_wake_reuses_ready_connection_without_connecting(monkeypatch) -> None:
     agent._ready_at_ns = time.monotonic_ns()
     monkeypatch.setattr(agent, "_ensure_connection", lambda: connection_attempts.append(True))
 
+    controller = ConversationController(logger)
+    controller.begin()
     agent.start(
-        np.ones(160, dtype=np.float32),
-        16_000,
-        WakeEvent("HEY LOBBY", time.monotonic_ns()),
+        DelegateStartContext(
+            wake=WakeEvent("HEY LOBBY", time.monotonic_ns()),
+            conversation=controller.handle,
+            sample_rate=16_000,
+            initial_audio=np.ones(160, dtype=np.float32),
+        )
     )
 
     assert connection_attempts == []
@@ -161,12 +172,14 @@ def test_session_update_marks_idle_connection_warm() -> None:
     logger = EventLogger(stream=stream)
     agent = OpenAIRealtimeAgent(logger, api_key="test-key")
     socket = FakeSocket()
+    agent._prepared = True
     agent._ws = socket
     agent._connection_started_at_ns = time.monotonic_ns()
 
     agent._on_message(socket, json.dumps({"type": "session.updated"}))
 
     assert agent._ready
+    assert agent.status.warm
     assert "Agent preconnection ready" in stream.getvalue()
     agent.close()
     logger.close()
