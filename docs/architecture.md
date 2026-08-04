@@ -12,11 +12,14 @@ Architectural decisions:
 
 Planned work and research:
 
+- [Engineering notebook](notebook/README.md)
 - [Canonical current latency pipeline](latency-pipeline.md)
 - [Delegate process protocol](delegate-process-protocol.md)
 - [Routed library API](library-api.md)
 - [Roadmap](../TODO.md)
 - [Laptop speaker/microphone barge-in](research/laptop-speaker-barge-in.md)
+- [Native macOS media helper protocol](native-media-protocol.md)
+- [Computer-use systems and prototype plan](research/computer-use-systems.md)
 
 ## System overview
 
@@ -86,12 +89,22 @@ only after a wake has been accepted.
 | `OpenAIRealtimeAgent` | Realtime connection, audio conversion, model events, graceful farewell | Top-level lifecycle state |
 | `SherpaWakeWordEngine` | Local wake detection | Conversation audio |
 | `AudioPlayer` | Non-blocking assistant playback | Microphone capture |
+| `NativeMacMedia` | Optional single-owner processed capture, playback, preroll, and Swift helper supervision | Wake classification or backend protocol |
+| `NativeWakeAudioSource` | 16 kHz wake-detector view of continuous native capture | Audio-device ownership or conversation streaming |
+| macOS media helper | `AVAudioEngine` voice processing and framed PCM device I/O | API credentials, wake routing, or conversation policy |
 | `EventLogger` | Human terminal logs and structured JSONL events | Audio content |
 
 The harness depends on `ConversationDelegate`, not OpenAI Realtime. The current
 Realtime class implements that contract in-process, and the supervised adapter
 translates the same lifecycle to child-process messages. Routing does not alter
 the delegate contract.
+
+Computer use follows the same boundary. It is a capability of a selected
+delegate, not a responsibility of `WakeRouter`. A voice delegate may bridge a
+model tool call to its own long-running computer-use worker; WakeOn sees only
+the existing delegate lifecycle and generation-scoped cancellation. This keeps
+other delegates free to use a different planner, executor, or no computer use
+at all.
 
 ## Routed daemon boundary
 

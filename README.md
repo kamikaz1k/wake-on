@@ -21,6 +21,8 @@ See the [canonical latency pipeline](docs/latency-pipeline.md) for the current
 measurements at a glance. The wake-model decision is recorded in
 [ADR 0001](docs/adr/0001-use-chunk-8-wake-model.md), with experiment history in
 [the latency notebook](docs/latency.md).
+Ongoing investigations and their failed attempts are preserved in the
+[engineering notebook](docs/notebook/README.md).
 Current priorities are tracked in [TODO.md](TODO.md).
 
 The wake router owns one audio stream:
@@ -149,6 +151,54 @@ Half duplex prevents speaker feedback, but it also prevents interruption while
 the assistant is speaking. Laptop speaker/microphone full duplex remains the
 separate acoustic echo-cancellation item in the [roadmap](TODO.md) and
 [research note](docs/research/laptop-speaker-barge-in.md).
+
+### WebRTC laptop AEC spike
+
+Before changing the delegate media path, run the standalone browser spike to
+test the MacBook microphone and speakers under WebRTC echo cancellation:
+
+```sh
+uv run lobby-webrtc-aec-spike
+```
+
+The command starts a loopback-only server, opens the test page, and keeps the
+standard OpenAI API key on the Python side. Approve microphone access, then:
+
+1. Run the **echo-only trial** and stay silent while the assistant speaks.
+2. Run the **barge-in trial** and interrupt when prompted.
+
+The page shows whether the browser reports echo cancellation, noise
+suppression, and automatic gain control as enabled. It also counts likely echo
+false starts and estimates server-VAD detection → remote audio silence. Human
+readable events appear in the terminal and structured measurements are written
+to `webrtc-aec-spike.jsonl`.
+
+Use `--no-open` to start the server without opening a browser. This is
+intentionally an acoustic spike rather than a second WakeOn lifecycle: once the
+browser path passes the trials, it can become a delegate-owned media
+implementation behind the existing contract.
+
+### Native macOS voice-processing spike
+
+The native comparison keeps the existing Realtime WebSocket connection while
+moving all microphone capture and conversation playback through Apple's
+voice-processing audio path:
+
+```sh
+sh scripts/build-native-media-helper.sh
+uv run lobby-wake --conversation-media native-macos
+```
+
+The Swift helper is the single microphone owner in this mode. Its continuous
+48 kHz processed stream branches to a 16 kHz Sherpa wake source and a one-second
+conversation preroll. At activation, Python sends the processed preroll and
+live capture to the delegate. Assistant PCM returns through the same helper so
+echo cancellation has the playback reference it needs. Helper startup occurs
+during delegate preparation, outside the post-wake critical path.
+
+The spike currently uses the system default input and output devices; do not
+combine it with `--device`, `--output-device`, or `--audio-file`. See the
+[native media protocol and lifecycle](docs/native-media-protocol.md).
 
 Select audio devices or change the response voice:
 

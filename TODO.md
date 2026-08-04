@@ -29,15 +29,26 @@ results belong in `docs/`; this file tracks what remains.
 
 ## Next: explore computer use in the reference delegate
 
-- [ ] **Define the computer-use boundary and safety model.** Keep computer use
-  inside the selected conversation delegate rather than the wake core. Specify
-  user-visible action feedback, authorization, cancellation, emergency end,
-  sensitive-screen handling, and how a long-running task retains its
-  generation-scoped conversation capability.
-- [ ] **Build one bounded computer-use prototype.** Let Lobby perform a small,
-  reversible desktop task while the voice conversation remains interruptible.
-  Measure tool startup, action feedback latency, cancellation, and process
-  failure behavior before broadening the action surface.
+- [x] **Survey computer-use systems and define the spike.** Keep computer use
+  inside the selected conversation delegate rather than the wake core. The
+  initial recommendation is an OpenAI Realtime function bridge to a separate,
+  provider-neutral worker, with Peekaboo as the first macOS executor candidate
+  and Cua as the isolation/evaluation alternative. See the
+  [research note](docs/research/computer-use-systems.md).
+- [ ] **Define and test the computer-task contract.** Add a fake worker before
+  touching the desktop. Cover start, progress, approval, generation-scoped
+  cancellation, stale observations, late results, failure, and emergency end.
+- [ ] **Run the bounded executor bake-off.** Compare pinned versions of Peekaboo
+  and Cua's local macOS driver on the reversible TextEdit fixture. Measure warm
+  and cold startup, first visible progress, action latency, 20-run reliability,
+  cancellation latency, permissions, and packaging weight.
+- [ ] **Bridge the winning executor into Lobby.** Add one Realtime function tool
+  to the reference delegate, keep voice interruption active during the task,
+  and return progress and completion without leaking the computer-use protocol
+  into WakeOn's delegate contract.
+- [ ] **Validate the safety model.** Enforce app/action allowlists, action-time
+  approval, untrusted on-screen content handling, sensitive-data redaction, and
+  dominant cancellation before broadening the action surface.
 
 ## Follow-up: complete the reference realtime experience
 
@@ -45,7 +56,16 @@ results belong in `docs/`; this file tracks what remains.
   bounded spike comparing a WebRTC media client with a native macOS
   `AVAudioEngine` voice-processing adapter. Record measured interruption
   latency, false interruptions from speaker echo, packaging cost, and how each
-  option reconnects to the harness lifecycle. See
+  option reconnects to the harness lifecycle. The WebRTC spike passed a clean
+  silent echo-only rerun and measured about 90 ms from remote speech detection
+  to audio silence during barge-in. A native `AVAudioEngine` helper, framed PCM
+  bridge, processed preroll, and Realtime integration are implemented. A live
+  trial passed built-in speaker playback and interruption, with successful
+  activations reaching first audio in about 775–909 ms. The duplicate capture
+  regression found during that trial has been replaced with one native stream
+  feeding both wake detection and conversation media. A repeat trial detected
+  five distinct activations; controlled wake sensitivity still needs comparison
+  against raw capture. See
   [the research note](docs/research/laptop-speaker-barge-in.md).
 - [ ] **Implement and validate the chosen AEC path.** Built-in speaker output
   must not trigger VAD; real user speech must interrupt playback reliably. Keep

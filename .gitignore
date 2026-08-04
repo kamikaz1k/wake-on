@@ -5,9 +5,12 @@
 .venv/
 __pycache__/
 .pytest_cache/
+native/macos-media-helper/.build/
+native/macos-media-helper/bin/
 *.egg-info/
 models/*.tar.bz2
 models/hey-lobby.txt
 models/sherpa-onnx-kws-zipformer-*/
 latency.jsonl
+webrtc-aec-spike.jsonl
 recordings/

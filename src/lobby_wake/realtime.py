@@ -10,6 +10,7 @@ from typing import Any
 import numpy as np
 
 from .agent import (
+    AudioInputOwnership,
     DelegateCapabilities,
     DelegateHealth,
     DelegatePrepareContext,
@@ -23,7 +24,7 @@ from .conversation import (
     EndSource,
 )
 from .events import EventLogger
-from .playback import AudioPlayer, PlaybackPosition
+from .playback import AudioPlayback, AudioPlayer, ConversationCapture, PlaybackPosition
 from .ring_buffer import FloatAudio
 
 REALTIME_SAMPLE_RATE = 24_000
@@ -156,6 +157,9 @@ class OpenAIRealtimeAgent:
         vad_silence_duration_ms: int = 300,
         vad_eagerness: str = "high",
         conversation_controller: ConversationController | None = None,
+        player: AudioPlayback | None = None,
+        audio_input: AudioInputOwnership = AudioInputOwnership.HARNESS,
+        capture: ConversationCapture | None = None,
     ) -> None:
         if not api_key:
             raise ValueError("OPENAI_API_KEY is not set")
@@ -173,7 +177,9 @@ class OpenAIRealtimeAgent:
         self._vad_silence_duration_ms = vad_silence_duration_ms
         self._vad_eagerness = vad_eagerness
         self._conversation = conversation_controller or ConversationController(logger)
-        self._player = AudioPlayer(device=output_device)
+        self._player = player or AudioPlayer(device=output_device)
+        self._audio_input = audio_input
+        self._capture = capture
         self._pending_audio: deque[bytes] = deque(maxlen=500)
         self._send_lock = threading.Lock()
         self._state_lock = threading.Lock()
@@ -210,7 +216,7 @@ class OpenAIRealtimeAgent:
 
     @property
     def capabilities(self) -> DelegateCapabilities:
-        return DelegateCapabilities()
+        return DelegateCapabilities(audio_input=self._audio_input)
 
     @property
     def status(self) -> DelegateStatus:
@@ -246,6 +252,7 @@ class OpenAIRealtimeAgent:
                 self._vad_silence_duration_ms if self._vad_mode == "server_vad" else None
             ),
             vad_eagerness=self._vad_eagerness if self._vad_mode == "semantic_vad" else None,
+            audio_input=self._audio_input,
         )
         if self._preconnect:
             self._logger.emit("agent.preconnection_started", adapter="openai_realtime")
@@ -254,13 +261,20 @@ class OpenAIRealtimeAgent:
     def start(self, context: DelegateStartContext) -> None:
         if self._active:
             return
-        if context.initial_audio is None:
+        if (
+            context.initial_audio is None
+            and self._audio_input is AudioInputOwnership.HARNESS
+        ):
             raise ValueError("OpenAIRealtimeAgent requires harness-owned input audio")
         initial_audio = context.initial_audio
         sample_rate = context.sample_rate
         wake = context.wake
         now_ns = time.monotonic_ns()
-        initial_pcm16 = float_audio_to_pcm16(initial_audio, sample_rate)
+        initial_pcm16 = (
+            float_audio_to_pcm16(initial_audio, sample_rate)
+            if initial_audio is not None
+            else None
+        )
         with self._state_lock:
             connection_ready = self._ready and self._ws is not None
             ready_at_ns = self._ready_at_ns
@@ -282,7 +296,7 @@ class OpenAIRealtimeAgent:
             self._active_output_content_index = 0
             self._interrupted_output_items.clear()
             self._pending_audio.clear()
-            if not connection_ready:
+            if not connection_ready and initial_pcm16 is not None:
                 self._pending_audio.append(initial_pcm16)
         self._logger.emit(
             "agent.started",
@@ -290,8 +304,14 @@ class OpenAIRealtimeAgent:
             route_id=context.route_id,
             wake_phrase=wake.phrase,
             wake_to_agent_start_ms=(now_ns - wake.detected_at_ns) / 1_000_000,
-            initial_audio_ms=initial_audio.size / sample_rate * 1000,
+            initial_audio_ms=(
+                initial_audio.size / sample_rate * 1000
+                if initial_audio is not None
+                else 0
+            ),
         )
+        if self._capture is not None:
+            self._capture.activate_capture()
         if connection_ready:
             self._logger.emit(
                 "agent.connection_reused",
@@ -301,7 +321,7 @@ class OpenAIRealtimeAgent:
                     (now_ns - ready_at_ns) / 1_000_000 if ready_at_ns is not None else 0
                 ),
             )
-            if not self._send_audio(initial_pcm16):
+            if initial_pcm16 is not None and not self._send_audio(initial_pcm16):
                 with self._state_lock:
                     self._pending_audio.appendleft(initial_pcm16)
                 self._ensure_connection()
@@ -369,6 +389,8 @@ class OpenAIRealtimeAgent:
             self._begin_graceful_close()
 
     def stop(self) -> None:
+        if self._capture is not None:
+            self._capture.deactivate_capture()
         with self._state_lock:
             was_active = self._active
             started_at_ns = self._started_at_ns

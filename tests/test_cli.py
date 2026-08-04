@@ -12,6 +12,7 @@ def test_parser_uses_low_latency_wake_defaults() -> None:
     assert args.realtime_vad == "server_vad"
     assert args.vad_silence_ms == 300
     assert args.full_duplex is True
+    assert args.conversation_media == "raw"
 
 
 def test_parser_accepts_zero_trailing_blanks() -> None:
@@ -24,6 +25,12 @@ def test_parser_can_disable_full_duplex_fallback() -> None:
     args = build_parser().parse_args(["--no-full-duplex"])
 
     assert args.full_duplex is False
+
+
+def test_parser_accepts_native_macos_conversation_media() -> None:
+    args = build_parser().parse_args(["--conversation-media", "native-macos"])
+
+    assert args.conversation_media == "native-macos"
 
 
 def test_parser_preserves_external_delegate_command_arguments() -> None:

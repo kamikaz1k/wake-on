@@ -3,6 +3,7 @@ from __future__ import annotations
 import argparse
 import os
 import signal
+import sys
 import time
 from pathlib import Path
 
@@ -12,6 +13,11 @@ from .agent import AudioInputOwnership, MockConversationAgent
 from .audio import MicrophoneSource, WaveFileSource
 from .conversation import ConversationController, EndSource
 from .events import EventLogger
+from .native_media import (
+    DEFAULT_NATIVE_MEDIA_HELPER,
+    NativeMacMedia,
+    NativeWakeAudioSource,
+)
 from .orchestrator import WakeListener
 from .process_delegate import ProcessConversationDelegate
 from .realtime import DEFAULT_INSTRUCTIONS, OpenAIRealtimeAgent
@@ -81,6 +87,18 @@ def build_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument("--output-device", help="sounddevice output device name or index")
     parser.add_argument(
+        "--conversation-media",
+        choices=("raw", "native-macos"),
+        default="raw",
+        help="Conversation microphone/playback adapter (default: raw sounddevice PCM)",
+    )
+    parser.add_argument(
+        "--native-media-helper",
+        type=Path,
+        default=DEFAULT_NATIVE_MEDIA_HELPER,
+        help="Path to the compiled native macOS voice-processing helper",
+    )
+    parser.add_argument(
         "--full-duplex",
         action=argparse.BooleanOptionalAction,
         default=True,
@@ -99,6 +117,16 @@ def main() -> None:
     args = parser.parse_args()
     if args.agent == "process" and not args.delegate_command:
         parser.error("--agent process requires --delegate-command")
+    if args.conversation_media == "native-macos" and args.agent != "openai":
+        parser.error("--conversation-media native-macos currently requires --agent openai")
+    if args.conversation_media == "native-macos" and sys.platform != "darwin":
+        parser.error("--conversation-media native-macos is available only on macOS")
+    if args.conversation_media == "native-macos" and args.output_device is not None:
+        parser.error("--output-device is not yet supported by native macOS media")
+    if args.conversation_media == "native-macos" and args.device is not None:
+        parser.error("--device is not yet supported by native macOS media")
+    if args.conversation_media == "native-macos" and args.audio_file is not None:
+        parser.error("--audio-file cannot be combined with native macOS media")
     device: int | str | None = args.device
     if isinstance(device, str) and device.isdigit():
         device = int(device)
@@ -108,10 +136,19 @@ def main() -> None:
 
     logger = EventLogger(args.log)
     conversation_controller = ConversationController(logger)
+    native_media = (
+        NativeMacMedia(logger, (args.native_media_helper,))
+        if args.conversation_media == "native-macos"
+        else None
+    )
     source = (
         WaveFileSource(args.audio_file, args.block_ms, pace_realtime=args.agent != "mock")
         if args.audio_file
-        else MicrophoneSource(block_duration_ms=args.block_ms, device=device)
+        else (
+            NativeWakeAudioSource(native_media)
+            if native_media is not None
+            else MicrophoneSource(block_duration_ms=args.block_ms, device=device)
+        )
     )
     model_load_started_ns = time.monotonic_ns()
     detector = SherpaWakeWordEngine(
@@ -155,7 +192,16 @@ def main() -> None:
             vad_silence_duration_ms=args.vad_silence_ms,
             vad_eagerness=args.vad_eagerness,
             conversation_controller=conversation_controller,
+            player=native_media,
+            audio_input=(
+                AudioInputOwnership.DELEGATE
+                if native_media is not None
+                else AudioInputOwnership.HARNESS
+            ),
+            capture=native_media,
         )
+        if native_media is not None:
+            native_media.set_capture_handler(agent.send_audio)
     orchestrator = WakeListener(
         detector,
         agent,
@@ -187,7 +233,11 @@ def main() -> None:
 
     logger.emit(
         "app.started",
-        source="wav" if args.audio_file else "microphone",
+        source=(
+            "wav"
+            if args.audio_file
+            else "native-macos" if native_media is not None else "microphone"
+        ),
         sample_rate=source.sample_rate,
         audio_block_ms=args.block_ms,
         wake_model_chunk=args.model_chunk,

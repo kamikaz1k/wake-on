@@ -5,6 +5,7 @@ import threading
 import time
 from collections.abc import Callable
 from dataclasses import dataclass
+from typing import Protocol
 
 
 @dataclass(frozen=True, slots=True)
@@ -12,6 +13,40 @@ class PlaybackPosition:
     item_id: str
     content_index: int
     audio_end_ms: int
+
+
+class AudioPlayback(Protocol):
+    sample_rate: int
+
+    @property
+    def playing(self) -> bool: ...
+
+    def start(self) -> None: ...
+
+    def enqueue(
+        self,
+        pcm16: bytes,
+        on_start: Callable[[], None] | None = None,
+        *,
+        item_id: str = "",
+        content_index: int = 0,
+    ) -> None: ...
+
+    def clear(self) -> None: ...
+
+    def interrupt(
+        self,
+        item_id: str | None = None,
+        content_index: int = 0,
+    ) -> PlaybackPosition | None: ...
+
+    def close(self) -> None: ...
+
+
+class ConversationCapture(Protocol):
+    def activate_capture(self) -> None: ...
+
+    def deactivate_capture(self) -> None: ...
 
 
 @dataclass(frozen=True, slots=True)

@@ -7,7 +7,12 @@ import time
 
 import numpy as np
 
-from lobby_wake.agent import DelegateHealth, DelegatePrepareContext, DelegateStartContext
+from lobby_wake.agent import (
+    AudioInputOwnership,
+    DelegateHealth,
+    DelegatePrepareContext,
+    DelegateStartContext,
+)
 from lobby_wake.conversation import (
     ConversationController,
     EndConversationRequest,
@@ -156,6 +161,46 @@ def test_wake_reuses_ready_connection_without_connecting(monkeypatch) -> None:
     assert connection_attempts == []
     assert json.loads(socket.sent[0])["type"] == "input_audio_buffer.append"
     assert "Agent connection reused" in stream.getvalue()
+    agent.close()
+    logger.close()
+
+
+def test_delegate_owned_audio_can_start_without_harness_preroll(monkeypatch) -> None:
+    class FakeSocket:
+        def __init__(self) -> None:
+            self.sent: list[str] = []
+
+        def send(self, message: str) -> None:
+            self.sent.append(message)
+
+        def close(self) -> None:
+            pass
+
+    logger = EventLogger(stream=io.StringIO())
+    agent = OpenAIRealtimeAgent(
+        logger,
+        api_key="test-key",
+        audio_input=AudioInputOwnership.DELEGATE,
+    )
+    socket = FakeSocket()
+    agent._ws = socket
+    agent._ready = True
+    agent._ready_at_ns = time.monotonic_ns()
+    monkeypatch.setattr(agent, "_ensure_connection", lambda: None)
+    controller = ConversationController(logger)
+    controller.begin()
+
+    agent.start(
+        DelegateStartContext(
+            wake=WakeEvent("HEY LOBBY", time.monotonic_ns()),
+            conversation=controller.handle,
+            sample_rate=16_000,
+            initial_audio=None,
+        )
+    )
+
+    assert agent.capabilities.audio_input is AudioInputOwnership.DELEGATE
+    assert socket.sent == []
     agent.close()
     logger.close()
 

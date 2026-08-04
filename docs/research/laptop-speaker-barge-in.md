@@ -1,8 +1,9 @@
 # Laptop speaker/microphone barge-in research
 
-- **Status:** WebSocket barge-in complete; laptop AEC transport decision pending
+- **Status:** WebRTC AEC validated provisionally; native macOS comparison ready for live testing
 - **Date:** 2026-08-01
 - **Related roadmap item:** [Lobby Wake roadmap](../../TODO.md)
+- **Engineering diary:** [2026-08-03 native macOS AEC and microphone work](../notebook/2026-08-03-native-macos-aec-and-microphone.md)
 
 ## Question
 
@@ -94,6 +95,51 @@ documentation][apple-voice].
 
 This sequence separates protocol correctness from echo-cancellation quality and
 avoids rewriting wake detection or orchestration before the media path is known.
+
+The standalone WebRTC spike is now available:
+
+```sh
+uv run lobby-webrtc-aec-spike
+```
+
+It uses OpenAI's unified `/v1/realtime/calls` interface through a loopback-only
+Python proxy. The browser requests `echoCancellation`, `noiseSuppression`, and
+`autoGainControl`, reports the resulting microphone track settings, and offers
+guided echo-only and barge-in trials. The proxy retains the standard API key;
+only SDP and the configured Realtime session cross the browser/server boundary.
+This establishes AEC quality before WebRTC is connected to wake activation or
+declared as the delegate's conversation-time microphone owner.
+
+The native comparison is also implemented. A Swift `AVAudioEngine` helper
+enables voice processing, captures processed microphone PCM, and plays
+assistant PCM while Python retains the existing backend WebSocket and delegate
+lifecycle. A hardware startup smoke test confirmed voice processing enabled,
+48 kHz capture, 24 kHz playback, and clean shutdown. Cold helper setup measured
+about 3.1 seconds on the development machine, but it runs during pre-wake
+`prepare()` rather than after activation.
+
+Build and run the live comparison with:
+
+```sh
+sh scripts/build-native-media-helper.sh
+uv run lobby-wake --conversation-media native-macos
+```
+
+The first native live trial worked with built-in speakers and microphone,
+including speech interruption. Successful activations reached first playback
+in roughly 775–909 ms. Once server VAD reported interrupting speech, local
+playback stopped in 0.17–0.51 ms in the observed trials. No obvious
+assistant-echo false interruption was observed.
+
+That trial also exposed reduced wake responsiveness because the initial spike
+opened the microphone independently through both `sounddevice` and
+`AVAudioEngine`. Native mode now makes the helper the sole microphone owner and
+fans its processed stream out to 16 kHz wake detection and 48 kHz conversation
+capture. The first single-owner repeat detected five distinct activations, with
+wake-to-feedback below 0.7 ms and wake-to-first playback between 744 and
+1,078 ms. A controlled sample-based sensitivity comparison with raw capture
+remains. See the [native helper protocol](../native-media-protocol.md) for its
+ownership and lifecycle boundary.
 
 ## Acceptance criteria
 

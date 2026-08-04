@@ -1,0 +1,321 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>WakeOn WebRTC AEC spike</title>
+  <style>
+    :root { color-scheme: dark; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+    body { margin: 0; background: #101411; color: #e8f0e9; }
+    main { max-width: 920px; margin: 0 auto; padding: 32px 20px 64px; }
+    h1 { margin-bottom: 6px; font-size: 28px; }
+    .lede { color: #aab9ad; margin-top: 0; }
+    .panel { background: #18201a; border: 1px solid #314237; border-radius: 12px; padding: 18px; margin: 16px 0; }
+    .status { display: flex; align-items: center; gap: 10px; }
+    .dot { width: 10px; height: 10px; border-radius: 50%; background: #738078; }
+    .dot.on { background: #68df86; box-shadow: 0 0 12px #68df86; }
+    button { background: #d5f7dc; color: #102115; border: 0; border-radius: 8px; padding: 10px 14px; margin: 5px 5px 5px 0; font: inherit; cursor: pointer; }
+    button.secondary { background: #29362d; color: #dce8df; border: 1px solid #435749; }
+    button:disabled { opacity: .4; cursor: default; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 10px; }
+    .metric { background: #111713; border-radius: 8px; padding: 12px; }
+    .metric span { display: block; color: #94a398; font-size: 12px; margin-bottom: 7px; }
+    .metric strong { font-size: 18px; }
+    pre { white-space: pre-wrap; overflow-wrap: anywhere; color: #b9c9bc; max-height: 320px; overflow: auto; }
+    .instruction { color: #f5d87c; min-height: 24px; }
+    code { color: #b8eec4; }
+  </style>
+</head>
+<body>
+<main>
+  <h1>WebRTC laptop AEC spike</h1>
+  <p class="lede">Validates browser echo cancellation and interruption before WakeOn adopts a new media path.</p>
+
+  <section class="panel">
+    <div class="status"><span id="dot" class="dot"></span><strong id="status">Disconnected</strong></div>
+    <p id="instruction" class="instruction">Connect, approve microphone access, then run the two trials in order.</p>
+    <button id="connect">Connect microphone</button>
+    <button id="disconnect" class="secondary" disabled>Disconnect</button>
+  </section>
+
+  <section class="panel">
+    <h2>Browser audio processing</h2>
+    <div class="grid">
+      <div class="metric"><span>Echo cancellation</span><strong id="aec">unknown</strong></div>
+      <div class="metric"><span>Noise suppression</span><strong id="ns">unknown</strong></div>
+      <div class="metric"><span>Automatic gain</span><strong id="agc">unknown</strong></div>
+      <div class="metric"><span>Remote audio level</span><strong id="level">0.000</strong></div>
+    </div>
+    <details><summary>Full microphone track settings</summary><pre id="settings">Not connected.</pre></details>
+  </section>
+
+  <section class="panel">
+    <h2>Guided trials</h2>
+    <p><strong>1. Echo-only:</strong> stay completely silent while the assistant speaks. Any microphone speech-start event is a likely echo false positive.</p>
+    <button id="echoTrial" disabled>Run echo-only trial</button>
+    <p><strong>2. Barge-in:</strong> wait for the assistant to speak, then say “Stop. Tell me the test status.”</p>
+    <button id="bargeTrial" disabled>Run barge-in trial</button>
+    <div class="grid">
+      <div class="metric"><span>Echo-only speech starts</span><strong id="falseStarts">—</strong></div>
+      <div class="metric"><span>VAD → remote silence estimate</span><strong id="stopLatency">—</strong></div>
+      <div class="metric"><span>Last response status</span><strong id="responseStatus">—</strong></div>
+    </div>
+  </section>
+
+  <section class="panel">
+    <h2>Event log</h2>
+    <pre id="events"></pre>
+  </section>
+  <audio id="remoteAudio" autoplay></audio>
+</main>
+<script>
+  const $ = (id) => document.getElementById(id);
+  let pc = null;
+  let dc = null;
+  let localStream = null;
+  let audioContext = null;
+  let analyser = null;
+  let analyserFrame = null;
+  let activeResponse = false;
+  let remoteWasAudible = false;
+  let interruptVadAt = null;
+  let quietSince = null;
+  let trial = null;
+  let falseStarts = 0;
+
+  function log(message) {
+    const line = `${new Date().toLocaleTimeString()} ${message}`;
+    $('events').textContent = `${line}\n${$('events').textContent}`.slice(0, 14000);
+  }
+
+  function telemetry(event, fields = {}) {
+    fetch('/telemetry', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({event, fields}),
+      keepalive: true,
+    }).catch(() => {});
+  }
+
+  function setConnected(connected) {
+    $('dot').classList.toggle('on', connected);
+    $('status').textContent = connected ? 'Connected' : 'Disconnected';
+    $('connect').disabled = connected;
+    $('disconnect').disabled = !connected;
+    $('echoTrial').disabled = !connected;
+    $('bargeTrial').disabled = !connected;
+  }
+
+  function valueOrUnknown(value) {
+    return value === undefined ? 'not reported' : String(value);
+  }
+
+  async function connect() {
+    try {
+      $('status').textContent = 'Requesting microphone…';
+      const supported = navigator.mediaDevices.getSupportedConstraints();
+      localStream = await navigator.mediaDevices.getUserMedia({
+        audio: {
+          echoCancellation: true,
+          noiseSuppression: true,
+          autoGainControl: true,
+          channelCount: 1,
+        },
+        video: false,
+      });
+      const track = localStream.getAudioTracks()[0];
+      const settings = track.getSettings();
+      $('aec').textContent = supported.echoCancellation ? valueOrUnknown(settings.echoCancellation) : 'unsupported';
+      $('ns').textContent = supported.noiseSuppression ? valueOrUnknown(settings.noiseSuppression) : 'unsupported';
+      $('agc').textContent = supported.autoGainControl ? valueOrUnknown(settings.autoGainControl) : 'unsupported';
+      $('settings').textContent = JSON.stringify({supported, settings}, null, 2);
+      telemetry('webrtc.microphone_ready', {
+        echo_cancellation: valueOrUnknown(settings.echoCancellation),
+        noise_suppression: valueOrUnknown(settings.noiseSuppression),
+        auto_gain_control: valueOrUnknown(settings.autoGainControl),
+        sample_rate: settings.sampleRate || 0,
+      });
+
+      pc = new RTCPeerConnection();
+      pc.onconnectionstatechange = () => {
+        log(`Peer connection: ${pc.connectionState}`);
+        if (pc.connectionState === 'failed' || pc.connectionState === 'closed') setConnected(false);
+      };
+      pc.ontrack = (event) => attachRemoteAudio(event.streams[0]);
+      pc.addTrack(track, localStream);
+
+      dc = pc.createDataChannel('oai-events');
+      dc.addEventListener('message', (event) => handleRealtimeEvent(JSON.parse(event.data)));
+      dc.addEventListener('open', () => {
+        setConnected(true);
+        $('instruction').textContent = 'Connected. Run the echo-only trial and stay silent.';
+        telemetry('webrtc.data_channel_ready');
+      });
+
+      const offer = await pc.createOffer();
+      await pc.setLocalDescription(offer);
+      const response = await fetch('/session', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/sdp'},
+        body: offer.sdp,
+      });
+      if (!response.ok) throw new Error(await response.text());
+      await pc.setRemoteDescription({type: 'answer', sdp: await response.text()});
+      log('Realtime WebRTC answer accepted.');
+    } catch (error) {
+      log(`Connection error: ${error.message}`);
+      telemetry('webrtc.client_error', {detail: String(error.message).slice(0, 500)});
+      disconnect();
+    }
+  }
+
+  function attachRemoteAudio(stream) {
+    $('remoteAudio').srcObject = stream;
+    $('remoteAudio').play().catch((error) => log(`Audio playback needs interaction: ${error.message}`));
+    audioContext = new AudioContext();
+    const source = audioContext.createMediaStreamSource(stream);
+    analyser = audioContext.createAnalyser();
+    analyser.fftSize = 512;
+    source.connect(analyser);
+    sampleRemoteLevel();
+    telemetry('webrtc.remote_audio_attached');
+  }
+
+  function sampleRemoteLevel() {
+    if (!analyser) return;
+    const data = new Float32Array(analyser.fftSize);
+    analyser.getFloatTimeDomainData(data);
+    const rms = Math.sqrt(data.reduce((sum, value) => sum + value * value, 0) / data.length);
+    $('level').textContent = rms.toFixed(3);
+    const audible = rms > 0.012;
+    if (audible) {
+      remoteWasAudible = true;
+      quietSince = null;
+      if (trial?.type === 'barge' && trial.waitingForAudio) {
+        trial.waitingForAudio = false;
+        $('instruction').textContent = 'Assistant is audible—interrupt now: “Stop. Tell me the test status.”';
+        telemetry('webrtc.barge_in_prompted');
+      }
+    } else if (interruptVadAt !== null && remoteWasAudible) {
+      quietSince ??= performance.now();
+      if (performance.now() - quietSince >= 100) {
+        const latency = quietSince - interruptVadAt;
+        $('stopLatency').textContent = `${latency.toFixed(0)} ms`;
+        telemetry('webrtc.remote_audio_stopped', {vad_to_remote_silence_ms: latency});
+        interruptVadAt = null;
+        quietSince = null;
+        remoteWasAudible = false;
+      }
+    }
+    analyserFrame = requestAnimationFrame(sampleRemoteLevel);
+  }
+
+  function handleRealtimeEvent(event) {
+    switch (event.type) {
+      case 'session.created':
+      case 'session.updated':
+        log(event.type);
+        break;
+      case 'response.created':
+        activeResponse = true;
+        remoteWasAudible = false;
+        if (trial && !trial.responseId) trial.responseId = event.response?.id || null;
+        $('responseStatus').textContent = 'in progress';
+        log('Assistant response started.');
+        break;
+      case 'input_audio_buffer.speech_started':
+        log(`Microphone speech started${activeResponse ? ' during assistant response' : ''}.`);
+        if (trial?.type === 'echo_only' && activeResponse) {
+          falseStarts += 1;
+          $('falseStarts').textContent = String(falseStarts);
+          telemetry('webrtc.echo_false_start', {count: falseStarts});
+        }
+        if (trial?.type === 'barge' && activeResponse) {
+          interruptVadAt = performance.now();
+          quietSince = null;
+          telemetry('webrtc.barge_in_detected');
+        }
+        break;
+      case 'input_audio_buffer.speech_stopped':
+        log('Microphone speech stopped.');
+        break;
+      case 'response.done': {
+        activeResponse = false;
+        const status = event.response?.status || 'done';
+        const completedTrial = trial && trial.responseId === event.response?.id ? trial : null;
+        $('responseStatus').textContent = status;
+        log(`Assistant response finished: ${status}.`);
+        telemetry('webrtc.response_done', {status, trial: completedTrial?.type || 'none'});
+        if (completedTrial?.type === 'echo_only') {
+          $('instruction').textContent = falseStarts === 0
+            ? 'Echo-only trial passed: no speech starts. Run the barge-in trial.'
+            : `Echo-only trial saw ${falseStarts} likely false speech start(s).`;
+          telemetry('webrtc.trial_completed', {trial: 'echo_only', false_starts: falseStarts});
+          trial = null;
+        } else if (completedTrial?.type === 'barge') {
+          $('instruction').textContent = 'Barge-in trial complete. Review the stop-latency result.';
+          telemetry('webrtc.trial_completed', {trial: 'barge'});
+          trial = null;
+        }
+        break;
+      }
+      case 'error':
+        log(`Realtime error: ${event.error?.message || 'unknown error'}`);
+        telemetry('webrtc.api_error', {detail: event.error?.message || 'unknown error'});
+        break;
+    }
+  }
+
+  function sendResponse(instructions) {
+    if (!dc || dc.readyState !== 'open') return;
+    dc.send(JSON.stringify({
+      type: 'response.create',
+      response: {instructions, tool_choice: 'none', tools: []},
+    }));
+  }
+
+  function runEchoTrial() {
+    falseStarts = 0;
+    $('falseStarts').textContent = '0';
+    $('stopLatency').textContent = '—';
+    trial = {type: 'echo_only'};
+    $('instruction').textContent = 'Stay completely silent until the assistant finishes.';
+    telemetry('webrtc.echo_trial_started');
+    sendResponse('Read a neutral passage aloud continuously for about twelve seconds. Do not ask the user questions. Do not use tools.');
+  }
+
+  function runBargeTrial() {
+    trial = {type: 'barge', waitingForAudio: true};
+    interruptVadAt = null;
+    $('stopLatency').textContent = 'waiting';
+    $('instruction').textContent = 'Wait for the assistant audio to begin.';
+    telemetry('webrtc.barge_trial_started');
+    sendResponse('Explain the history of clocks aloud for at least thirty seconds unless the user interrupts. Do not use tools.');
+  }
+
+  function disconnect() {
+    if (analyserFrame) cancelAnimationFrame(analyserFrame);
+    analyserFrame = null;
+    analyser = null;
+    if (audioContext) audioContext.close().catch(() => {});
+    audioContext = null;
+    if (dc) dc.close();
+    dc = null;
+    if (pc) pc.close();
+    pc = null;
+    if (localStream) localStream.getTracks().forEach((track) => track.stop());
+    localStream = null;
+    $('remoteAudio').srcObject = null;
+    setConnected(false);
+    $('instruction').textContent = 'Disconnected.';
+    telemetry('webrtc.client_disconnected');
+  }
+
+  $('connect').addEventListener('click', connect);
+  $('disconnect').addEventListener('click', disconnect);
+  $('echoTrial').addEventListener('click', runEchoTrial);
+  $('bargeTrial').addEventListener('click', runBargeTrial);
+  window.addEventListener('beforeunload', disconnect);
+</script>
+</body>
+</html>
