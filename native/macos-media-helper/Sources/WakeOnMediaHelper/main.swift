@@ -3,15 +3,90 @@ import Foundation
 
 private let maximumFrameBytes = 4 * 1024 * 1024
 private let playbackSampleRate = 24_000.0
+private let wakeSampleRate = 16_000.0
 
 private enum FrameType {
     static let ready = Character("R").asciiValue!
     static let audio = Character("A").asciiValue!
+    static let wakeAudio = Character("W").asciiValue!
     static let playback = Character("P").asciiValue!
     static let playbackDone = Character("D").asciiValue!
+    static let state = Character("S").asciiValue!
+    static let enableVoiceProcessing = Character("V").asciiValue!
     static let clear = Character("C").asciiValue!
     static let quit = Character("Q").asciiValue!
     static let error = Character("E").asciiValue!
+}
+
+private final class StreamingPCMResampler {
+    let inputFormat: AVAudioFormat
+    let outputFormat: AVAudioFormat
+    private let converter: AVAudioConverter
+
+    init(sourceSampleRate: Double, destinationSampleRate: Double) throws {
+        guard let inputFormat = AVAudioFormat(
+            commonFormat: .pcmFormatFloat32,
+            sampleRate: sourceSampleRate,
+            channels: 1,
+            interleaved: false
+        ), let outputFormat = AVAudioFormat(
+            commonFormat: .pcmFormatFloat32,
+            sampleRate: destinationSampleRate,
+            channels: 1,
+            interleaved: false
+        ), let converter = AVAudioConverter(from: inputFormat, to: outputFormat)
+        else {
+            throw NSError(
+                domain: "WakeOnMediaHelper",
+                code: 2,
+                userInfo: [NSLocalizedDescriptionKey: "Could not create sample-rate converter"]
+            )
+        }
+        self.inputFormat = inputFormat
+        self.outputFormat = outputFormat
+        self.converter = converter
+        converter.sampleRateConverterQuality = AVAudioQuality.high.rawValue
+    }
+
+    func convert(_ input: AVAudioPCMBuffer) throws -> AVAudioPCMBuffer {
+        let ratio = outputFormat.sampleRate / inputFormat.sampleRate
+        let capacity = AVAudioFrameCount(
+            max(1, ceil(Double(input.frameLength) * ratio) + 64)
+        )
+        guard let output = AVAudioPCMBuffer(
+            pcmFormat: outputFormat,
+            frameCapacity: capacity
+        ) else {
+            throw NSError(
+                domain: "WakeOnMediaHelper",
+                code: 3,
+                userInfo: [NSLocalizedDescriptionKey: "Could not allocate converter output"]
+            )
+        }
+
+        var suppliedInput = false
+        var conversionError: NSError?
+        let status = converter.convert(
+            to: output,
+            error: &conversionError
+        ) { _, inputStatus in
+            if suppliedInput {
+                inputStatus.pointee = .noDataNow
+                return nil
+            }
+            suppliedInput = true
+            inputStatus.pointee = .haveData
+            return input
+        }
+        if status == .error {
+            throw conversionError ?? NSError(
+                domain: "WakeOnMediaHelper",
+                code: 4,
+                userInfo: [NSLocalizedDescriptionKey: "Sample-rate conversion failed"]
+            )
+        }
+        return output
+    }
 }
 
 private final class FramedWriter {
@@ -39,12 +114,15 @@ private final class FramedWriter {
 }
 
 private final class VoiceProcessingEngine {
-    private let engine = AVAudioEngine()
-    private let player = AVAudioPlayerNode()
+    private var engine: AVAudioEngine!
+    private var player: AVAudioPlayerNode!
     private let writer: FramedWriter
     private let playbackFormat: AVAudioFormat
     private let stateLock = NSLock()
     private var playbackGeneration: UInt64 = 0
+    private var wakeResampler: StreamingPCMResampler?
+    private var voiceProcessingActive = false
+    private var tapInstalled = false
 
     init(writer: FramedWriter) {
         self.writer = writer
@@ -65,11 +143,51 @@ private final class VoiceProcessingEngine {
             )
         }
 
+        try rebuildGraph(voiceProcessing: false)
+        sendState(type: FrameType.ready)
+    }
+
+    func setConversationActive(_ active: Bool) throws {
+        if active == voiceProcessingActive {
+            sendState(type: FrameType.state)
+            return
+        }
+
+        try rebuildGraph(voiceProcessing: active)
+        sendState(type: FrameType.state)
+    }
+
+    private func rebuildGraph(voiceProcessing active: Bool) throws {
+        stopGraph()
+        // The voice-processing Audio Unit cannot reliably be changed back to
+        // raw I/O in place. Fully release the old graph before constructing
+        // the replacement so Core Audio also releases its ducking session.
+        player = nil
+        engine = nil
+        engine = AVAudioEngine()
+        player = AVAudioPlayerNode()
         engine.attach(player)
         engine.connect(player, to: engine.mainMixerNode, format: playbackFormat)
-        try engine.inputNode.setVoiceProcessingEnabled(true)
+        if active {
+            try engine.inputNode.setVoiceProcessingEnabled(true)
+            if #available(macOS 15.0, *) {
+                engine.inputNode.voiceProcessingOtherAudioDuckingConfiguration =
+                    AVAudioVoiceProcessingOtherAudioDuckingConfiguration(
+                        enableAdvancedDucking: false,
+                        duckingLevel: .min
+                    )
+            }
+        }
+        voiceProcessingActive = active
+        try startGraph()
+    }
 
+    private func startGraph() throws {
         let inputFormat = engine.inputNode.outputFormat(forBus: 0)
+        wakeResampler = try StreamingPCMResampler(
+            sourceSampleRate: inputFormat.sampleRate,
+            destinationSampleRate: wakeSampleRate
+        )
         let captureFrames = AVAudioFrameCount(max(1, round(inputFormat.sampleRate * 0.02)))
         engine.inputNode.installTap(
             onBus: 0,
@@ -78,19 +196,27 @@ private final class VoiceProcessingEngine {
         ) { [weak self] buffer, _ in
             self?.emitCapture(buffer)
         }
+        tapInstalled = true
 
         engine.prepare()
         try engine.start()
         player.play()
+    }
 
+    private func sendState(type: UInt8) {
+        let inputFormat = engine.inputNode.outputFormat(forBus: 0)
         writer.sendJSON(
-            FrameType.ready,
+            type,
             value: [
+                "mode": voiceProcessingActive ? "aec" : "raw",
                 "capture_sample_rate": Int(inputFormat.sampleRate.rounded()),
-                "capture_channels": Int(inputFormat.channelCount),
+                "capture_channels": 1,
+                "wake_sample_rate": Int(wakeSampleRate),
                 "playback_sample_rate": Int(playbackSampleRate),
                 "output_latency_ms": engine.outputNode.presentationLatency * 1_000,
                 "voice_processing": engine.inputNode.isVoiceProcessingEnabled,
+                "voice_processing_agc": engine.inputNode.isVoiceProcessingAGCEnabled,
+                "other_audio_ducking": voiceProcessingActive ? "minimum" : "off",
             ]
         )
     }
@@ -141,30 +267,48 @@ private final class VoiceProcessingEngine {
     }
 
     func stop() {
-        clearPlayback()
-        engine.inputNode.removeTap(onBus: 0)
+        stopGraph()
+    }
+
+    private func stopGraph() {
+        guard let engine, let player else { return }
+        player.stop()
+        player.reset()
+        if tapInstalled {
+            engine.inputNode.removeTap(onBus: 0)
+            tapInstalled = false
+        }
         engine.stop()
+        wakeResampler = nil
     }
 
     private func emitCapture(_ buffer: AVAudioPCMBuffer) {
         guard let channels = buffer.floatChannelData else { return }
         let frameCount = Int(buffer.frameLength)
         let channelCount = max(1, Int(buffer.format.channelCount))
-        var output = Data(count: frameCount * MemoryLayout<Int16>.size)
-        output.withUnsafeMutableBytes { raw in
-            let destination = raw.bindMemory(to: Int16.self)
-            for frame in 0 ..< frameCount {
-                var mixed: Float = 0
-                for channel in 0 ..< channelCount {
-                    mixed += channels[channel][frame]
-                }
-                let sample = max(-1, min(1, mixed / Float(channelCount)))
-                destination[frame] = Int16(
-                    max(-32_768, min(32_767, Int((sample * 32_767).rounded())))
-                ).littleEndian
+        guard let resampler = wakeResampler,
+              let mono = AVAudioPCMBuffer(
+                  pcmFormat: resampler.inputFormat,
+                  frameCapacity: AVAudioFrameCount(frameCount)
+              ), let monoChannel = mono.floatChannelData?[0]
+        else { return }
+        mono.frameLength = AVAudioFrameCount(frameCount)
+        for frame in 0 ..< frameCount {
+            var mixed: Float = 0
+            for channel in 0 ..< channelCount {
+                mixed += channels[channel][frame]
             }
+            monoChannel[frame] = max(-1, min(1, mixed / Float(channelCount)))
         }
-        writer.send(FrameType.audio, payload: output)
+        writer.send(FrameType.audio, payload: encodePCM16(mono))
+        do {
+            let wake = try resampler.convert(mono)
+            if wake.frameLength > 0 {
+                writer.send(FrameType.wakeAudio, payload: encodePCM16(wake))
+            }
+        } catch {
+            writer.sendJSON(FrameType.error, value: ["message": error.localizedDescription])
+        }
     }
 
     private func microphoneAccessAllowed() -> Bool {
@@ -206,6 +350,82 @@ private func decodeUInt64(_ data: Data) -> UInt64? {
     }
 }
 
+private func encodePCM16(_ buffer: AVAudioPCMBuffer) -> Data {
+    guard let channel = buffer.floatChannelData?[0] else { return Data() }
+    let frameCount = Int(buffer.frameLength)
+    var output = Data(count: frameCount * MemoryLayout<Int16>.size)
+    output.withUnsafeMutableBytes { raw in
+        let destination = raw.bindMemory(to: Int16.self)
+        for frame in 0 ..< frameCount {
+            let sample = max(-1, min(1, channel[frame]))
+            destination[frame] = Int16(
+                max(-32_768, min(32_767, Int((sample * 32_767).rounded())))
+            ).littleEndian
+        }
+    }
+    return output
+}
+
+private func decodePCM16(_ data: Data, format: AVAudioFormat) -> AVAudioPCMBuffer? {
+    let sampleCount = data.count / MemoryLayout<Int16>.size
+    guard data.count.isMultiple(of: MemoryLayout<Int16>.size),
+          let buffer = AVAudioPCMBuffer(
+              pcmFormat: format,
+              frameCapacity: AVAudioFrameCount(sampleCount)
+          ), let channel = buffer.floatChannelData?[0]
+    else { return nil }
+    buffer.frameLength = AVAudioFrameCount(sampleCount)
+    data.withUnsafeBytes { raw in
+        let samples = raw.bindMemory(to: Int16.self)
+        for index in 0 ..< sampleCount {
+            channel[index] = Float(Int16(littleEndian: samples[index])) / 32_768.0
+        }
+    }
+    return buffer
+}
+
+private func runOfflineResampler(sourceRate: Double, destinationRate: Double) throws {
+    let resampler = try StreamingPCMResampler(
+        sourceSampleRate: sourceRate,
+        destinationSampleRate: destinationRate
+    )
+    let input = FileHandle.standardInput.readDataToEndOfFile()
+    let bytesPerSample = MemoryLayout<Int16>.size
+    let chunkBytes = max(bytesPerSample, Int(sourceRate / 10) * bytesPerSample)
+    var offset = 0
+    while offset < input.count {
+        let end = min(input.count, offset + chunkBytes)
+        let chunk = input.subdata(in: offset ..< end)
+        guard let buffer = decodePCM16(chunk, format: resampler.inputFormat) else {
+            throw NSError(
+                domain: "WakeOnMediaHelper",
+                code: 5,
+                userInfo: [NSLocalizedDescriptionKey: "Invalid offline PCM16 input"]
+            )
+        }
+        let output = try resampler.convert(buffer)
+        FileHandle.standardOutput.write(encodePCM16(output))
+        offset = end
+    }
+}
+
+if CommandLine.arguments.count == 4,
+   CommandLine.arguments[1] == "--resample-stdin",
+   let sourceRate = Double(CommandLine.arguments[2]),
+   let destinationRate = Double(CommandLine.arguments[3])
+{
+    do {
+        try runOfflineResampler(
+            sourceRate: sourceRate,
+            destinationRate: destinationRate
+        )
+        exit(0)
+    } catch {
+        FileHandle.standardError.write(Data((error.localizedDescription + "\n").utf8))
+        exit(2)
+    }
+}
+
 private let writer = FramedWriter()
 private let voiceEngine = VoiceProcessingEngine(writer: writer)
 
@@ -239,6 +459,12 @@ commandLoop: while let header = readExactly(5, from: input) {
         )
     case FrameType.clear:
         voiceEngine.clearPlayback()
+    case FrameType.enableVoiceProcessing:
+        do {
+            try voiceEngine.setConversationActive(true)
+        } catch {
+            writer.sendJSON(FrameType.error, value: ["message": error.localizedDescription])
+        }
     case FrameType.quit:
         break commandLoop
     default:

@@ -241,18 +241,17 @@ class WakeRouter:
             )
         self._conversation.begin()
         self._active_route = route
-        delegate_audio = (
-            initial_audio
-            if route.delegate.capabilities.audio_input is AudioInputOwnership.HARNESS
-            else None
-        )
         try:
             route.delegate.start(
                 DelegateStartContext(
                     wake=wake,
                     conversation=self._conversation.handle,
                     sample_rate=self._sample_rate,
-                    initial_audio=delegate_audio,
+                    # Input ownership controls the ongoing stream. The harness
+                    # may always provide its bounded wake/preroll snapshot once
+                    # so a delegate-owned device can warm or transition without
+                    # dropping activation speech.
+                    initial_audio=initial_audio,
                     route_id=route.route_id,
                 )
             )

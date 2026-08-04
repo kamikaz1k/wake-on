@@ -34,6 +34,7 @@ lobby-latency-report = "lobby_wake.latency:main"
 lobby-record-samples = "lobby_wake.sample_recorder:main"
 lobby-openai-delegate = "lobby_wake.openai_process_delegate:main"
 lobby-webrtc-aec-spike = "lobby_wake.webrtc_spike:main"
+lobby-compare-wake-capture = "lobby_wake.wake_capture_comparison:main"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/lobby_wake"]

@@ -127,7 +127,7 @@ def test_prepare_runs_before_wake_and_start_receives_conversation_context() -> N
     logger.close()
 
 
-def test_delegate_owned_input_does_not_receive_harness_audio() -> None:
+def test_delegate_owned_input_receives_preroll_but_not_ongoing_harness_audio() -> None:
     class DelegateOwnedInputAgent(EndingAgent):
         def __init__(self) -> None:
             super().__init__()
@@ -151,7 +151,7 @@ def test_delegate_owned_input_does_not_receive_harness_audio() -> None:
     orchestrator.process(np.ones(320, dtype=np.float32))
 
     assert agent.start_context is not None
-    assert agent.start_context.initial_audio is None
+    assert agent.start_context.initial_audio is not None
     assert agent.sent_audio_blocks == 0
     logger.close()
 

@@ -287,8 +287,10 @@ sequenceDiagram
 ```
 
 This lifecycle is enabled by default for headphones and echo-cancelled inputs.
-`--no-full-duplex` disables microphone upload during playback as a temporary
-laptop-speaker fallback; that mode cannot support interruption.
+`--media-policy raw-half-duplex` disables microphone upload during playback as
+a temporary laptop-speaker fallback; that mode cannot support interruption.
+`raw-full-duplex` is the non-processing default, while opt-in `native-aec`
+enables Apple voice processing only for an active conversation.
 
 ## Unified end-request lifecycle
 
@@ -422,7 +424,7 @@ flowchart LR
 Full duplex is the default so server VAD can hear an interruption. On
 `input_audio_buffer.speech_started`, the WebSocket client aborts current and
 queued playback, estimates the audio duration heard for the active assistant
-item, and sends `conversation.item.truncate`. `--no-full-duplex` is the
+item, and sends `conversation.item.truncate`. `raw-half-duplex` is the
 half-duplex fallback for unprocessed speaker output. Built-in
 speaker/microphone full duplex still requires an AEC media path; see the
 [research note](research/laptop-speaker-barge-in.md).

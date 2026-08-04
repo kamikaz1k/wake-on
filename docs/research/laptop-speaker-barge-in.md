@@ -43,7 +43,7 @@ aborts current and queued playback, estimates the heard offset from PCM playback
 progress, sends `conversation.item.truncate`, ignores late audio deltas for the
 interrupted item, and logs VAD-to-playback-stop latency and truncation state.
 
-`--no-full-duplex` retains the previous half-duplex behavior for unprocessed
+`--media-policy raw-half-duplex` retains the previous half-duplex behavior for unprocessed
 laptop speakers. It prevents speaker feedback by discarding microphone frames
 during playback, so interruption is unavailable in that fallback mode.
 
@@ -122,7 +122,7 @@ Build and run the live comparison with:
 
 ```sh
 sh scripts/build-native-media-helper.sh
-uv run lobby-wake --conversation-media native-macos
+uv run lobby-wake --media-policy native-aec
 ```
 
 The first native live trial worked with built-in speakers and microphone,

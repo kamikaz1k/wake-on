@@ -26,6 +26,11 @@ results belong in `docs/`; this file tracks what remains.
   stable trigger IDs preserve a single-daemon multiplexer boundary. The CLI
   intentionally configures only the `lobby` route in this phase. Atomic
   delegate handoff and multi-route configuration remain later extensions.
+- [x] **Add an explicit conversation-media policy boundary.** The default
+  `raw-full-duplex` path never enables Apple voice processing; callers can opt
+  into `raw-half-duplex` or conversation-scoped `native-aec`. Delegate-owned
+  capture may receive the one-time harness preroll, and native AEC returns to a
+  fresh raw helper after every conversation so system ducking is released.
 
 ## Next: explore computer use in the reference delegate
 
@@ -64,13 +69,26 @@ results belong in `docs/`; this file tracks what remains.
   activations reaching first audio in about 775–909 ms. The duplicate capture
   regression found during that trial has been replaced with one native stream
   feeding both wake detection and conversation media. A repeat trial detected
-  five distinct activations; controlled wake sensitivity still needs comparison
-  against raw capture. See
+  five distinct activations. A guided raw/native comparison runner now records
+  approved attempts, misses, audio fixtures, and summary metrics. Its first
+  raw-first run measured 10/10 raw versus 8/10 native. The unfiltered Python
+  downsampler has been replaced by a persistent Apple converter. On the same 32
+  existing fixtures, a 16→48→16 round trip preserved every prior detection and
+  improved the comparison runner from 27/32 to 29/32; a live native-first repeat
+  is optional confirmation. See
   [the research note](docs/research/laptop-speaker-barge-in.md).
-- [ ] **Implement and validate the chosen AEC path.** Built-in speaker output
+- [x] **Validate the chosen AEC path and lifecycle.** Built-in speaker output
   must not trigger VAD; real user speech must interrupt playback reliably. Keep
   wake detection and the harness lifecycle independent of the selected media
-  transport.
+  transport. Continuously active Apple Voice Processing I/O was rejected
+  because even minimum ducking lowered other applications' playback. Use raw
+  capture while listening and hand device ownership to native AEC only for the
+  active conversation, preserving raw preroll across the transition. The
+  policy and raw→AEC→raw lifecycle are implemented. A repeated hardware smoke
+  measured roughly 1.31–1.37 s to enter AEC and 0.60–0.69 s to restore a fresh
+  raw helper. The 2026-08-04 full wake/Realtime trial confirmed speaker playback,
+  interruption, idle volume, and ducking recovery. The brief transition pause
+  is acceptable for this phase.
 - [ ] **Measure the full user-turn handoff.** Add a local estimate of the final
   voiced microphone frame so reports include actual-speech-end → server
   `speech_stopped`, then server `speech_stopped` → playback. Compare server VAD
@@ -79,6 +97,8 @@ results belong in `docs/`; this file tracks what remains.
 
 ## Later: production hardening
 
+- [ ] Reduce or mask the roughly 1.3-second raw→AEC transition pause without
+  reintroducing continuous system ducking or multiple competing microphone owners.
 - [ ] Evaluate a shorter-cadence or phrase-specific “Hey Lobby” model against
   the chunk-8 baseline if another ~100–300 ms of wake latency is necessary.
 - [ ] Record and evaluate representative negative audio before treating the

@@ -85,8 +85,11 @@ Sent immediately after launch, before wake listening begins.
 }
 ```
 
-`initial_audio` is omitted when the child owns input. Audio is mono,
-little-endian float32 with nominal values in `[-1, 1]`.
+`initial_audio` is an optional, bounded wake/preroll snapshot even when the
+child owns ongoing input. It lets a delegate begin processing while its device
+or transport becomes conversation-ready. Subsequent `audio` messages are sent
+only when the harness owns input. Audio is mono, little-endian float32 with
+nominal values in `[-1, 1]`.
 
 ### `audio`
 

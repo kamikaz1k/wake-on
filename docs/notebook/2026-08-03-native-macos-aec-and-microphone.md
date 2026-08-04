@@ -181,3 +181,172 @@ helper exits. A real follow-up smoke test exited with code 0 and logged both
    latency. Spike direct `AUVoiceIO` only if measurements justify it.
 5. Investigate native input/output device selection without losing the
    single-owner invariant or Apple's valid echo-reference route.
+
+## Later update: bounded comparison harness
+
+After this entry's initial session, we added
+`lobby-compare-wake-capture --attempts 10`. It performs explicit raw and native
+live phases, tests each capture path first, asks the operator to keep or redo
+every attempt, evaluates approved audio with the same Sherpa configuration, and
+saves both WAV sets plus per-trial JSONL and a summary. This supplies the
+attempted-phrase denominator that the exploratory live run lacked.
+
+## 2026-08-03 bounded raw/native result
+
+The first guided comparison completed ten approved attempts per mode in
+raw-first order. Results were saved locally under
+`recordings/wake-comparison/20260803-224045/`.
+
+| Capture path | Detected | Hit rate | Estimated phrase-end → detection p50 | p95 |
+| --- | ---: | ---: | ---: | ---: |
+| Raw `sounddevice`, 16 kHz | 10/10 | 100% | 205 ms | 367 ms |
+| Native voice-processed, resampled to 16 kHz | 8/10 | 80% | 290 ms | 330 ms |
+
+Native attempts 5 and 7 missed. Their RMS levels were approximately 0.0403 and
+0.0422, so neither was among the quietest native recordings. Across all ten
+attempts, native mean peak/RMS was 0.400/0.0395 versus raw 0.554/0.0500. Native
+capture was lower in level overall, but the per-attempt data does not support
+level as a complete explanation for the two misses.
+
+This result establishes a plausible regression, not a final effect size. Ten
+attempts per path produce wide uncertainty, the run was raw-first rather than
+counterbalanced, and the utterances were comparable but not identical audio.
+
+Code review after the result identified another candidate: the current native
+48→16 kHz conversion uses per-chunk linear interpolation. At an exact 3:1
+ratio, its sample positions reduce to decimation without an anti-aliasing
+low-pass filter. Aliased high-frequency content may reduce recognition quality
+or delay decoder finalization. This is a concrete signal-processing flaw worth
+fixing before simply tuning Sherpa thresholds or adding gain.
+
+The next controlled sequence is:
+
+1. replace the native downsampler with a stateful anti-aliased 3:1 converter;
+2. rerun the bounded comparison in native-first order;
+3. compare hit rate and saved-fixture latency with this raw-first baseline;
+4. only investigate gain normalization if misses remain and correlate with
+   level after proper resampling.
+
+## 2026-08-03 native converter implementation and fixture reuse
+
+The Python linear 48→16 kHz path was removed. The Swift helper now keeps a
+persistent `AVAudioConverter` after voice processing and emits a separate 16 kHz
+`W` protocol frame for Sherpa. The original 48 kHz `A` frame remains unchanged
+for conversation capture, so this change is isolated from the working AEC and
+Realtime media path.
+
+To avoid another recording session, the helper also exposes the same converter
+as an offline PCM operation. The 32 existing positive recordings were passed
+through a 16→48→16 kHz round trip and evaluated against the untouched WAVs:
+
+| Input | Sherpa detections | Estimated latency p50 |
+| --- | ---: | ---: |
+| Untouched fixtures in the new comparison runner | 27/32 | 320 ms |
+| Same fixtures after native converter round trip | 29/32 | 330 ms |
+
+No previously detected fixture regressed. `positive-009-quiet.wav` and
+`positive-023-quiet.wav` changed from missed to detected after conversion. The
+round trip returned 216 fewer samples over each three-second fixture because of
+converter priming/filter delay; the offline evaluator padded the tail back to
+the original duration. In the live persistent stream this is a one-time startup
+effect rather than a per-chunk loss.
+
+This result shows that the production converter preserves wake-relevant content
+on identical recorded speech and does not reproduce the earlier 8/10 live
+regression. It cannot prove how fresh speech will behave after Apple's live
+voice processing because the original native 48 kHz audio from that run was not
+saved. A live repeat is now optional confirmation rather than the only way to
+validate the downsampler.
+
+A hardware smoke test then confirmed that the voice-processing helper advertises
+48 kHz conversation capture while delivering live 16 kHz wake frames through
+the new `W` branch. Six observed wake frames covered approximately 586 ms after
+the converter's initial priming, and the helper shut down cleanly.
+
+## 2026-08-03 system-wide voice-processing side effects
+
+During the live converter confirmation, QuickTime playback became noticeably
+quieter at the same system volume, and another application's microphone
+transcription level also appeared lower. Stopping Wake On immediately restored
+QuickTime volume. This isolates the speaker effect to the continuously active
+Apple voice-processing I/O session, not `AVAudioConverter`.
+
+The first bounded mitigation keeps AEC and its default-enabled microphone AGC
+but configures Apple's other-audio ducking level to `min`, with advanced ducking
+disabled. We will compare QuickTime volume before changing AGC or redesigning
+the pre-wake audio handoff.
+
+The minimum-ducking live test still reduced QuickTime volume as soon as the
+voice-processing helper became active. Stopping Wake On immediately restored
+normal playback again. Therefore the available minimum is not equivalent to
+zero ducking and does not make continuously active Voice Processing I/O suitable
+for an always-listening daemon.
+
+The next design should separate media phases:
+
+```text
+LISTENING: ordinary non-voice-processed capture → Sherpa + raw preroll
+WAKE ACCEPTED: stop/release ordinary capture → activate native voice processing
+CONVERSATION: native AEC capture + native playback
+CONVERSATION END: stop voice processing → restore ordinary wake capture
+```
+
+The Realtime WebSocket and helper process may still be prepared before wake;
+only the device-owning voice-processing engine must remain inactive. Raw wake
+preroll should accompany activation so speech immediately following “Hey Lobby”
+is not lost during the device handoff. The next measurement is wake acceptance
+→ first processed conversation frame and the audible system-volume recovery at
+conversation end.
+
+## 2026-08-03 explicit media policy and on-demand AEC implementation
+
+We introduced one backend-neutral `ConversationMediaPolicy` boundary:
+
+| Policy | Behavior |
+| --- | --- |
+| `raw-full-duplex` | Default; raw capture and interruption, intended for headphones or an already echo-cancelled route |
+| `raw-half-duplex` | Raw fallback that suppresses upload during playback and therefore cannot interrupt |
+| `native-aec` | Opt-in Apple voice processing only while a conversation is active |
+
+The native helper now reports `mode=raw` and
+`voice_processing=false` at preparation. Its 16 kHz `W` frames feed Sherpa as
+before. When a wake is accepted, the harness sends its raw bounded preroll to
+the delegate first; `V` then asks the helper to enter AEC, and Python gates live
+`A` frames until the helper acknowledges `S mode=aec`. Input ownership still
+governs the ongoing stream: providing a one-time harness preroll does not turn a
+delegate-owned device into harness-owned capture.
+
+The initial implementation tried to return the same stopped `AVAudioEngine`
+from voice processing to raw capture. macOS rejected
+`setVoiceProcessingEnabled(false)` with Core Audio/AVFAudio error `-10875`.
+Releasing and rebuilding the entire graph inside the same process produced the
+same result. This is useful negative evidence: on this tested route, the Voice
+Processing I/O lifetime is effectively sticky at the helper-process boundary.
+
+The working recovery path cleanly quits the short-lived AEC helper and launches
+a fresh raw helper. `NativeMacMedia`, the wake source, the Realtime delegate,
+and the overall daemon remain stable. A repeated real-device lifecycle smoke
+test completed raw→AEC→raw twice:
+
+| Transition | Observed |
+| --- | ---: |
+| Raw helper ready | 408 ms on first launch |
+| Raw → AEC | 1,371 ms, then 1,312 ms |
+| AEC → fresh raw helper | 595 ms, then 687 ms |
+
+The activation cost is significant. Realtime now sends or queues the raw
+preroll before starting the synchronous device transition, preserving event
+ordering and overlapping server processing with AEC setup. There may still be
+an input gap for speech spoken during the Core Audio transition. The next live
+trial must verify three things together: idle QuickTime volume is unchanged,
+ducking exists only during the active conversation and recovers afterward, and
+the post-wake capture gap is acceptable or needs an overlapping handoff design.
+
+## 2026-08-04 live policy acceptance
+
+The full `native-aec` wake and Realtime path passed a user acceptance trial.
+Idle playback remained at its normal level, built-in speaker conversation and
+interruptions worked, and ending the conversation restored ordinary audio. A
+brief audible pause remains during the raw→AEC transition. It is acceptable for
+the current phase and is tracked as a later latency optimization rather than a
+blocker for starting the computer-use work.

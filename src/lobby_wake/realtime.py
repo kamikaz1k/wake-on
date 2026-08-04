@@ -34,7 +34,9 @@ DEFAULT_INSTRUCTIONS = (
     "The user may begin by saying your wake phrase, Hey Lobby. "
     "Call end_conversation when the user explicitly asks to stop or says goodbye. "
     "You may also call it when a clearly delegated task is fully complete. "
-    "Do not end merely because you answered one ordinary conversational turn."
+    "Do not end merely because you answered one ordinary conversational turn. "
+    "When ending, use only a short, casual goodbye of four words or fewer. "
+    "Do not recap the conversation or give a ceremonial sign-off."
 )
 END_CONVERSATION_TOOL = {
     "type": "function",
@@ -53,7 +55,8 @@ END_CONVERSATION_TOOL = {
             },
             "farewell": {
                 "type": "string",
-                "description": "An optional short, natural closing sentence.",
+                "maxLength": 40,
+                "description": "An optional casual closing phrase of one to four words.",
             },
         },
         "required": ["reason"],
@@ -310,8 +313,6 @@ class OpenAIRealtimeAgent:
                 else 0
             ),
         )
-        if self._capture is not None:
-            self._capture.activate_capture()
         if connection_ready:
             self._logger.emit(
                 "agent.connection_reused",
@@ -327,6 +328,12 @@ class OpenAIRealtimeAgent:
                 self._ensure_connection()
         else:
             self._ensure_connection()
+        # Send or queue the harness preroll before a delegate-owned capture
+        # device performs a potentially slow raw-to-AEC transition. This keeps
+        # backend processing overlapped with media setup and preserves ordering
+        # before the first live conversation frame.
+        if self._capture is not None:
+            self._capture.activate_capture()
 
     def send_audio(self, samples: FloatAudio, sample_rate: int) -> None:
         if not self._active:
@@ -728,11 +735,15 @@ class OpenAIRealtimeAgent:
                 }
             )
         closing_instruction = (
-            "Say one brief, natural closing sentence, then stop. "
-            "Do not ask a follow-up question. Do not call any tools."
+            "Say only a short, casual goodbye of four words or fewer, then stop. "
+            "Do not recap, thank the user at length, offer more help, or use a ceremonial "
+            "sign-off. Do not ask a follow-up question. Do not call any tools."
         )
         if request.farewell:
-            closing_instruction += f" Use this closing message: {request.farewell}"
+            closing_instruction += (
+                f" Use this closing message if it fits the limit; otherwise shorten it: "
+                f"{request.farewell}"
+            )
         self._closing_response_requested = self._send_event(
             {
                 "type": "response.create",

@@ -22,6 +22,7 @@ from lobby_wake.conversation import (
 from lobby_wake.events import EventLogger, WakeEvent
 from lobby_wake.playback import PlaybackPosition
 from lobby_wake.realtime import (
+    DEFAULT_INSTRUCTIONS,
     END_CONVERSATION_TOOL,
     REALTIME_SAMPLE_RATE,
     OpenAIRealtimeAgent,
@@ -71,6 +72,12 @@ def test_session_update_uses_server_vad_by_default() -> None:
     assert session["audio"]["output"]["voice"] == "marin"
     assert session["tools"] == [END_CONVERSATION_TOOL]
     assert session["tool_choice"] == "auto"
+    assert END_CONVERSATION_TOOL["parameters"]["properties"]["farewell"]["maxLength"] == 40
+
+
+def test_default_instructions_require_short_casual_goodbyes() -> None:
+    assert "four words or fewer" in DEFAULT_INSTRUCTIONS
+    assert "ceremonial sign-off" in DEFAULT_INSTRUCTIONS
 
 
 def test_session_update_can_use_semantic_vad() -> None:
@@ -137,10 +144,23 @@ def test_wake_reuses_ready_connection_without_connecting(monkeypatch) -> None:
         def close(self) -> None:
             self.closed = True
 
+    class Capture:
+        def __init__(self, socket: FakeSocket) -> None:
+            self.socket = socket
+            self.sent_count_at_activation: int | None = None
+
+        def activate_capture(self) -> None:
+            self.sent_count_at_activation = len(self.socket.sent)
+
+        def deactivate_capture(self) -> None:
+            pass
+
     stream = io.StringIO()
     logger = EventLogger(stream=stream)
     agent = OpenAIRealtimeAgent(logger, api_key="test-key")
     socket = FakeSocket()
+    capture = Capture(socket)
+    agent._capture = capture
     connection_attempts = []
     agent._ws = socket
     agent._ready = True
@@ -160,6 +180,7 @@ def test_wake_reuses_ready_connection_without_connecting(monkeypatch) -> None:
 
     assert connection_attempts == []
     assert json.loads(socket.sent[0])["type"] == "input_audio_buffer.append"
+    assert capture.sent_count_at_activation == 1
     assert "Agent connection reused" in stream.getvalue()
     agent.close()
     logger.close()
@@ -339,6 +360,9 @@ def test_graceful_end_acknowledges_tool_and_requests_tool_free_farewell() -> Non
     assert events[1]["response"]["tools"] == []
     assert events[1]["response"]["tool_choice"] == "none"
     assert events[1]["response"]["metadata"]["purpose"] == "conversation_close"
+    closing = events[1]["response"]["instructions"]
+    assert "four words or fewer" in closing
+    assert "Do not recap" in closing
     agent.close()
     logger.close()
 

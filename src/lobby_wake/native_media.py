@@ -84,15 +84,19 @@ class NativeMacMedia:
         self._write_lock = threading.Lock()
         self._state_lock = threading.Lock()
         self._ready = threading.Event()
+        self._mode_changed = threading.Event()
         self._playing = threading.Event()
         self._capture_handler: Callable[[FloatAudio, int], None] | None = None
         self._wake_capture_handler: Callable[[FloatAudio, int], None] | None = None
         self._capture_active = False
-        self._capture_preroll: deque[bytes] = deque()
-        self._capture_preroll_samples = 0
+        self._media_mode = "starting"
+        self._requested_mode: str | None = None
         self._start_error: str | None = None
         self._capture_sample_rate = 0
+        self._wake_sample_rate = 0
         self._output_latency_seconds = 0.0
+        self._voice_processing_agc: bool | None = None
+        self._other_audio_ducking: str | None = None
         self._next_chunk_id = 1
         self._chunks: dict[int, _NativePlaybackChunk] = {}
         self._playback_order: deque[int] = deque()
@@ -119,23 +123,55 @@ class NativeMacMedia:
         self._wake_capture_handler = handler
 
     def activate_capture(self) -> None:
+        transition_started_ns = time.monotonic_ns()
         with self._state_lock:
+            if self._capture_active and self._media_mode == "aec":
+                return
             self._capture_active = True
-            preroll = list(self._capture_preroll)
-            self._capture_preroll.clear()
-            self._capture_preroll_samples = 0
-        for payload in preroll:
-            self._deliver_capture(payload)
+        try:
+            self._transition_to("aec", b"V")
+        except Exception:
+            with self._state_lock:
+                self._capture_active = False
+            raise
+        self._logger.emit(
+            "media.native_aec_active",
+            transition_ms=(time.monotonic_ns() - transition_started_ns) / 1_000_000,
+            voice_processing=True,
+            voice_processing_agc=self._voice_processing_agc,
+            other_audio_ducking=self._other_audio_ducking,
+        )
 
     def deactivate_capture(self) -> None:
+        transition_started_ns = time.monotonic_ns()
         with self._state_lock:
             self._capture_active = False
-            self._capture_preroll.clear()
-            self._capture_preroll_samples = 0
+            already_raw = self._media_mode == "raw"
+        if already_raw or not self.running:
+            return
+        # AVAudioEngine can enable Voice Processing I/O after raw capture, but
+        # macOS currently rejects switching that Audio Unit back to raw I/O in
+        # the same process (-10875). Replacing only the helper process provides
+        # a hard lifecycle boundary and reliably releases system ducking while
+        # keeping this media object and the wake harness alive.
+        self.close()
+        self.start()
+        self._logger.emit(
+            "media.native_raw_active",
+            transition_ms=(time.monotonic_ns() - transition_started_ns) / 1_000_000,
+            voice_processing=False,
+            other_audio_ducking="off",
+        )
 
     def start(self) -> None:
         if self._process is not None:
             return
+        self._start_error = None
+        self._media_mode = "starting"
+        self._capture_sample_rate = 0
+        self._wake_sample_rate = 0
+        self._voice_processing_agc = None
+        self._other_audio_ducking = None
         helper = Path(self._command[0])
         if len(self._command) == 1 and not helper.exists():
             raise FileNotFoundError(
@@ -174,9 +210,13 @@ class NativeMacMedia:
             helper=self._command[0],
             setup_ms=(time.monotonic_ns() - started_at_ns) / 1_000_000,
             capture_sample_rate=self._capture_sample_rate,
+            wake_sample_rate=self._wake_sample_rate,
             playback_sample_rate=self.sample_rate,
             output_latency_ms=self._output_latency_seconds * 1_000,
-            voice_processing=True,
+            media_mode=self._media_mode,
+            voice_processing=False,
+            voice_processing_agc=self._voice_processing_agc,
+            other_audio_ducking=self._other_audio_ducking,
         )
 
     def enqueue(
@@ -284,6 +324,7 @@ class NativeMacMedia:
             self._stderr_thread.join(timeout=1)
             self._stderr_thread = None
         self._ready.clear()
+        self._mode_changed.clear()
         self._playing.clear()
         self._logger.emit("media.native_stopped", return_code=process.returncode)
 
@@ -317,31 +358,50 @@ class NativeMacMedia:
     def _handle_frame(self, frame_type: bytes, payload: bytes) -> None:
         if frame_type == b"R":
             ready = json.loads(payload)
-            if not isinstance(ready, dict) or ready.get("voice_processing") is not True:
-                raise ValueError("native helper did not enable voice processing")
+            if not isinstance(ready, dict) or ready.get("mode") != "raw":
+                raise ValueError("native helper did not start in raw listening mode")
+            if ready.get("voice_processing") is not False:
+                raise ValueError("native helper enabled voice processing while idle")
             self._capture_sample_rate = int(ready["capture_sample_rate"])
+            self._wake_sample_rate = int(ready["wake_sample_rate"])
+            if self._wake_sample_rate != NativeWakeAudioSource.sample_rate:
+                raise ValueError("native helper wake stream must be 16 kHz")
             self._output_latency_seconds = float(ready.get("output_latency_ms", 0)) / 1_000
+            self._voice_processing_agc = ready.get("voice_processing_agc")
+            self._other_audio_ducking = ready.get("other_audio_ducking")
+            self._media_mode = "raw"
             self._ready.set()
+        elif frame_type == b"S":
+            state = json.loads(payload)
+            if not isinstance(state, dict) or state.get("mode") not in {"raw", "aec"}:
+                raise ValueError("native helper sent an invalid media state")
+            mode = str(state["mode"])
+            with self._state_lock:
+                self._media_mode = mode
+                self._capture_sample_rate = int(state["capture_sample_rate"])
+                self._output_latency_seconds = (
+                    float(state.get("output_latency_ms", 0)) / 1_000
+                )
+                self._voice_processing_agc = state.get("voice_processing_agc")
+                self._other_audio_ducking = state.get("other_audio_ducking")
+                requested_mode = self._requested_mode
+            if requested_mode == mode:
+                self._mode_changed.set()
         elif frame_type == b"A":
             if self._capture_sample_rate <= 0:
                 raise ValueError("native helper sent audio before readiness")
             samples = self._decode_capture(payload)
-            wake_handler = self._wake_capture_handler
-            if wake_handler is not None and samples.size:
-                wake_handler(samples, self._capture_sample_rate)
             with self._state_lock:
-                capture_active = self._capture_active
-                if not capture_active and payload:
-                    self._capture_preroll.append(payload)
-                    self._capture_preroll_samples += len(payload) // 2
-                    while (
-                        self._capture_preroll
-                        and self._capture_preroll_samples > self._capture_sample_rate
-                    ):
-                        removed = self._capture_preroll.popleft()
-                        self._capture_preroll_samples -= len(removed) // 2
+                capture_active = self._capture_active and self._media_mode == "aec"
             if capture_active:
                 self._deliver_capture_samples(samples)
+        elif frame_type == b"W":
+            if self._wake_sample_rate <= 0:
+                raise ValueError("native helper sent wake audio before readiness")
+            samples = self._decode_capture(payload)
+            wake_handler = self._wake_capture_handler
+            if wake_handler is not None and samples.size:
+                wake_handler(samples, self._wake_sample_rate)
         elif frame_type == b"D":
             if len(payload) != CHUNK_ID.size:
                 raise ValueError("native playback completion has an invalid chunk ID")
@@ -353,6 +413,7 @@ class NativeMacMedia:
             if not self._ready.is_set():
                 self._start_error = str(detail)
                 self._ready.set()
+            self._mode_changed.set()
         else:
             raise ValueError(f"unknown native media frame: {frame_type!r}")
 
@@ -375,6 +436,23 @@ class NativeMacMedia:
 
     def _deliver_capture(self, payload: bytes) -> None:
         self._deliver_capture_samples(self._decode_capture(payload))
+
+    def _transition_to(self, mode: str, command: bytes) -> None:
+        if not self.running:
+            raise RuntimeError("native media helper is not running")
+        with self._state_lock:
+            if self._media_mode == mode:
+                return
+            self._requested_mode = mode
+            self._mode_changed.clear()
+        self._send_frame(command)
+        if not self._mode_changed.wait(self._start_timeout_seconds):
+            raise TimeoutError(f"native media helper did not enter {mode} mode")
+        with self._state_lock:
+            actual_mode = self._media_mode
+            self._requested_mode = None
+        if actual_mode != mode:
+            raise RuntimeError(f"native media helper entered {actual_mode}, expected {mode}")
 
     def _deliver_capture_samples(self, samples: FloatAudio) -> None:
         handler = self._capture_handler
@@ -439,11 +517,20 @@ class NativeWakeAudioSource:
         self._closed.set()
         self._put_latest(None)
 
+    def discard_pending(self) -> None:
+        """Discard capture queued while the comparison runner was prompting."""
+        while True:
+            try:
+                self._queue.get_nowait()
+            except queue.Empty:
+                return
+
     def _accept_capture(self, samples: FloatAudio, source_rate: int) -> None:
         if self._closed.is_set() or not samples.size:
             return
-        wake_samples = self._resample(samples, source_rate, self.sample_rate)
-        self._put_latest(wake_samples)
+        if source_rate != self.sample_rate:
+            raise ValueError("native wake capture must already be 16 kHz")
+        self._put_latest(np.asarray(samples, dtype=np.float32))
 
     def _put_latest(self, samples: FloatAudio | None) -> None:
         try:
@@ -454,21 +541,3 @@ class NativeWakeAudioSource:
                 self._queue.get_nowait()
             with contextlib.suppress(queue.Full):
                 self._queue.put_nowait(samples)
-
-    @staticmethod
-    def _resample(
-        samples: FloatAudio,
-        source_rate: int,
-        target_rate: int,
-    ) -> FloatAudio:
-        if source_rate <= 0:
-            raise ValueError("native capture sample rate must be positive")
-        samples = np.asarray(samples, dtype=np.float32)
-        if source_rate == target_rate:
-            return samples
-        target_size = max(1, round(samples.size * target_rate / source_rate))
-        source_positions = np.arange(samples.size, dtype=np.float64)
-        target_positions = (
-            np.arange(target_size, dtype=np.float64) * source_rate / target_rate
-        )
-        return np.interp(target_positions, source_positions, samples).astype(np.float32)

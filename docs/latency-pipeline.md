@@ -77,7 +77,7 @@ therefore not target either dominant delay.
 | Wake decoder | 16 active paths, 0 trailing blanks, score 2.0, threshold 0.1 |
 | Realtime connection | Preconnected and reused on wake |
 | Turn detection | `server_vad`, threshold 0.5, 300 ms silence, 300 ms prefix padding |
-| Duplex behavior | Full-duplex WebSocket barge-in; `--no-full-duplex` fallback |
+| Duplex behavior | `raw-full-duplex` default; `raw-half-duplex` fallback; opt-in `native-aec` |
 
 ## Canonical event boundaries
 

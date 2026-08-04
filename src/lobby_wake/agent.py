@@ -49,7 +49,11 @@ class DelegatePrepareContext:
 
 @dataclass(frozen=True, slots=True)
 class DelegateStartContext:
-    """Conversation-scoped activation delivered after a wake is accepted."""
+    """Conversation-scoped activation delivered after a wake is accepted.
+
+    ``initial_audio`` is an optional, one-time harness preroll even when the
+    delegate owns ongoing audio input.
+    """
 
     wake: WakeEvent
     conversation: ConversationHandle

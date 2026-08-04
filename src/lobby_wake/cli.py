@@ -13,6 +13,7 @@ from .agent import AudioInputOwnership, MockConversationAgent
 from .audio import MicrophoneSource, WaveFileSource
 from .conversation import ConversationController, EndSource
 from .events import EventLogger
+from .media_policy import ConversationMediaPolicy, resolve_media_policy
 from .native_media import (
     DEFAULT_NATIVE_MEDIA_HELPER,
     NativeMacMedia,
@@ -87,10 +88,17 @@ def build_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument("--output-device", help="sounddevice output device name or index")
     parser.add_argument(
+        "--media-policy",
+        choices=tuple(ConversationMediaPolicy),
+        help=(
+            "Conversation media behavior (default: raw-full-duplex; use native-aec "
+            "to opt into macOS voice processing only while a conversation is active)"
+        ),
+    )
+    parser.add_argument(
         "--conversation-media",
         choices=("raw", "native-macos"),
-        default="raw",
-        help="Conversation microphone/playback adapter (default: raw sounddevice PCM)",
+        help=argparse.SUPPRESS,
     )
     parser.add_argument(
         "--native-media-helper",
@@ -101,11 +109,8 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--full-duplex",
         action=argparse.BooleanOptionalAction,
-        default=True,
-        help=(
-            "Send mic audio during playback for interruption (default: enabled; "
-            "use headphones until echo cancellation is available)"
-        ),
+        default=None,
+        help=argparse.SUPPRESS,
     )
     parser.add_argument("--log", type=Path, default=Path("latency.jsonl"))
     return parser
@@ -115,17 +120,25 @@ def main() -> None:
     load_dotenv()
     parser = build_parser()
     args = parser.parse_args()
+    try:
+        media_policy = resolve_media_policy(
+            args.media_policy,
+            legacy_adapter=args.conversation_media,
+            legacy_full_duplex=args.full_duplex,
+        )
+    except ValueError as error:
+        parser.error(str(error))
     if args.agent == "process" and not args.delegate_command:
         parser.error("--agent process requires --delegate-command")
-    if args.conversation_media == "native-macos" and args.agent != "openai":
-        parser.error("--conversation-media native-macos currently requires --agent openai")
-    if args.conversation_media == "native-macos" and sys.platform != "darwin":
-        parser.error("--conversation-media native-macos is available only on macOS")
-    if args.conversation_media == "native-macos" and args.output_device is not None:
+    if media_policy.aec_on_demand and args.agent != "openai":
+        parser.error("--media-policy native-aec currently requires --agent openai")
+    if media_policy.aec_on_demand and sys.platform != "darwin":
+        parser.error("--media-policy native-aec is available only on macOS")
+    if media_policy.aec_on_demand and args.output_device is not None:
         parser.error("--output-device is not yet supported by native macOS media")
-    if args.conversation_media == "native-macos" and args.device is not None:
+    if media_policy.aec_on_demand and args.device is not None:
         parser.error("--device is not yet supported by native macOS media")
-    if args.conversation_media == "native-macos" and args.audio_file is not None:
+    if media_policy.aec_on_demand and args.audio_file is not None:
         parser.error("--audio-file cannot be combined with native macOS media")
     device: int | str | None = args.device
     if isinstance(device, str) and device.isdigit():
@@ -138,7 +151,7 @@ def main() -> None:
     conversation_controller = ConversationController(logger)
     native_media = (
         NativeMacMedia(logger, (args.native_media_helper,))
-        if args.conversation_media == "native-macos"
+        if media_policy.aec_on_demand
         else None
     )
     source = (
@@ -184,7 +197,7 @@ def main() -> None:
             instructions=args.instructions,
             output_device=output_device,
             inactivity_timeout_seconds=args.session_timeout,
-            full_duplex=args.full_duplex,
+            full_duplex=media_policy.full_duplex,
             preconnect=not args.no_preconnect,
             vad_mode=args.realtime_vad,
             vad_threshold=args.vad_threshold,
@@ -233,6 +246,10 @@ def main() -> None:
 
     logger.emit(
         "app.started",
+        media_policy=media_policy.policy,
+        media_adapter=media_policy.adapter,
+        full_duplex=media_policy.full_duplex,
+        aec_on_demand=media_policy.aec_on_demand,
         source=(
             "wav"
             if args.audio_file

@@ -65,7 +65,36 @@ def test_native_media_bridge_captures_and_completes_playback() -> None:
     assert captured[0][1] == 48_000
     np.testing.assert_allclose(captured[0][0], [-1.0, 0.0, 32767 / 32768])
     assert "Media native ready" in stream.getvalue()
+    assert "Media native aec active" in stream.getvalue()
 
+    media.deactivate_capture()
+    assert "Media native raw active" in stream.getvalue()
+
+    media.close()
+    logger.close()
+
+
+def test_native_media_starts_raw_and_only_delivers_conversation_capture_in_aec() -> None:
+    stream = io.StringIO()
+    logger = EventLogger(stream=stream)
+    helper = Path(__file__).parent / "fixtures" / "native_media_helper.py"
+    media = NativeMacMedia(logger, (sys.executable, helper))
+    captured: list[np.ndarray] = []
+    media.set_capture_handler(lambda samples, _rate: captured.append(samples))
+
+    media.start()
+    time.sleep(0.05)
+    assert captured == []
+    assert "media mode=\"raw\"" in stream.getvalue().lower()
+    assert "voice processing=false" in stream.getvalue().lower()
+
+    media.activate_capture()
+    deadline = time.monotonic() + 1
+    while not captured and time.monotonic() < deadline:
+        time.sleep(0.01)
+    assert captured
+
+    media.deactivate_capture()
     media.close()
     logger.close()
 

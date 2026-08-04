@@ -135,22 +135,23 @@ The low-latency defaults use Sherpa's 160 ms chunk-8 model. Use
 `--model-chunk 16` for its 320 ms model when comparing the accuracy/latency
 tradeoff.
 
-Microphone upload continues while the assistant is speaking so server VAD can
-detect an interruption. On `input_audio_buffer.speech_started`, the WebSocket
-client immediately stops queued/current playback and truncates the assistant
-item to the estimated amount actually heard. Use headphones or an already
-echo-cancelled device for this mode until laptop-speaker AEC is implemented.
+The default `raw-full-duplex` policy keeps microphone upload active while the
+assistant speaks so server VAD can detect an interruption. On
+`input_audio_buffer.speech_started`, the WebSocket client immediately stops
+queued/current playback and truncates the assistant item to the estimated
+amount actually heard. This is the simple path for headphones or an already
+echo-cancelled device and does not enable Apple voice processing or system
+ducking.
 
 Temporarily fall back to half duplex when using unprocessed laptop speakers:
 
 ```sh
-uv run lobby-wake --no-full-duplex
+uv run lobby-wake --media-policy raw-half-duplex
 ```
 
 Half duplex prevents speaker feedback, but it also prevents interruption while
-the assistant is speaking. Laptop speaker/microphone full duplex remains the
-separate acoustic echo-cancellation item in the [roadmap](TODO.md) and
-[research note](docs/research/laptop-speaker-barge-in.md).
+the assistant is speaking. For a built-in MacBook speaker and microphone, opt
+into conversation-scoped native AEC instead.
 
 ### WebRTC laptop AEC spike
 
@@ -186,15 +187,26 @@ voice-processing audio path:
 
 ```sh
 sh scripts/build-native-media-helper.sh
-uv run lobby-wake --conversation-media native-macos
+uv run lobby-wake --media-policy native-aec
 ```
 
-The Swift helper is the single microphone owner in this mode. Its continuous
-48 kHz processed stream branches to a 16 kHz Sherpa wake source and a one-second
-conversation preroll. At activation, Python sends the processed preroll and
-live capture to the delegate. Assistant PCM returns through the same helper so
-echo cancellation has the playback reference it needs. Helper startup occurs
-during delegate preparation, outside the post-wake critical path.
+The Swift helper is the single microphone owner in this mode, but it starts in
+ordinary raw capture: no Apple voice processing and no other-application
+ducking. Its Apple-converted 16 kHz stream feeds Sherpa and the harness retains
+the bounded wake preroll. At activation, that raw preroll is sent to the
+delegate first, then the helper enters AEC mode and delivers live 48 kHz
+conversation capture. Assistant PCM returns through the same AEC graph so it
+has the playback reference it needs. At conversation end the AEC helper exits
+and is replaced by a fresh raw-listening helper, reliably releasing Core Audio
+ducking while the wake harness remains alive.
+
+The media policy is explicit and independent of the conversation backend:
+
+| Policy | Intended route | Interruption | Apple voice processing |
+| --- | --- | --- | --- |
+| `raw-full-duplex` (default) | Headphones / echo-cancelled device | Yes | Never |
+| `raw-half-duplex` | Unprocessed speaker fallback | No during playback | Never |
+| `native-aec` | Built-in Mac speaker + microphone | Yes | Active conversation only |
 
 The spike currently uses the system default input and output devices; do not
 combine it with `--device`, `--output-device`, or `--audio-file`. See the
@@ -331,6 +343,35 @@ Omit either count to be prompted for it. Approved mono 16 kHz PCM WAV files are
 stored under `recordings/` with a `manifest.jsonl`; rejected takes are discarded.
 Use `--input-device` or `--output-device` when the system defaults are not the
 devices you want.
+
+### Compare raw and native wake capture
+
+Run a bounded guided A/B session when changing the native microphone path:
+
+```sh
+uv run lobby-compare-wake-capture --attempts 10
+```
+
+The tool runs a microphone test, collects ten approved “Hey Lobby” attempts
+through raw `sounddevice` capture, then ten through the native Apple
+voice-processed path. Each attempt is evaluated locally with the same Sherpa
+configuration and must be kept or redone, so misses remain in the denominator.
+It saves both sets of 16 kHz WAV files, `trials.jsonl`, and `summary.json` under
+`recordings/wake-comparison/<timestamp>/`. Use `--order native-first` for a
+second counterbalanced run.
+
+To verify the native converter without recording more speech, reuse the existing
+positive corpus:
+
+```sh
+uv run lobby-compare-wake-capture \
+  --reuse-recordings recordings/positive \
+  --output-dir recordings/wake-converter-check
+```
+
+This sends each saved 16 kHz WAV through the production Swift converter as a
+16→48→16 kHz round trip and compares Sherpa detections on identical speech. It
+tests converter preservation, not the live effect of Apple's voice processing.
 
 ## Tests
 
