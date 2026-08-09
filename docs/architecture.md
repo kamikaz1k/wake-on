@@ -86,6 +86,10 @@ only after a wake has been accepted.
 | `ConversationController` | One active generation and serialized end requests | Audio or delegate execution |
 | `ConversationHandle` | A restricted, generation-scoped delegate capability | Harness internals |
 | `ConversationDelegate` | Pre-wake preparation, activation, status, audio ownership, and shutdown contract | Any backend protocol |
+| `ComputerTaskService` | Delegate-owned task lifecycle, progress, approvals, cancellation, and completion | Wake routing or UI implementation |
+| `ComputerTaskPlanner` | Provider-swappable next-action decisions from fresh observations | Direct desktop access or product approval policy |
+| `ComputerExecutor` | Revision-bound observation/action and immediate cancellation | Voice, wake, or model protocol |
+| `ComputerPolicyScope` | Per-task application/action allowlists and approval gates | Prompt interpretation |
 | `OpenAIRealtimeAgent` | Realtime connection, audio conversion, model events, graceful farewell | Top-level lifecycle state |
 | `SherpaWakeWordEngine` | Local wake detection | Conversation audio |
 | `AudioPlayer` | Non-blocking assistant playback | Microphone capture |
@@ -105,6 +109,34 @@ model tool call to its own long-running computer-use worker; WakeOn sees only
 the existing delegate lifecycle and generation-scoped cancellation. This keeps
 other delegates free to use a different planner, executor, or no computer use
 at all.
+
+### Computer-task lifecycle
+
+```mermaid
+stateDiagram-v2
+    [*] --> READY: prepare executor
+    READY --> RUNNING: start(task, generation, scope)
+    RUNNING --> AWAITING_APPROVAL: policy requires confirmation
+    AWAITING_APPROVAL --> RUNNING: approve + revision unchanged
+    AWAITING_APPROVAL --> RUNNING: UI changed → reobserve + replan
+    AWAITING_APPROVAL --> CANCELLED: reject / expiry / cancel
+    RUNNING --> RUNNING: observe → plan → revision-bound act
+    RUNNING --> COMPLETED: planner completes
+    RUNNING --> FAILED: policy / planner / executor / step limit
+    RUNNING --> CANCELLING: matching generation cancel
+    CANCELLING --> CANCELLED: executor stopped or late result discarded
+    COMPLETED --> RUNNING: next task
+    FAILED --> RUNNING: next task
+    CANCELLED --> RUNNING: next task
+```
+
+The worker owns one task at a time and is independent of the active voice
+transport. A task request carries an opaque task ID, delegate generation, user
+intent, target application, and immutable policy scope. Observations carry a
+revision; actions planned against a stale revision are rejected and replanned.
+Approval never freezes an old click target: the worker observes again before
+execution. Cancellation calls the executor immediately and dominates any late
+action or completion result.
 
 ## Routed daemon boundary
 
@@ -439,6 +471,10 @@ speaker/microphone full duplex still requires an AEC media path; see the
 - Delegates receive a restricted capability, not the Realtime socket or
   orchestrator internals.
 - Graceful termination is bounded; emergency termination is always available.
+- Computer actions execute only inside the task's application/action allowlist.
+- Accepted computer-task cancellation dominates queued and late results.
+- Screen content, screenshots, action parameters, and user intent stay out of
+  ordinary lifecycle logs.
 - Secrets are loaded from `.env`, excluded from Git, and never included in
   lifecycle logs.
 
@@ -450,6 +486,7 @@ speaker/microphone full duplex still requires an AEC media path; see the
 | Delegate lifecycle contract | `src/lobby_wake/agent.py` |
 | End requests and delegate capability | `src/lobby_wake/conversation.py` |
 | Realtime connection, tools, and audio | `src/lobby_wake/realtime.py` |
+| Provider-neutral computer-task lifecycle | `src/lobby_wake/computer_task.py` |
 | Wake detection | `src/lobby_wake/wake.py` |
 | Microphone and WAV sources | `src/lobby_wake/audio.py` |
 | Rolling preroll buffer | `src/lobby_wake/ring_buffer.py` |

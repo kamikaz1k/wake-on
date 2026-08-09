@@ -1,6 +1,6 @@
 # Computer-use systems research
 
-- **Status:** initial survey and prototype plan
+- **Status:** Peekaboo selected; provider-neutral task contract implemented
 - **Scope:** the Lobby reference delegate on macOS
 - **Non-goal:** adding computer-use behavior to the WakeOn wake-word core
 
@@ -39,8 +39,10 @@ For the first prototype:
 2. Put the computer-use loop in a separate long-running worker owned by the
    Lobby delegate. Do not add screenshots, UI actions, or provider-specific
    events to `WakeRouter` or the delegate process protocol.
-3. Try **Peekaboo** first as the macOS executor. It exposes both a CLI and MCP,
-   has structured element/snapshot IDs, is native Swift, and is MIT licensed.
+3. Use **Peekaboo** as the macOS executor. It exposes both a CLI and MCP, has
+   structured element/snapshot IDs, is native Swift, and is MIT licensed. Pin
+   the first integration to v3.9.10 (released 2026-08-03) rather than tracking
+   `main`.
 4. Keep the planner and executor behind local interfaces so we can compare the
    OpenAI Responses `computer` tool, a custom tool loop, or another agent
    without changing WakeOn.
@@ -74,6 +76,35 @@ Those are patterns worth copying. The packaged runtime is not presented as a
 public dependency or supported SDK, so WakeOn should not import it or copy its
 implementation. We should reproduce the contract using public macOS tooling.
 
+### Tool-surface comparison: Peekaboo v3.9.10 and packaged Sky
+
+The installed Sky client exposes 10 deliberately small methods:
+`list_apps`, `get_app_state`, `click`, `drag`, `scroll`, `set_value`,
+`type_text`, `press_key`, `select_text`, and `perform_secondary_action`.
+`get_app_state` combines accessibility text with a screenshot and can return
+incremental accessibility diffs. Element indices are observation-scoped.
+
+Peekaboo v3.9.10 exposes 27 native tools through its canonical MCP catalog:
+`image`, `capture`, `analyze`, `browser`, `list`, `permissions`, `sleep`, `see`,
+`inspect_ui`, `click`, `type`, `set_value`, `perform_action`, `scroll`,
+`hotkey`, `swipe`, `drag`, `move`, `app`, `window`, `menu`, `clipboard`,
+`paste`, `agent`, `dock`, `dialog`, and `space`.
+
+The overlap is strong: both can observe accessibility plus pixels, click by an
+observed element or coordinates, type, set accessibility values, invoke named
+accessibility actions, scroll, drag, and press key combinations. Sky uniquely
+offers content-aware `select_text` with prefix/suffix disambiguation. Peekaboo
+adds raw/annotated and live capture, deeper UI inspection, pointer movement and
+swipes, clipboard-safe paste, app/window/Space control, menus, Dock, system
+dialogs, browser delegation, optional image analysis, and its own agent.
+
+WakeOn should not expose Peekaboo's full catalog to the Realtime model. The
+first executor allowlist is `see`, `click`, `type`, `set_value`,
+`perform_action`, `hotkey`, `scroll`, `app`, and narrowly scoped `window`.
+`permissions` is used during worker preparation, not model planning. Capture,
+analysis, browser, clipboard, Dock, dialogs, Spaces, and Peekaboo's own agent
+remain disabled until a task requires them and policy coverage exists.
+
 ## OpenAI integration choices
 
 OpenAI documents three computer-use harness shapes: the built-in Responses API
@@ -99,7 +130,7 @@ the local Mac.
 
 | System | Useful layer | macOS perception/actions | License | Fit for the first spike |
 | --- | --- | --- | --- | --- |
-| [Peekaboo](https://github.com/steipete/Peekaboo) | Native executor, CLI, MCP, optional agent | Screen capture, accessibility-aware snapshots, element IDs, native actions with synthetic input fallback | MIT | **Best first executor.** Small enough to place behind our bridge and close to the installed Codex skill's interaction style. Version 3 has recently been beta, so pin and test a known version. |
+| [Peekaboo](https://github.com/openclaw/Peekaboo) | Native executor, CLI, MCP, optional agent | Screen capture, accessibility-aware snapshots, element IDs, native actions with synthetic input fallback | MIT | **Selected executor.** Pin v3.9.10 and expose only the initial allowlist through our worker. |
 | [Cua](https://github.com/trycua/cua) | Driver, sandbox SDK, macOS/Linux/Windows VMs, benchmarks | macOS background driver plus isolated full-desktop environments | MIT | **Best isolation/evaluation candidate.** Broader and heavier than needed for the first local task, but attractive when we test risky or reproducible workflows. |
 | [OpenAI computer tool](https://developers.openai.com/api/docs/guides/tools-computer-use) | Model planner and action protocol | Screenshot-based; the application must supply the actual browser/desktop executor | API service | **Best initial planner candidate.** It does not replace Peekaboo or another driver. |
 | [Browser Use](https://github.com/browser-use/browser-use) | Browser-specific agent and executor | Chromium/CDP, indexed web elements, persistent browser daemon | MIT | Excellent specialized web backend, but not a general macOS executor. Prefer it when the task is known to be browser-only. |
@@ -116,7 +147,7 @@ The comparison separates three things that are often bundled together:
 WakeOn should integrate these as separate roles even if the prototype library
 offers all three.
 
-## Proposed local contract
+## Implemented local contract
 
 The first design pass should define a provider-neutral worker contract around
 task lifecycle, not around OpenAI response events:
@@ -141,6 +172,21 @@ act(revision, action) -> accepted/rejected + timing
 Requiring the observation revision prevents an action planned against stale UI
 state from being silently applied after the window changes.
 
+The implementation is in `src/lobby_wake/computer_task.py` and separates:
+
+- `ComputerTaskService`: start, status, approval, cancellation, events, close;
+- `ComputerTaskPlanner`: provider-swappable next-step decisions;
+- `ComputerExecutor`: prepare, observe, revision-bound act, cancel, close;
+- `ComputerPolicyScope`: application and action allowlists plus approval gates;
+- `ComputerTaskWorker`: the single-active-task lifecycle and event queue.
+
+Approvals carry the proposed action, a risk label, and a monotonic expiry. The
+worker observes again after approval and replans instead of acting if the UI
+revision changed. Executor cancellation is invoked immediately, and a result
+that arrives after accepted cancellation is discarded. Ordinary logs contain
+task/action IDs and timing metadata, not screen text, screenshots, action
+parameters, user intent, or result summaries.
+
 ## Safety baseline
 
 The bounded prototype should enforce these rules in code:
@@ -163,20 +209,21 @@ The bounded prototype should enforce these rules in code:
 
 ### Phase 0 — contract and deterministic fixture
 
-- Define the worker and executor interfaces above.
-- Build a fake executor and test start, progress, approval, stale revisions,
-  cancellation, worker failure, and generation mismatch.
-- Decide which approval responses can travel over voice and which require a
-  visible local prompt.
+- [x] Define the worker, planner, executor, policy, status, and event interfaces.
+- [x] Build a fake executor and test start, progress, expiring approval, stale
+  revisions, generation mismatch, cancellation dominance, late results, and
+  worker failure.
+- [ ] Decide which approval responses can travel over voice and which require a
+  visible local prompt before enabling consequential actions.
 
-### Phase 1 — executor bake-off
+### Phase 1 — Peekaboo adapter and benchmark
 
 Use one reversible task in a disposable macOS account or controlled test app:
 open TextEdit, create an unsaved document, type a known sentence, verify it,
 and close without saving.
 
-Compare Peekaboo with one alternative, initially Cua's local macOS driver. For
-each run record:
+Run the pinned Peekaboo adapter first. Keep Cua as a later isolation alternative
+rather than a blocking bake-off. For each run record:
 
 - cold and warm worker startup;
 - task accepted → first user-visible progress;

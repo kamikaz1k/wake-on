@@ -40,13 +40,17 @@ results belong in `docs/`; this file tracks what remains.
   provider-neutral worker, with Peekaboo as the first macOS executor candidate
   and Cua as the isolation/evaluation alternative. See the
   [research note](docs/research/computer-use-systems.md).
-- [ ] **Define and test the computer-task contract.** Add a fake worker before
+- [x] **Define and test the computer-task contract.** Add a fake worker before
   touching the desktop. Cover start, progress, approval, generation-scoped
   cancellation, stale observations, late results, failure, and emergency end.
-- [ ] **Run the bounded executor bake-off.** Compare pinned versions of Peekaboo
-  and Cua's local macOS driver on the reversible TextEdit fixture. Measure warm
-  and cold startup, first visible progress, action latency, 20-run reliability,
-  cancellation latency, permissions, and packaging weight.
+  The implemented worker also enforces application/action allowlists, expiring
+  approvals, re-observation after approval, and log-content redaction.
+- [ ] **Integrate and benchmark pinned Peekaboo v3.9.10.** Use its public MCP
+  executor behind the provider-neutral worker contract and a narrow tool
+  allowlist. Run the reversible TextEdit fixture and measure warm/cold startup,
+  first visible progress, action latency, 20-run reliability, cancellation
+  latency, permissions, and packaging weight. Keep Cua as a later isolation
+  alternative rather than blocking the selected local integration.
 - [ ] **Bridge the winning executor into Lobby.** Add one Realtime function tool
   to the reference delegate, keep voice interruption active during the task,
   and return progress and completion without leaking the computer-use protocol

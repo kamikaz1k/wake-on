@@ -13,6 +13,7 @@ time the work happened. They complement the architecture documents and ADRs:
 | Date | Entry | Outcome |
 | --- | --- | --- |
 | 2026-08-03 | [Native macOS AEC and single-owner microphone capture](2026-08-03-native-macos-aec-and-microphone.md) | Native speaker/mic full duplex worked; duplicate capture hurt wake responsiveness; a single native stream fixed the identified contention and passed an initial repeat trial |
+| 2026-08-04 | [Computer-task contract and deterministic worker](2026-08-04-computer-task-contract.md) | Provider-neutral planner/executor/task lifecycle implemented with policy gates, expiring approvals, stale-state protection, and dominant cancellation |
 
 ## Entry convention
 

@@ -350,3 +350,37 @@ interruptions worked, and ending the conversation restored ordinary audio. A
 brief audible pause remains during the raw→AEC transition. It is acceptable for
 the current phase and is tracked as a later latency optimization rather than a
 blocker for starting the computer-use work.
+
+## 2026-08-04 Control Center Voice Isolation trial
+
+We ran a bounded trial of macOS Control Center's Voice Isolation mode while
+WakeOn was listening in `native-aec` policy. The Control Center panel identified
+the microphone-owning application as **ChatGPT**. This is expected attribution:
+the helper was launched by the terminal hosted inside Codex/ChatGPT, and the
+same label appears when the user launches the job manually from that terminal.
+The user selected Voice Isolation for that active attributed session, so this
+is credible evidence that the trial exercised WakeOn under Voice Isolation.
+
+The WakeOn behavior itself was good after the AEC handoff. Laptop-speaker audio
+did not cause an observed false interruption, and two intentional barge-ins
+stopped playback 0.35 ms and 1.12 ms after the server's
+`input_audio_buffer.speech_started` event. The first instruction was cut off,
+as expected from the current handoff design. This particular run measured:
+
+| Metric | Observed |
+| --- | ---: |
+| Wake → first input audio sent | 21.99 ms |
+| Raw → AEC transition | 831.03 ms |
+| Wake → first assistant playback | 1,914.52 ms |
+
+The assistant's first transcript explicitly reported that the question sounded
+cut off. This is direct confirmation that the transition gap is user-visible,
+not only a theoretical risk.
+
+The trial was qualitative and did not isolate Voice Isolation from WakeOn's own
+AEC, which had already passed speaker rejection and barge-in tests. For a
+controlled comparison, the native helper should still expose
+`AVCaptureDevice.preferredMicrophoneMode` and `activeMicrophoneMode` in its
+readiness/state telemetry, then repeat identical Standard and Voice Isolation
+trials. That instrumentation is about measurement confidence, not a reason to
+discard this successful run.
