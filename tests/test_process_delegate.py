@@ -3,6 +3,7 @@ from __future__ import annotations
 import base64
 import json
 import sys
+import threading
 import time
 from collections.abc import Callable
 from pathlib import Path
@@ -10,6 +11,7 @@ from pathlib import Path
 import numpy as np
 
 from lobby_wake.agent import (
+    AudioInputOwnership,
     DelegateHealth,
     DelegatePrepareContext,
     DelegateStartContext,
@@ -21,9 +23,65 @@ from lobby_wake.conversation import (
     EndSource,
 )
 from lobby_wake.events import EventLogger, WakeEvent
+from lobby_wake.playback import PlaybackPosition
 from lobby_wake.process_delegate import ProcessConversationDelegate, encode_float_audio
 
 FIXTURE = Path(__file__).parent / "fixtures" / "process_delegate.py"
+
+
+class FakeHarnessMedia:
+    sample_rate = 24_000
+
+    def __init__(self) -> None:
+        self.started = False
+        self.playing = False
+        self.capture_active = False
+        self.chunks: list[bytes] = []
+        self.clear_count = 0
+        self.deactivate_thread_ids: list[int] = []
+
+    def start(self) -> None:
+        self.started = True
+
+    def enqueue(
+        self,
+        pcm16: bytes,
+        on_start: Callable[[], None] | None = None,
+        *,
+        item_id: str = "",
+        content_index: int = 0,
+    ) -> None:
+        del item_id, content_index
+        self.chunks.append(pcm16)
+        self.playing = True
+        if on_start is not None:
+            on_start()
+
+    def clear(self) -> None:
+        self.clear_count += 1
+        self.playing = False
+
+    def interrupt(
+        self,
+        item_id: str | None = None,
+        content_index: int = 0,
+    ) -> PlaybackPosition | None:
+        self.clear()
+        return (
+            PlaybackPosition(item_id, content_index, 0)
+            if item_id is not None
+            else None
+        )
+
+    def close(self) -> None:
+        self.started = False
+
+    def activate_capture(self) -> None:
+        self.capture_active = True
+
+    def deactivate_capture(self) -> None:
+        self.deactivate_thread_ids.append(threading.get_ident())
+        self.capture_active = False
 
 
 def wait_until(
@@ -108,6 +166,74 @@ def test_process_delegate_prepares_warm_and_completes_graceful_end(tmp_path) -> 
         for record in records
     )
     assert any(record["event"] == "delegate.activation_ended" for record in records)
+
+
+def test_process_delegate_routes_capture_and_playback_through_harness_media() -> None:
+    logger = EventLogger()
+    controller = ConversationController(logger)
+    media = FakeHarnessMedia()
+    delegate = ProcessConversationDelegate(
+        logger,
+        [sys.executable, str(FIXTURE), "--emit-playback"],
+        audio_input=AudioInputOwnership.DELEGATE,
+        player=media,
+        capture=media,
+        restart_delay_seconds=0.01,
+    )
+
+    delegate.prepare(DelegatePrepareContext(sample_rate=16_000))
+    wait_until(lambda: delegate.status.warm, delegate)
+    delegate.start(start_context(controller))
+    delegate.send_captured_audio(np.ones(80, dtype=np.float32), 24_000)
+    wait_until(lambda: bool(media.chunks), delegate)
+
+    assert media.started
+    assert media.capture_active
+    assert media.chunks == [b"\x01\x00\x02\x00"]
+
+    delegate.stop()
+    assert not media.capture_active
+    assert not media.playing
+    delegate.close()
+    logger.close()
+
+
+def test_process_delegate_defers_child_ended_media_teardown_to_poll_thread() -> None:
+    logger = EventLogger()
+    controller = ConversationController(logger)
+    media = FakeHarnessMedia()
+    delegate = ProcessConversationDelegate(
+        logger,
+        [sys.executable, str(FIXTURE)],
+        audio_input=AudioInputOwnership.DELEGATE,
+        player=media,
+        capture=media,
+        restart_delay_seconds=0.01,
+    )
+    delegate.prepare(DelegatePrepareContext(sample_rate=16_000))
+    wait_until(lambda: delegate.status.warm, delegate)
+    delegate.start(start_context(controller))
+    delegate.request_end(
+        EndConversationRequest(
+            source=EndSource.USER,
+            reason="done",
+            mode=EndMode.GRACEFUL,
+            requested_at_ns=time.monotonic_ns(),
+        )
+    )
+
+    deadline = time.monotonic() + 2
+    while delegate.active and time.monotonic() < deadline:
+        time.sleep(0.01)
+    assert not delegate.active
+    assert media.capture_active
+
+    poll_thread_id = threading.get_ident()
+    delegate.poll()
+    assert not media.capture_active
+    assert media.deactivate_thread_ids == [poll_thread_id]
+    delegate.close()
+    logger.close()
 
 
 def test_child_end_request_uses_current_conversation_handle() -> None:

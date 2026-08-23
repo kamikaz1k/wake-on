@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import base64
+import binascii
 import json
 import os
 import subprocess
@@ -23,6 +24,7 @@ from .agent import (
 )
 from .conversation import ConversationHandle, EndConversationRequest
 from .events import EventLogger
+from .playback import AudioPlayback, ConversationCapture
 from .ring_buffer import FloatAudio
 
 PROTOCOL_VERSION = 1
@@ -36,6 +38,32 @@ def encode_float_audio(samples: FloatAudio) -> dict[str, Any]:
         "samples": audio.size,
         "data": base64.b64encode(audio.tobytes()).decode("ascii"),
     }
+
+
+def encode_pcm16_audio(pcm16: bytes) -> dict[str, Any]:
+    if len(pcm16) % 2:
+        raise ValueError("PCM16 audio must contain complete samples")
+    return {
+        "encoding": "pcm16le",
+        "samples": len(pcm16) // 2,
+        "data": base64.b64encode(pcm16).decode("ascii"),
+    }
+
+
+def decode_pcm16_audio(value: object) -> bytes:
+    if not isinstance(value, dict) or value.get("encoding") != "pcm16le":
+        raise ValueError("audio must use pcm16le encoding")
+    encoded = value.get("data")
+    samples = value.get("samples")
+    if not isinstance(encoded, str) or not isinstance(samples, int) or samples < 0:
+        raise ValueError("audio payload is missing data or sample count")
+    try:
+        pcm16 = base64.b64decode(encoded, validate=True)
+    except (ValueError, binascii.Error) as error:
+        raise ValueError("audio payload is not valid base64") from error
+    if len(pcm16) != samples * 2:
+        raise ValueError("audio byte length does not match sample count")
+    return pcm16
 
 
 class ProcessConversationDelegate:
@@ -52,6 +80,8 @@ class ProcessConversationDelegate:
         command: Sequence[str],
         *,
         audio_input: AudioInputOwnership = AudioInputOwnership.HARNESS,
+        player: AudioPlayback | None = None,
+        capture: ConversationCapture | None = None,
         cwd: Path | None = None,
         environment: Mapping[str, str] | None = None,
         restart_delay_seconds: float = 0.5,
@@ -67,6 +97,10 @@ class ProcessConversationDelegate:
         self._logger = logger
         self._command = tuple(str(part) for part in command)
         self._capabilities = DelegateCapabilities(audio_input=audio_input)
+        self._player = player
+        self._capture = capture
+        self._remote_playback_pending = False
+        self._media_end_pending = False
         self._cwd = cwd
         self._environment = dict(environment) if environment is not None else None
         self._restart_delay_ns = round(restart_delay_seconds * 1_000_000_000)
@@ -106,6 +140,8 @@ class ProcessConversationDelegate:
             return self._active
 
     def prepare(self, context: DelegatePrepareContext) -> None:
+        if self._player is not None:
+            self._player.start()
         with self._state_lock:
             if self._closing:
                 return
@@ -152,6 +188,8 @@ class ProcessConversationDelegate:
                 self._activation_id = None
                 self._conversation = None
             raise RuntimeError("failed to activate delegate process")
+        if self._capture is not None:
+            self._capture.activate_capture()
         self._logger.emit(
             "delegate.activation_sent",
             adapter="process",
@@ -172,6 +210,10 @@ class ProcessConversationDelegate:
     def send_audio(self, samples: FloatAudio, sample_rate: int) -> None:
         if self._capabilities.audio_input is not AudioInputOwnership.HARNESS:
             return
+        self.send_captured_audio(samples, sample_rate)
+
+    def send_captured_audio(self, samples: FloatAudio, sample_rate: int) -> None:
+        """Forward audio delivered by an attached harness media adapter."""
         with self._state_lock:
             if not self._active or self._activation_id is None:
                 return
@@ -201,6 +243,17 @@ class ProcessConversationDelegate:
                 and self._end_deadline_ns is not None
                 and now_ns >= self._end_deadline_ns
             )
+            media_end_pending = self._media_end_pending
+            self._media_end_pending = False
+        if media_end_pending:
+            try:
+                self._end_media_session()
+            except Exception as error:
+                self._logger.emit(
+                    "delegate.media_teardown_error",
+                    adapter="process",
+                    detail=str(error),
+                )
         if process_exited and process is not None:
             self._record_process_exit(process, self._process_generation)
         if end_timed_out:
@@ -209,6 +262,13 @@ class ProcessConversationDelegate:
             return
         if restart_due:
             self._spawn()
+        if (
+            self._player is not None
+            and self._remote_playback_pending
+            and not self._player.playing
+        ):
+            self._remote_playback_pending = False
+            self._send({"v": PROTOCOL_VERSION, "type": "playback_idle"})
 
     def request_end(self, request: EndConversationRequest) -> None:
         with self._state_lock:
@@ -245,6 +305,7 @@ class ProcessConversationDelegate:
                 "activation_id": activation_id,
             }
         )
+        self._end_media_session()
 
     def close(self) -> None:
         with self._state_lock:
@@ -269,6 +330,9 @@ class ProcessConversationDelegate:
             self._process = None
             self._clear_activation_locked()
             self._status = DelegateStatus(DelegateHealth.CLOSED, accepting_activation=False)
+        self._end_media_session(deactivate_capture=False)
+        if self._player is not None:
+            self._player.close()
 
     def _spawn(self) -> None:
         with self._state_lock:
@@ -333,12 +397,23 @@ class ProcessConversationDelegate:
         self._stdout_thread.start()
         self._stderr_thread.start()
         if context is not None:
+            audio_output: dict[str, object] = {"owner": "delegate"}
+            if self._player is not None:
+                audio_output = {
+                    "owner": "harness",
+                    "sample_rate": self._player.sample_rate,
+                }
             self._send(
                 {
                     "v": PROTOCOL_VERSION,
                     "type": "prepare",
                     "sample_rate": context.sample_rate,
-                    "audio_input": self._capabilities.audio_input,
+                    "audio_input": (
+                        AudioInputOwnership.HARNESS
+                        if self._capture is not None
+                        else self._capabilities.audio_input
+                    ),
+                    "audio_output": audio_output,
                 }
             )
 
@@ -427,6 +502,10 @@ class ProcessConversationDelegate:
                 self._finish_activation(reason=message.get("reason"))
         elif message_type == "request_end":
             self._handle_child_end_request(message)
+        elif message_type == "playback_audio":
+            self._handle_playback_audio(message)
+        elif message_type == "playback_clear":
+            self._handle_playback_clear(message)
         elif message_type == "log":
             self._logger.emit(
                 "delegate.process_log",
@@ -439,11 +518,43 @@ class ProcessConversationDelegate:
         else:
             self._protocol_error(f"unknown message type: {message_type!r}")
 
+    def _handle_playback_audio(self, message: dict[str, Any]) -> None:
+        player = self._player
+        if player is None:
+            self._protocol_error("child sent playback audio without harness-owned output")
+            return
+        if not self._matches_activation(message):
+            return
+        item_id = message.get("item_id")
+        content_index = message.get("content_index")
+        if not isinstance(item_id, str) or not isinstance(content_index, int):
+            self._protocol_error("playback audio metadata is invalid")
+            return
+        try:
+            pcm16 = decode_pcm16_audio(message.get("audio"))
+        except ValueError as error:
+            self._protocol_error(str(error))
+            return
+        player.enqueue(pcm16, item_id=item_id, content_index=content_index)
+        self._remote_playback_pending = True
+
+    def _handle_playback_clear(self, message: dict[str, Any]) -> None:
+        player = self._player
+        if player is None or not self._matches_activation(message):
+            return
+        item_id = message.get("item_id")
+        content_index = message.get("content_index", 0)
+        player.interrupt(
+            item_id if isinstance(item_id, str) else None,
+            content_index if isinstance(content_index, int) else 0,
+        )
+        self._remote_playback_pending = False
+
     def _handle_child_event(self, message: dict[str, Any]) -> None:
         event = message.get("event")
         fields = message.get("fields")
-        if not isinstance(event, str) or not event.startswith("agent."):
-            self._protocol_error("child event must use the agent.* namespace")
+        if not isinstance(event, str) or not event.startswith(("agent.", "computer.")):
+            self._protocol_error("child event must use the agent.* or computer.* namespace")
             return
         if not isinstance(fields, dict):
             fields = {}
@@ -520,6 +631,7 @@ class ProcessConversationDelegate:
         with self._state_lock:
             activation_id = self._activation_id
             self._clear_activation_locked()
+            self._media_end_pending = True
         self._logger.emit(
             "delegate.activation_ended",
             adapter="process",
@@ -533,6 +645,13 @@ class ProcessConversationDelegate:
         self._conversation = None
         self._activation_sent_at_ns = None
         self._end_deadline_ns = None
+
+    def _end_media_session(self, *, deactivate_capture: bool = True) -> None:
+        if self._player is not None:
+            self._player.clear()
+        self._remote_playback_pending = False
+        if deactivate_capture and self._capture is not None:
+            self._capture.deactivate_capture()
 
     def _record_process_exit(
         self,
@@ -548,6 +667,7 @@ class ProcessConversationDelegate:
             self._process = None
             was_active = self._active
             self._clear_activation_locked()
+            self._media_end_pending = self._media_end_pending or was_active
             closing = self._closing
             if not closing:
                 self._status = DelegateStatus(
@@ -599,6 +719,7 @@ class ProcessConversationDelegate:
             )
         if process is not None and process.poll() is None:
             process.terminate()
+        self._end_media_session()
         self._schedule_restart()
 
     def _protocol_error(self, detail: str) -> None:

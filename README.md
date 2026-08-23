@@ -254,6 +254,96 @@ uv run lobby-wake \
   --delegate-command python -m lobby_wake.openai_process_delegate
 ```
 
+To expose the bounded macOS computer tool to that delegate, grant the process
+Screen Recording and Accessibility access, then opt in explicitly:
+
+```sh
+uv run lobby-wake \
+  --agent process \
+  --delegate-command python -m lobby_wake.openai_process_delegate \
+  --computer-use \
+  --computer-allow-app TextEdit \
+  --peekaboo-command ".tools/peekaboo/peekaboo-macos-universal/peekaboo mcp serve"
+```
+
+When no `--computer-allow-app` option is supplied, the reference delegate keeps
+the historical TextEdit target and also allows Google Chrome. Chrome page
+content uses Peekaboo's native `browser` tool backed by Chrome DevTools MCP,
+not the macOS `see` path. Before the first Chrome trial, open
+`chrome://inspect/#remote-debugging`, enable remote debugging for the active
+profile, and accept Chrome's confirmation prompt when Peekaboo connects.
+
+To run a Chrome-only trial, narrow the application scope explicitly:
+
+```sh
+uv run lobby-wake \
+  --agent process \
+  --media-policy native-aec \
+  --delegate-command python -m lobby_wake.openai_process_delegate \
+  --computer-use \
+  --computer-allow-app "Google Chrome" \
+  --peekaboo-command ".tools/peekaboo/peekaboo-macos-universal/peekaboo mcp serve"
+```
+
+The background computer agent consumes Peekaboo's live MCP tool descriptions
+and JSON schemas. Tool names and arguments pass directly to `tools/call`, so
+Chrome behavior comes from Peekaboo's standard `browser` tool rather than a
+WakeOn-specific browser mapping. Voice streaming and barge-in remain
+independent of these browser actions.
+
+For built-in MacBook speakers and microphone, compose the same process delegate
+with harness-owned native AEC. As with all Wake On options, `--media-policy`
+must appear before `--delegate-command`:
+
+```sh
+sh scripts/build-native-media-helper.sh
+uv run lobby-wake \
+  --agent process \
+  --media-policy native-aec \
+  --delegate-command python -m lobby_wake.openai_process_delegate \
+  --computer-use \
+  --computer-allow-app TextEdit \
+  --peekaboo-command ".tools/peekaboo/peekaboo-macos-universal/peekaboo mcp serve"
+```
+
+The Realtime model receives high-level `use_computer`,
+`steer_computer_task`, and `cancel_computer_task` functions. Starting a task
+returns its ID immediately; steering revises that same task when the user
+changes their mind, while cancellation stops it entirely. The computer worker
+currently uses the same `OPENAI_API_KEY` as Realtime but has an independent
+Responses context. A background Responses tool loop uses Peekaboo's live MCP Interface while
+microphone streaming, server VAD, and voice turns remain active. Completion
+waits behind foreground voice activity before it is spoken. Cancellation stops
+the supervised Peekaboo child and suppresses late results. Computer use is off
+by default; repeat `--computer-allow-app` to expand its advertised application
+scope deliberately. Use Peekaboo's `PEEKABOO_ALLOW_TOOLS` setting when a
+restricted MCP tool catalog is required.
+
+Voice handoffs are deliberately terse. The agent gives one short pre-tool
+handoff, does not speak again when task acceptance succeeds, and explains only
+a rejected or failed acceptance. If an accepted task is still running after ten
+seconds, it gives one reassurance and then stays quiet until completion or
+failure. Conversation endings are restricted to a quick send-off such as
+“Thanks,” “Bye-bye,” or “Have a nice day.”
+
+Computer-agent API usage is accounted separately from Realtime. Each Responses
+call logs exact input, cached-input, and output tokens plus request and cumulative
+task cost. Logs also include cumulative computer-agent cost for the lifetime of
+the delegate process; the JSONL record remains available across restarts for
+aggregation. The default computer-task ceiling is **$0.25**. Override it when
+starting the process delegate, or pass `0` to disable the hard ceiling:
+
+```sh
+python -m lobby_wake.openai_process_delegate \
+  --computer-use \
+  --computer-max-task-cost-usd 0.10
+```
+
+Pricing estimates currently cover the default `gpt-5.4-mini` model at the
+standard API rates verified on 2026-08-23. A custom model without a configured
+rate still logs exact tokens, but its dollar estimate and hard dollar ceiling
+are unavailable.
+
 ## Ending conversations
 
 The Realtime agent can call the harness-owned `end_conversation` function when

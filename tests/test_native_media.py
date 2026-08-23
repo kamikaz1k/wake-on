@@ -8,6 +8,7 @@ import time
 from pathlib import Path
 
 import numpy as np
+import pytest
 
 from lobby_wake.events import EventLogger
 from lobby_wake.native_media import (
@@ -95,6 +96,75 @@ def test_native_media_starts_raw_and_only_delivers_conversation_capture_in_aec()
     assert captured
 
     media.deactivate_capture()
+    media.close()
+    logger.close()
+
+
+def test_native_media_retries_transient_raw_helper_restart(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    stream = io.StringIO()
+    logger = EventLogger(stream=stream)
+    helper = Path(__file__).parent / "fixtures" / "native_media_helper.py"
+    media = NativeMacMedia(
+        logger,
+        (sys.executable, helper),
+        restart_attempts=3,
+        restart_delay_seconds=0,
+    )
+    media.start()
+    media.activate_capture()
+    real_start = media.start
+    attempts = 0
+
+    def flaky_start() -> None:
+        nonlocal attempts
+        attempts += 1
+        if attempts < 3:
+            raise RuntimeError("Core Audio device is still releasing")
+        real_start()
+
+    monkeypatch.setattr(media, "start", flaky_start)
+    media.deactivate_capture()
+
+    assert attempts == 3
+    assert media.running
+    assert stream.getvalue().count("Media native restart retry") == 2
+    media.close()
+    logger.close()
+
+
+def test_native_wake_source_waits_across_managed_helper_restart(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    logger = EventLogger(stream=io.StringIO())
+    helper = Path(__file__).parent / "fixtures" / "native_media_helper.py"
+    media = NativeMacMedia(
+        logger,
+        (sys.executable, helper),
+        restart_delay_seconds=0,
+    )
+    source = NativeWakeAudioSource(media)
+    frames = source.frames()
+    media.start()
+    next(frames)
+    media.activate_capture()
+    real_start = media.start
+
+    def delayed_start() -> None:
+        time.sleep(0.35)
+        real_start()
+
+    monkeypatch.setattr(media, "start", delayed_start)
+    reset = threading.Thread(target=media.deactivate_capture)
+    reset.start()
+
+    samples = next(frames)
+    reset.join(timeout=2)
+    assert not reset.is_alive()
+    np.testing.assert_allclose(samples, [-1.0])
+
+    source.close()
     media.close()
     logger.close()
 

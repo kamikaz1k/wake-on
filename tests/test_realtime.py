@@ -20,11 +20,16 @@ from lobby_wake.conversation import (
     EndSource,
 )
 from lobby_wake.events import EventLogger, WakeEvent
+from lobby_wake.peekaboo_task import ComputerToolEvent, ComputerToolResult
 from lobby_wake.playback import PlaybackPosition
 from lobby_wake.realtime import (
+    CANCEL_COMPUTER_TASK_TOOL,
+    COMPUTER_SLOW_REASSURANCE_NS,
     DEFAULT_INSTRUCTIONS,
     END_CONVERSATION_TOOL,
     REALTIME_SAMPLE_RATE,
+    STEER_COMPUTER_TASK_TOOL,
+    USE_COMPUTER_TOOL,
     OpenAIRealtimeAgent,
     build_session_update,
     float_audio_to_pcm16,
@@ -75,8 +80,35 @@ def test_session_update_uses_server_vad_by_default() -> None:
     assert END_CONVERSATION_TOOL["parameters"]["properties"]["farewell"]["maxLength"] == 40
 
 
+def test_session_update_exposes_computer_tool_only_when_enabled() -> None:
+    event = build_session_update("gpt-realtime-2.1", "marin", "Be helpful.", computer_enabled=True)
+
+    assert event["session"]["tools"] == [
+        END_CONVERSATION_TOOL,
+        USE_COMPUTER_TOOL,
+        STEER_COMPUTER_TASK_TOOL,
+        CANCEL_COMPUTER_TASK_TOOL,
+    ]
+
+
+def test_session_update_exposes_enforced_computer_scope() -> None:
+    event = build_session_update(
+        "gpt-realtime-2.1",
+        "marin",
+        "Be helpful.",
+        computer_enabled=True,
+        computer_applications=("TextEdit",),
+        computer_tools=("see", "type"),
+    )
+
+    tool = event["session"]["tools"][1]
+    assert tool["parameters"]["properties"]["application"]["enum"] == ["TextEdit"]
+    assert "see, type" in tool["description"]
+
+
 def test_default_instructions_require_short_casual_goodbyes() -> None:
-    assert "four words or fewer" in DEFAULT_INSTRUCTIONS
+    assert "Have a nice day" in DEFAULT_INSTRUCTIONS
+    assert "do not" in DEFAULT_INSTRUCTIONS.casefold()
     assert "ceremonial sign-off" in DEFAULT_INSTRUCTIONS
 
 
@@ -325,6 +357,460 @@ def test_model_end_tool_queues_harness_request() -> None:
     logger.close()
 
 
+def test_computer_tool_acknowledges_immediately_and_defers_completion_for_voice() -> None:
+    class FakeSocket:
+        def __init__(self) -> None:
+            self.sent: list[str] = []
+
+        def send(self, message: str) -> None:
+            self.sent.append(message)
+
+        def close(self) -> None:
+            pass
+
+    class FakeComputerTool:
+        def __init__(self) -> None:
+            self.events: list[ComputerToolEvent] = []
+
+        def start(self, task: str, application: str) -> ComputerToolResult:
+            assert task == "Type hello"
+            assert application == "TextEdit"
+            return ComputerToolResult("accepted", "Computer task started.", "task-1")
+
+        def poll_events(self) -> tuple[ComputerToolEvent, ...]:
+            events = tuple(self.events)
+            self.events.clear()
+            return events
+
+        def cancel(self, task_id: str | None = None, *, reason: str) -> ComputerToolResult:
+            return ComputerToolResult("not_running", "No task.", task_id)
+
+        def close(self) -> None:
+            pass
+
+    logger = EventLogger(stream=io.StringIO())
+    tool = FakeComputerTool()
+    agent = OpenAIRealtimeAgent(logger, api_key="test-key", computer_tool=tool)  # type: ignore[arg-type]
+    socket = FakeSocket()
+    agent._ws = socket
+    agent._active = True
+    agent._ready = True
+    agent._last_activity_ns = time.monotonic_ns()
+
+    agent._on_message(
+        socket,
+        json.dumps(
+            {
+                "type": "response.done",
+                "response": {
+                    "status": "completed",
+                    "output": [
+                        {
+                            "type": "function_call",
+                            "name": "use_computer",
+                            "call_id": "call-computer",
+                            "arguments": json.dumps(
+                                {"task": "Type hello", "application": "TextEdit"}
+                            ),
+                        }
+                    ],
+                },
+            }
+        ),
+    )
+
+    events = [json.loads(message) for message in socket.sent]
+    assert events[0]["item"]["type"] == "function_call_output"
+    assert events[0]["item"]["call_id"] == "call-computer"
+    assert json.loads(events[0]["item"]["output"]) == {
+        "status": "accepted",
+        "summary": "Computer task started.",
+        "task_id": "task-1",
+    }
+    assert len(events) == 1
+
+    tool.events.append(ComputerToolEvent("task-1", 1, "completed", "Hello is visible.", True))
+    agent._user_speaking = True
+    agent.poll()
+    assert len(socket.sent) == 1
+
+    agent._user_speaking = False
+    agent._response_active = True
+    agent.poll()
+    assert len(socket.sent) == 1
+
+    agent._response_active = False
+    agent.poll()
+    completion_events = [json.loads(message) for message in socket.sent[1:]]
+    assert completion_events[0]["item"]["role"] == "system"
+    completion = json.loads(completion_events[0]["item"]["content"][0]["text"])
+    assert completion == {
+        "source": "computer_task",
+        "task_id": "task-1",
+        "status": "completed",
+        "summary": "Hello is visible.",
+    }
+    assert completion_events[1]["response"]["metadata"] == {
+        "purpose": "computer_task_notification",
+        "task_id": "task-1",
+    }
+    agent.close()
+    logger.close()
+
+
+def test_rejected_computer_task_gets_a_spoken_explanation() -> None:
+    class FakeSocket:
+        def __init__(self) -> None:
+            self.sent: list[str] = []
+
+        def send(self, message: str) -> None:
+            self.sent.append(message)
+
+        def close(self) -> None:
+            pass
+
+    class FakeComputerTool:
+        def start(self, task: str, application: str) -> ComputerToolResult:
+            return ComputerToolResult("denied", "That app is outside the allowed scope.")
+
+        def poll_events(self) -> tuple[ComputerToolEvent, ...]:
+            return ()
+
+        def cancel(self, task_id: str | None = None, *, reason: str) -> ComputerToolResult:
+            return ComputerToolResult("not_running", "No task.", task_id)
+
+        def close(self) -> None:
+            pass
+
+    logger = EventLogger(stream=io.StringIO())
+    agent = OpenAIRealtimeAgent(
+        logger,
+        api_key="test-key",
+        computer_tool=FakeComputerTool(),  # type: ignore[arg-type]
+    )
+    socket = FakeSocket()
+    agent._ws = socket
+    agent._active = True
+    agent._ready = True
+
+    agent._handle_function_calls(
+        [
+            {
+                "type": "function_call",
+                "name": "use_computer",
+                "call_id": "call-denied",
+                "arguments": json.dumps(
+                    {"task": "Open it", "application": "Messages"}
+                ),
+            }
+        ]
+    )
+
+    events = [json.loads(message) for message in socket.sent]
+    assert json.loads(events[0]["item"]["output"])["status"] == "denied"
+    assert events[1]["response"]["metadata"]["purpose"] == "computer_task_rejected"
+    agent.close()
+    logger.close()
+
+
+def test_running_computer_task_reassures_once_after_ten_seconds() -> None:
+    class FakeSocket:
+        def __init__(self) -> None:
+            self.sent: list[str] = []
+
+        def send(self, message: str) -> None:
+            self.sent.append(message)
+
+        def close(self) -> None:
+            pass
+
+    class FakeComputerTool:
+        def start(self, task: str, application: str) -> ComputerToolResult:
+            return ComputerToolResult("accepted", "Started.", "task-slow")
+
+        def poll_events(self) -> tuple[ComputerToolEvent, ...]:
+            return ()
+
+        def cancel(self, task_id: str | None = None, *, reason: str) -> ComputerToolResult:
+            return ComputerToolResult("not_running", "No task.", task_id)
+
+        def close(self) -> None:
+            pass
+
+    logger = EventLogger(stream=io.StringIO())
+    agent = OpenAIRealtimeAgent(
+        logger,
+        api_key="test-key",
+        computer_tool=FakeComputerTool(),  # type: ignore[arg-type]
+    )
+    socket = FakeSocket()
+    agent._ws = socket
+    agent._active = True
+    agent._ready = True
+    agent._last_activity_ns = time.monotonic_ns()
+    agent._handle_function_calls(
+        [
+            {
+                "type": "function_call",
+                "name": "use_computer",
+                "call_id": "call-slow",
+                "arguments": json.dumps(
+                    {"task": "Inspect the page", "application": "Google Chrome"}
+                ),
+            }
+        ]
+    )
+    assert len(socket.sent) == 1
+
+    agent._computer_task_started_ns["task-slow"] = (
+        time.monotonic_ns() - COMPUTER_SLOW_REASSURANCE_NS
+    )
+    agent.poll()
+
+    events = [json.loads(message) for message in socket.sent[1:]]
+    reminder = json.loads(events[0]["item"]["content"][0]["text"])
+    assert reminder["status"] == "slow"
+    assert events[1]["response"]["metadata"]["purpose"] == "computer_task_notification"
+    assert "The task is taking a bit" in events[1]["response"]["instructions"]
+
+    sent_count = len(socket.sent)
+    agent._response_active = False
+    agent.poll()
+    assert len(socket.sent) == sent_count
+    agent.close()
+    logger.close()
+
+
+def test_background_computer_task_does_not_block_microphone_upload() -> None:
+    class FakeSocket:
+        def __init__(self) -> None:
+            self.sent: list[str] = []
+
+        def send(self, message: str) -> None:
+            self.sent.append(message)
+
+        def close(self) -> None:
+            pass
+
+    class FakeComputerTool:
+        def start(self, task: str, application: str) -> ComputerToolResult:
+            return ComputerToolResult("accepted", "Started.", "task-live")
+
+        def poll_events(self) -> tuple[ComputerToolEvent, ...]:
+            return ()
+
+        def cancel(self, task_id: str | None = None, *, reason: str) -> ComputerToolResult:
+            return ComputerToolResult("cancellation_requested", "Stopping.", "task-live")
+
+        def close(self) -> None:
+            pass
+
+    logger = EventLogger(stream=io.StringIO())
+    agent = OpenAIRealtimeAgent(
+        logger,
+        api_key="test-key",
+        computer_tool=FakeComputerTool(),  # type: ignore[arg-type]
+    )
+    socket = FakeSocket()
+    agent._ws = socket
+    agent._ready = True
+    agent._active = True
+    agent._handle_function_calls(
+        [
+            {
+                "type": "function_call",
+                "name": "use_computer",
+                "call_id": "call-live",
+                "arguments": json.dumps({"task": "Type hello", "application": "TextEdit"}),
+            }
+        ]
+    )
+
+    agent.send_audio(np.zeros(160, dtype=np.float32), 16_000)
+
+    events = [json.loads(message) for message in socket.sent]
+    assert events[-1]["type"] == "input_audio_buffer.append"
+    agent.close()
+    logger.close()
+
+
+def test_cancel_computer_tool_does_not_end_voice_conversation() -> None:
+    class FakeSocket:
+        def __init__(self) -> None:
+            self.sent: list[str] = []
+
+        def send(self, message: str) -> None:
+            self.sent.append(message)
+
+        def close(self) -> None:
+            pass
+
+    class FakeComputerTool:
+        def __init__(self) -> None:
+            self.cancelled: list[tuple[str | None, str]] = []
+
+        def cancel(self, task_id: str | None = None, *, reason: str) -> ComputerToolResult:
+            self.cancelled.append((task_id, reason))
+            return ComputerToolResult("cancellation_requested", "Stopping.", "task-1")
+
+        def poll_events(self) -> tuple[ComputerToolEvent, ...]:
+            return ()
+
+        def close(self) -> None:
+            pass
+
+    logger = EventLogger(stream=io.StringIO())
+    tool = FakeComputerTool()
+    agent = OpenAIRealtimeAgent(logger, api_key="test-key", computer_tool=tool)  # type: ignore[arg-type]
+    socket = FakeSocket()
+    agent._ws = socket
+    agent._active = True
+
+    agent._handle_function_calls(
+        [
+            {
+                "type": "function_call",
+                "name": "cancel_computer_task",
+                "call_id": "call-cancel",
+                "arguments": json.dumps({"task_id": "task-1"}),
+            }
+        ]
+    )
+
+    assert tool.cancelled == [("task-1", "model_requested")]
+    assert agent.active
+    events = [json.loads(message) for message in socket.sent]
+    assert json.loads(events[0]["item"]["output"])["status"] == "cancellation_requested"
+    assert events[1]["response"]["metadata"]["purpose"] == "computer_task_cancel"
+    agent.close()
+    logger.close()
+
+
+def test_steer_computer_tool_updates_goal_without_ending_voice_conversation() -> None:
+    class FakeSocket:
+        def __init__(self) -> None:
+            self.sent: list[str] = []
+
+        def send(self, message: str) -> None:
+            self.sent.append(message)
+
+        def close(self) -> None:
+            pass
+
+    class FakeComputerTool:
+        def __init__(self) -> None:
+            self.steered: list[tuple[str | None, str]] = []
+
+        def steer(self, task_id: str | None, instruction: str) -> ComputerToolResult:
+            self.steered.append((task_id, instruction))
+            return ComputerToolResult("steering_accepted", "Updating.", "task-1")
+
+        def poll_events(self) -> tuple[ComputerToolEvent, ...]:
+            return ()
+
+        def cancel(self, task_id: str | None = None, *, reason: str) -> ComputerToolResult:
+            return ComputerToolResult("not_running", "No task.", task_id)
+
+        def close(self) -> None:
+            pass
+
+    logger = EventLogger(stream=io.StringIO())
+    tool = FakeComputerTool()
+    agent = OpenAIRealtimeAgent(logger, api_key="test-key", computer_tool=tool)  # type: ignore[arg-type]
+    socket = FakeSocket()
+    agent._ws = socket
+    agent._active = True
+
+    agent._handle_function_calls(
+        [
+            {
+                "type": "function_call",
+                "name": "steer_computer_task",
+                "call_id": "call-steer",
+                "arguments": json.dumps(
+                    {
+                        "task_id": "task-1",
+                        "instruction": "Do not submit; open the help page instead.",
+                    }
+                ),
+            }
+        ]
+    )
+
+    assert tool.steered == [
+        ("task-1", "Do not submit; open the help page instead.")
+    ]
+    assert agent.active
+    events = [json.loads(message) for message in socket.sent]
+    assert json.loads(events[0]["item"]["output"])["status"] == "steering_accepted"
+    assert events[1]["response"]["metadata"]["purpose"] == "computer_task_steer"
+    agent.close()
+    logger.close()
+
+
+def test_late_computer_result_is_not_announced_in_next_activation() -> None:
+    class FakeSocket:
+        def __init__(self) -> None:
+            self.sent: list[str] = []
+
+        def send(self, message: str) -> None:
+            self.sent.append(message)
+
+        def close(self) -> None:
+            pass
+
+    class FakeComputerTool:
+        def __init__(self) -> None:
+            self.events: list[ComputerToolEvent] = []
+
+        def start(self, task: str, application: str) -> ComputerToolResult:
+            return ComputerToolResult("accepted", "Started.", "old-task")
+
+        def poll_events(self) -> tuple[ComputerToolEvent, ...]:
+            events = tuple(self.events)
+            self.events.clear()
+            return events
+
+        def cancel(self, task_id: str | None = None, *, reason: str) -> ComputerToolResult:
+            return ComputerToolResult("cancellation_requested", "Stopping.", "old-task")
+
+        def close(self) -> None:
+            pass
+
+    logger = EventLogger(stream=io.StringIO())
+    tool = FakeComputerTool()
+    agent = OpenAIRealtimeAgent(logger, api_key="test-key", computer_tool=tool)  # type: ignore[arg-type]
+    old_socket = FakeSocket()
+    agent._ws = old_socket
+    agent._ready = True
+    agent._active = True
+    agent._handle_function_calls(
+        [
+            {
+                "type": "function_call",
+                "name": "use_computer",
+                "call_id": "old-call",
+                "arguments": json.dumps({"task": "Type", "application": "TextEdit"}),
+            }
+        ]
+    )
+    agent.stop()
+
+    new_socket = FakeSocket()
+    agent._ws = new_socket
+    agent._ready = True
+    agent._active = True
+    agent._last_activity_ns = time.monotonic_ns()
+    agent._activation_generation += 1
+    tool.events.append(ComputerToolEvent("old-task", 1, "completed", "Old task completed.", True))
+
+    agent.poll()
+
+    assert new_socket.sent == []
+    agent.close()
+    logger.close()
+
+
 def test_graceful_end_acknowledges_tool_and_requests_tool_free_farewell() -> None:
     class FakeSocket:
         def __init__(self) -> None:
@@ -361,8 +847,9 @@ def test_graceful_end_acknowledges_tool_and_requests_tool_free_farewell() -> Non
     assert events[1]["response"]["tool_choice"] == "none"
     assert events[1]["response"]["metadata"]["purpose"] == "conversation_close"
     closing = events[1]["response"]["instructions"]
-    assert "four words or fewer" in closing
-    assert "Do not recap" in closing
+    assert "one quick send-off" in closing
+    assert "Bye-bye" in closing
+    assert "Do not add any other words" in closing
     agent.close()
     logger.close()
 

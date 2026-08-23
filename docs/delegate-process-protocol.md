@@ -35,6 +35,11 @@ sequenceDiagram
     loop Harness-owned microphone
         Supervisor->>Child: audio(activation_id, float32le)
     end
+    opt Harness-owned playback (for example native AEC)
+        Child-->>Supervisor: playback_audio(activation_id, pcm16le)
+        Supervisor->>Harness: enqueue conversation audio
+        Child-->>Supervisor: playback_clear on interruption
+    end
     Child-->>Supervisor: request_end(activation_id)
     Supervisor->>Harness: generation-scoped handle.end()
     Harness->>Supervisor: request_end(graceful)
@@ -55,13 +60,18 @@ process generation cannot end a newer conversation.
 Sent immediately after launch, before wake listening begins.
 
 ```json
-{"v":1,"type":"prepare","sample_rate":16000,"audio_input":"harness"}
+{"v":1,"type":"prepare","sample_rate":16000,"audio_input":"harness","audio_output":{"owner":"harness","sample_rate":24000}}
 ```
 
 `audio_input` is either:
 
 - `harness`: the parent sends preroll and live microphone frames.
 - `delegate`: the child owns its conversation media capture, such as WebRTC.
+
+`audio_output.owner` is `delegate` by default. A media policy such as
+`native-aec` sets it to `harness` and supplies the playback sample rate. The
+child then exports PCM16 response deltas instead of opening its own output
+device, allowing capture and playback to share one echo-cancelling audio unit.
 
 ### `start`
 
@@ -169,6 +179,13 @@ The child sends `started` and `ended` with the current `activation_id`:
 The supervisor ignores the request unless the activation ID matches the active
 generation.
 
+### Harness-owned playback
+
+When `prepare.audio_output.owner` is `harness`, the child sends response audio
+through `playback_audio` and sends `playback_clear` when barge-in cancels queued
+speech. Both carry the current `activation_id`, so stale output is ignored. The
+parent sends `playback_idle` after the native output queue drains.
+
 The parent logs `delegate.activation_sent` and `delegate.activation_started`
 with wake-to-send, protocol-write, and parent-to-child dispatch timing. These
 fields are included in the standard latency report.
@@ -195,8 +212,9 @@ event. The supervisor preserves the event name, marks it with
 }
 ```
 
-Other event namespaces are rejected so a child cannot impersonate wake or
-orchestrator lifecycle events.
+The bounded `agent.*` and `computer.*` namespaces are accepted. Other event
+namespaces are rejected so a child cannot impersonate wake or orchestrator
+lifecycle events.
 
 ## OpenAI Realtime reference child
 
@@ -211,6 +229,9 @@ uv run lobby-wake \
   --agent process \
   --delegate-command python -m lobby_wake.openai_process_delegate
 ```
+
+With `--media-policy native-aec`, the parent owns both native capture and
+playback while the child continues to own Realtime and computer-use work.
 
 Its options appear after `--delegate-command`; run
 `python -m lobby_wake.openai_process_delegate --help` for the backend-specific

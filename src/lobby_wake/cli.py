@@ -130,8 +130,8 @@ def main() -> None:
         parser.error(str(error))
     if args.agent == "process" and not args.delegate_command:
         parser.error("--agent process requires --delegate-command")
-    if media_policy.aec_on_demand and args.agent != "openai":
-        parser.error("--media-policy native-aec currently requires --agent openai")
+    if media_policy.aec_on_demand and args.agent == "mock":
+        parser.error("--media-policy native-aec requires a conversation audio backend")
     if media_policy.aec_on_demand and sys.platform != "darwin":
         parser.error("--media-policy native-aec is available only on macOS")
     if media_policy.aec_on_demand and args.output_device is not None:
@@ -186,8 +186,16 @@ def main() -> None:
         agent = ProcessConversationDelegate(
             logger,
             args.delegate_command,
-            audio_input=AudioInputOwnership(args.delegate_audio_input),
+            audio_input=(
+                AudioInputOwnership.DELEGATE
+                if native_media is not None
+                else AudioInputOwnership(args.delegate_audio_input)
+            ),
+            player=native_media,
+            capture=native_media,
         )
+        if native_media is not None:
+            native_media.set_capture_handler(agent.send_captured_audio)
     else:
         agent = OpenAIRealtimeAgent(
             logger,

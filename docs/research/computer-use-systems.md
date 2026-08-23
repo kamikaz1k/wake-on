@@ -1,6 +1,6 @@
 # Computer-use systems research
 
-- **Status:** Peekaboo selected; provider-neutral task contract implemented
+- **Status:** thin schema-driven Peekaboo MCP integration implemented; live regression trial pending
 - **Scope:** the Lobby reference delegate on macOS
 - **Non-goal:** adding computer-use behavior to the WakeOn wake-word core
 
@@ -12,17 +12,15 @@ Keep the voice and computer-use layers separate:
 flowchart LR
     Wake["WakeOn<br/>wake + route + lifecycle"]
     Voice["Lobby voice delegate<br/>OpenAI Realtime"]
-    Bridge["Computer-use bridge<br/>task + progress + cancel"]
-    Policy["Local policy gate<br/>allow + confirm + deny"]
-    Planner["Computer-use planner<br/>OpenAI Responses or swappable agent"]
-    Driver["macOS executor<br/>Peekaboo prototype"]
+    Bridge["PeekabooTaskRunner<br/>task + progress + cancel"]
+    Planner["Background Responses loop<br/>live MCP schemas"]
+    Driver["Peekaboo MCP<br/>native tools"]
     Mac["macOS apps"]
 
     Wake -->|"activate / end"| Voice
     Voice -->|"function call"| Bridge
-    Bridge --> Policy
-    Policy --> Planner
-    Planner -->|"observe / act loop"| Driver
+    Bridge --> Planner
+    Planner -->|"exact tools/call"| Driver
     Driver <--> Mac
     Driver -->|"state + result"| Planner
     Planner -->|"progress / completion"| Bridge
@@ -43,12 +41,12 @@ For the first prototype:
    structured element/snapshot IDs, is native Swift, and is MIT licensed. Pin
    the first integration to v3.9.10 (released 2026-08-03) rather than tracking
    `main`.
-4. Keep the planner and executor behind local interfaces so we can compare the
-   OpenAI Responses `computer` tool, a custom tool loop, or another agent
-   without changing WakeOn.
-5. Treat cancellation and policy as product behavior, not prompt text. Ending
-   the active WakeOn generation must cancel the computer task and prevent
-   further actions.
+4. Use Peekaboo's live `tools/list` definitions directly. Do not maintain a
+   parallel action enum, argument mapping, application state model, or copied
+   tool instructions in WakeOn.
+5. Keep only WakeOn-specific concurrency behavior in code: one background task,
+   immediate acceptance, cancellation by stopping the MCP child, generation
+   suppression, and voice-priority notification delivery.
 
 The project name the user recalled as “Clippy” or “Blippy” is probably
 [Peekaboo](https://github.com/steipete/Peekaboo): its name and current macOS
@@ -98,12 +96,11 @@ adds raw/annotated and live capture, deeper UI inspection, pointer movement and
 swipes, clipboard-safe paste, app/window/Space control, menus, Dock, system
 dialogs, browser delegation, optional image analysis, and its own agent.
 
-WakeOn should not expose Peekaboo's full catalog to the Realtime model. The
-first executor allowlist is `see`, `click`, `type`, `set_value`,
-`perform_action`, `hotkey`, `scroll`, `app`, and narrowly scoped `window`.
-`permissions` is used during worker preparation, not model planning. Capture,
-analysis, browser, clipboard, Dock, dialogs, Spaces, and Peekaboo's own agent
-remain disabled until a task requires them and policy coverage exists.
+WakeOn's background computer agent receives the tool catalog that Peekaboo
+actually exposes. Deployments that need a smaller catalog should configure
+Peekaboo's native `PEEKABOO_ALLOW_TOOLS` or deny list; the runner then discovers
+and describes that same filtered catalog. The nested `agent` tool is omitted
+because WakeOn's background Responses loop already owns orchestration.
 
 ## OpenAI integration choices
 
@@ -149,8 +146,9 @@ offers all three.
 
 ## Implemented local contract
 
-The first design pass should define a provider-neutral worker contract around
-task lifecycle, not around OpenAI response events:
+The original provider-neutral planner/executor contract below was implemented,
+then removed on 2026-08-22 after live Chrome trials exposed schema loss and
+unnecessary indirection:
 
 ```text
 start(task_id, generation, user_intent, policy_scope)
@@ -162,30 +160,22 @@ completed(task_id, result_summary)
 failed(task_id, error_code, user_safe_message)
 ```
 
-The executor contract can remain smaller:
+The current Interface is deliberately smaller:
 
 ```text
-observe(target) -> accessibility state + optional screenshot + revision
-act(revision, action) -> accepted/rejected + timing
+prepare() -> discover Peekaboo tools
+start(task, application) -> accepted(task_id) | busy | denied
+poll_events() -> progress | completed | failed | cancelled
+cancel(task_id, reason)
+close()
 ```
 
-Requiring the observation revision prevents an action planned against stale UI
-state from being silently applied after the window changes.
-
-The implementation is in `src/lobby_wake/computer_task.py` and separates:
-
-- `ComputerTaskService`: start, status, approval, cancellation, events, close;
-- `ComputerTaskPlanner`: provider-swappable next-step decisions;
-- `ComputerExecutor`: prepare, observe, revision-bound act, cancel, close;
-- `ComputerPolicyScope`: application and action allowlists plus approval gates;
-- `ComputerTaskWorker`: the single-active-task lifecycle and event queue.
-
-Approvals carry the proposed action, a risk label, and a monotonic expiry. The
-worker observes again after approval and replans instead of acting if the UI
-revision changed. Executor cancellation is invoked immediately, and a result
-that arrives after accepted cancellation is discarded. Ordinary logs contain
-task/action IDs and timing metadata, not screen text, screenshots, action
-parameters, user intent, or result summaries.
+Inside that Module, MCP definitions become OpenAI function definitions without
+changing their input schemas. Function names and parsed argument objects pass
+unchanged to `tools/call`. Native tool errors return to the model for recovery.
+Cancellation stops the MCP child and dominates late results. Ordinary logs
+contain task IDs, tool names, timing, and status—not tool arguments, screen
+contents, user intent, or raw results.
 
 ## Safety baseline
 
@@ -218,6 +208,13 @@ The bounded prototype should enforce these rules in code:
 
 ### Phase 1 — Peekaboo adapter and benchmark
 
+- [x] Implement the supervised, version-pinned MCP adapter and deterministic
+  protocol/action tests.
+- [x] Validate release checksum, real binary version, MCP handshake, and tool
+  discovery.
+- [ ] Grant Screen Recording and Accessibility to the launching app context.
+- [ ] Run the reversible TextEdit fixture and latency/reliability benchmark.
+
 Use one reversible task in a disposable macOS account or controlled test app:
 open TextEdit, create an unsaved document, type a known sentence, verify it,
 and close without saving.
@@ -235,27 +232,31 @@ rather than a blocking bake-off. For each run record:
 
 ### Phase 2 — Realtime voice bridge
 
-- Add one Realtime function tool, such as `use_computer`, to the Lobby
+- [x] Add one Realtime function tool, `use_computer`, to the Lobby
   reference delegate.
-- Stream concise progress into terminal logs first; then decide when the voice
+- [x] Stream concise start/completion into terminal logs first; then decide when the voice
   agent should speak progress without blocking barge-in.
-- Return a structured completion result to Realtime so it can answer naturally.
+- [x] Return a structured completion result to Realtime so it can answer naturally.
+- [x] Return task acceptance immediately and queue terminal callbacks behind
+  foreground voice activity so computer work cannot block barge-in.
 - Keep the Responses planner connection warm only if measurement shows a
   meaningful first-action improvement.
 
 ### Phase 3 — cancellation and approval
 
-- Wire the WakeOn generation end and emergency kill switch to worker cancel.
+- [x] Wire conversation end, delegate close, and the emergency kill path to worker cancel.
+- [x] Add model-callable task cancellation that leaves the voice conversation active.
 - Add an action-time approval state that pauses execution without ending the
   voice conversation.
 - Test prompt injection displayed inside the controlled test app.
-- Test delegate crash, executor crash, Realtime reconnect, and a late result
-  arriving after cancellation.
+- Test delegate crash, executor crash, and Realtime reconnect.
+- [x] Test that a late result after cancellation or conversation replacement is suppressed.
 
 ### Phase 4 — decision record
 
 - Choose the first supported planner/executor combination with an ADR.
-- Preserve the provider-neutral bridge even if OpenAI Responses + Peekaboo wins.
+- Keep the Realtime asynchronous job seam, but keep Peekaboo knowledge local to
+  the Peekaboo task runner rather than inventing a provider-neutral action model.
 - Defer browser-specific routing, isolated VMs, and broad app access until the
   bounded native task is reliable and safely interruptible.
 

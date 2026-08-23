@@ -50,6 +50,9 @@ class HumanEventFormatter(logging.Formatter):
         if key.endswith("_ms") and isinstance(value, int | float):
             label = label.removesuffix(" ms")
             return f"{label}={value:.2f} ms"
+        if key.endswith("_usd") and isinstance(value, int | float):
+            label = label.removesuffix(" usd")
+            return f"{label}=${value:.6f}"
         if isinstance(value, float):
             rendered = f"{value:.3f}"
         elif isinstance(value, bool):

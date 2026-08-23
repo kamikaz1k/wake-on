@@ -36,28 +36,29 @@ results belong in `docs/`; this file tracks what remains.
 
 - [x] **Survey computer-use systems and define the spike.** Keep computer use
   inside the selected conversation delegate rather than the wake core. The
-  initial recommendation is an OpenAI Realtime function bridge to a separate,
-  provider-neutral worker, with Peekaboo as the first macOS executor candidate
-  and Cua as the isolation/evaluation alternative. See the
+  selected shape is an OpenAI Realtime function bridge to a background
+  schema-driven Peekaboo MCP task, with Cua as the isolation/evaluation
+  alternative. See the
   [research note](docs/research/computer-use-systems.md).
-- [x] **Define and test the computer-task contract.** Add a fake worker before
-  touching the desktop. Cover start, progress, approval, generation-scoped
-  cancellation, stale observations, late results, failure, and emergency end.
-  The implemented worker also enforces application/action allowlists, expiring
-  approvals, re-observation after approval, and log-content redaction.
-- [ ] **Integrate and benchmark pinned Peekaboo v3.9.10.** Use its public MCP
-  executor behind the provider-neutral worker contract and a narrow tool
-  allowlist. Run the reversible TextEdit fixture and measure warm/cold startup,
-  first visible progress, action latency, 20-run reliability, cancellation
-  latency, permissions, and packaging weight. Keep Cua as a later isolation
-  alternative rather than blocking the selected local integration.
-- [ ] **Bridge the winning executor into Lobby.** Add one Realtime function tool
+- [x] **Simplify the computer-task contract.** Retain immediate acceptance,
+  one-active-task serialization, generation-scoped cancellation, late-result
+  suppression, and log-content redaction. Remove the custom action vocabulary,
+  application state machine, mapping Adapter, and duplicated prompt guidance;
+  use Peekaboo's live MCP schemas and native tool filtering instead.
+- [ ] **Benchmark pinned Peekaboo v3.9.10.** Keep the blocked TextEdit fixture
+  as a historical regression and
+  run the active fixture through Peekaboo's native Chrome `browser` tool:
+  connect, navigate the current page, open a page, snapshot, and scroll. Measure
+  warm/cold startup, first visible progress, action latency, 20-run reliability,
+  cancellation latency, permissions, and packaging weight. Keep Cua as a later
+  isolation alternative rather than blocking the selected local integration.
+- [x] **Bridge Peekaboo into Lobby.** Add one Realtime function tool
   to the reference delegate, keep voice interruption active during the task,
   and return progress and completion without leaking the computer-use protocol
   into WakeOn's delegate contract.
-- [ ] **Validate the safety model.** Enforce app/action allowlists, action-time
-  approval, untrusted on-screen content handling, sensitive-data redaction, and
-  dominant cancellation before broadening the action surface.
+- [ ] **Validate the safety model.** Validate Peekaboo tool filtering,
+  untrusted on-screen content handling, sensitive-data redaction, application
+  scope limitations, and dominant cancellation before broadening access.
 
 ## Follow-up: complete the reference realtime experience
 

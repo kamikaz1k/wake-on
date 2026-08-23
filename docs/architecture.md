@@ -86,10 +86,8 @@ only after a wake has been accepted.
 | `ConversationController` | One active generation and serialized end requests | Audio or delegate execution |
 | `ConversationHandle` | A restricted, generation-scoped delegate capability | Harness internals |
 | `ConversationDelegate` | Pre-wake preparation, activation, status, audio ownership, and shutdown contract | Any backend protocol |
-| `ComputerTaskService` | Delegate-owned task lifecycle, progress, approvals, cancellation, and completion | Wake routing or UI implementation |
-| `ComputerTaskPlanner` | Provider-swappable next-action decisions from fresh observations | Direct desktop access or product approval policy |
-| `ComputerExecutor` | Revision-bound observation/action and immediate cancellation | Voice, wake, or model protocol |
-| `ComputerPolicyScope` | Per-task application/action allowlists and approval gates | Prompt interpretation |
+| `PeekabooTaskRunner` | One interruptible background task, goal revisions, live MCP tool discovery, schema-driven model loop, token/cost budget, cancellation, and task events | Wake routing or Realtime audio |
+| `StdioMCPClient` | MCP framing, request correlation, timeouts, and Peekaboo child-process supervision | Tool planning or application-specific behavior |
 | `OpenAIRealtimeAgent` | Realtime connection, audio conversion, model events, graceful farewell | Top-level lifecycle state |
 | `SherpaWakeWordEngine` | Local wake detection | Conversation audio |
 | `AudioPlayer` | Non-blocking assistant playback | Microphone capture |
@@ -103,40 +101,106 @@ Realtime class implements that contract in-process, and the supervised adapter
 translates the same lifecycle to child-process messages. Routing does not alter
 the delegate contract.
 
-Computer use follows the same boundary. It is a capability of a selected
+Computer use follows the same delegate seam. It is a capability of a selected
 delegate, not a responsibility of `WakeRouter`. A voice delegate may bridge a
-model tool call to its own long-running computer-use worker; WakeOn sees only
-the existing delegate lifecycle and generation-scoped cancellation. This keeps
-other delegates free to use a different planner, executor, or no computer use
-at all.
+model tool call to its own background task runner. The current implementation
+is intentionally Peekaboo-specific: its live MCP schemas are authoritative and
+WakeOn does not redefine Peekaboo actions, application states, or argument
+names.
+
+```mermaid
+flowchart LR
+    A["Realtime voice model"] -->|"use_computer(task, app)"| B["Async delegate bridge"]
+    B -->|"immediate accepted(task_id)"| A
+    B --> C["PeekabooTaskRunner"]
+    C -->|"tools/list schemas"| D["Background Responses tool loop"]
+    D -->|"exact tool name + arguments"| C
+    C -->|"tools/call"| E["Peekaboo MCP"]
+    E -->|"native MCP result"| C
+    C -->|"compact text / content descriptor"| D
+    C -->|"terminal result"| B
+    B -->|"queued system task result when voice is idle"| A
+    A -->|"cancel_computer_task(task_id)"| B
+    A -->|"steer_computer_task(task_id, new goal)"| B
+    F["Voice stop / delegate close"] -->|"generation-scoped cancel"| B
+```
+
+The Realtime function call starts the background runner and receives
+a task ID immediately, so UI latency does not block microphone streaming,
+server VAD, barge-in, or subsequent voice turns. Runner callbacks are drained
+through the delegate's poll loop. Intermediate progress remains terminal-only.
+A terminal result is inserted as a system conversation item and spoken only
+when the user is not speaking, no model response is active, playback is idle,
+and a short post-speech grace period has elapsed. Explicit task cancellation
+does not end the voice conversation. Conversation generations suppress late
+results after stop or reconnect.
+
+The voice layer gives one short handoff before `use_computer`. Successful task
+acceptance is recorded silently rather than causing a duplicate acknowledgement;
+only rejected or failed acceptance requests an explanatory response. An accepted
+task that remains active for ten seconds queues one reassurance behind foreground
+voice activity. It does not repeat the reminder, and terminal notification still
+uses the normal voice-priority gate.
+
+Google Chrome remains part of Peekaboo rather than becoming a WakeOn browser
+Adapter. Peekaboo's `browser` tool description and input schema tell the model
+how to use Chrome DevTools; WakeOn forwards the model's selected tool name and
+arguments unchanged.
 
 ### Computer-task lifecycle
 
 ```mermaid
 stateDiagram-v2
-    [*] --> READY: prepare executor
-    READY --> RUNNING: start(task, generation, scope)
-    RUNNING --> AWAITING_APPROVAL: policy requires confirmation
-    AWAITING_APPROVAL --> RUNNING: approve + revision unchanged
-    AWAITING_APPROVAL --> RUNNING: UI changed → reobserve + replan
-    AWAITING_APPROVAL --> CANCELLED: reject / expiry / cancel
-    RUNNING --> RUNNING: observe → plan → revision-bound act
-    RUNNING --> COMPLETED: planner completes
-    RUNNING --> FAILED: policy / planner / executor / step limit
-    RUNNING --> CANCELLING: matching generation cancel
-    CANCELLING --> CANCELLED: executor stopped or late result discarded
+    [*] --> READY: discover MCP tools
+    READY --> RUNNING: start task + generation
+    RUNNING --> RUNNING: model tool call → MCP result
+    RUNNING --> RUNNING: steer → supersede plan + re-observe
+    RUNNING --> COMPLETED: model returns final text
+    RUNNING --> FAILED: model / MCP / step limit
+    RUNNING --> CANCELLING: matching task cancel
+    CANCELLING --> CANCELLED: stop MCP child; suppress late result
     COMPLETED --> RUNNING: next task
     FAILED --> RUNNING: next task
     CANCELLED --> RUNNING: next task
 ```
 
-The worker owns one task at a time and is independent of the active voice
-transport. A task request carries an opaque task ID, delegate generation, user
-intent, target application, and immutable policy scope. Observations carry a
-revision; actions planned against a stale revision are rejected and replanned.
-Approval never freezes an old click target: the worker observes again before
-execution. Cancellation calls the executor immediately and dominates any late
-action or completion result.
+The runner owns one task at a time and is independent of the active voice
+transport. It converts each discovered MCP definition mechanically into an
+OpenAI function definition while preserving the MCP input schema. Model tool
+calls go directly to `tools/call`. Results cross a compact model-context
+boundary: textual content is bounded, binary content becomes a descriptor, and
+raw MCP envelopes and metadata are not accumulated. Native error text returns
+to the model so it can recover using Peekaboo's own Interface. A matching cancellation stops
+the supervised MCP child and dominates any late result.
+
+Steering retains the task ID and increments its goal revision. Rapid steering
+collapses to the newest instruction. A model plan completed after steering is
+discarded before it can dispatch a UI action. An MCP action already executing
+is allowed to reach its safe boundary; the runner then supplies the revised
+goal and requires the subagent to re-observe current state. Changing the target
+application requires cancelling and starting a new scoped task.
+
+Each Responses result contributes its exact API-reported input, cached-input,
+and output token counts to task-local accounting. Model-specific standard rates
+produce request, task, and process-lifetime cumulative USD estimates. The JSONL
+event stream provides the persistent source for aggregation across restarts.
+Before a request, a conservative
+serialized-payload estimate prevents an obviously over-budget call; after a
+response, exact usage prevents any plan from acting if the task has crossed its
+hard ceiling. The default ceiling is $0.25 per task and is configurable at the
+process-delegate boundary. Models without a configured price still report token
+usage but cannot enforce a dollar ceiling.
+
+The selected target application is checked before task start and included in
+the model instruction. Peekaboo's native `PEEKABOO_ALLOW_TOOLS` configuration
+controls which tools appear in `tools/list`; the runner therefore exposes and
+describes the same capability it can execute. WakeOn does not currently claim
+hard per-tool enforcement beyond Peekaboo's own filtering or hard enforcement
+of application identity inside individual tool arguments.
+
+Diagnostics log task IDs, generations, tool names, status, and typed transport
+errors. They do not log tool arguments, screen contents, user intent, or raw
+MCP results.
 
 ## Routed daemon boundary
 
@@ -471,7 +535,8 @@ speaker/microphone full duplex still requires an AEC media path; see the
 - Delegates receive a restricted capability, not the Realtime socket or
   orchestrator internals.
 - Graceful termination is bounded; emergency termination is always available.
-- Computer actions execute only inside the task's application/action allowlist.
+- Computer tasks start only for configured applications; Peekaboo's MCP tool
+  filter is authoritative for executable tools.
 - Accepted computer-task cancellation dominates queued and late results.
 - Screen content, screenshots, action parameters, and user intent stay out of
   ordinary lifecycle logs.
@@ -486,7 +551,8 @@ speaker/microphone full duplex still requires an AEC media path; see the
 | Delegate lifecycle contract | `src/lobby_wake/agent.py` |
 | End requests and delegate capability | `src/lobby_wake/conversation.py` |
 | Realtime connection, tools, and audio | `src/lobby_wake/realtime.py` |
-| Provider-neutral computer-task lifecycle | `src/lobby_wake/computer_task.py` |
+| Asynchronous schema-driven Peekaboo tasks | `src/lobby_wake/peekaboo_task.py` |
+| Supervised MCP stdio transport | `src/lobby_wake/mcp_stdio.py` |
 | Wake detection | `src/lobby_wake/wake.py` |
 | Microphone and WAV sources | `src/lobby_wake/audio.py` |
 | Rolling preroll buffer | `src/lobby_wake/ring_buffer.py` |

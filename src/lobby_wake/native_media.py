@@ -72,12 +72,20 @@ class NativeMacMedia:
         command: Sequence[str | Path] = (DEFAULT_NATIVE_MEDIA_HELPER,),
         *,
         start_timeout_seconds: float = 30.0,
+        restart_attempts: int = 4,
+        restart_delay_seconds: float = 0.2,
     ) -> None:
         if not command:
             raise ValueError("native media helper command cannot be empty")
+        if restart_attempts <= 0:
+            raise ValueError("native media restart attempts must be positive")
+        if restart_delay_seconds < 0:
+            raise ValueError("native media restart delay cannot be negative")
         self._logger = logger
         self._command = tuple(str(part) for part in command)
         self._start_timeout_seconds = start_timeout_seconds
+        self._restart_attempts = restart_attempts
+        self._restart_delay_seconds = restart_delay_seconds
         self._process: subprocess.Popen[bytes] | None = None
         self._reader_thread: threading.Thread | None = None
         self._stderr_thread: threading.Thread | None = None
@@ -86,6 +94,7 @@ class NativeMacMedia:
         self._ready = threading.Event()
         self._mode_changed = threading.Event()
         self._playing = threading.Event()
+        self._restarting = threading.Event()
         self._capture_handler: Callable[[FloatAudio, int], None] | None = None
         self._wake_capture_handler: Callable[[FloatAudio, int], None] | None = None
         self._capture_active = False
@@ -112,6 +121,10 @@ class NativeMacMedia:
     def running(self) -> bool:
         process = self._process
         return process is not None and process.poll() is None
+
+    @property
+    def restarting(self) -> bool:
+        return self._restarting.is_set()
 
     def set_capture_handler(self, handler: Callable[[FloatAudio, int], None]) -> None:
         self._capture_handler = handler
@@ -154,14 +167,44 @@ class NativeMacMedia:
         # the same process (-10875). Replacing only the helper process provides
         # a hard lifecycle boundary and reliably releases system ducking while
         # keeping this media object and the wake harness alive.
-        self.close()
-        self.start()
+        self._restart_raw_helper()
         self._logger.emit(
             "media.native_raw_active",
             transition_ms=(time.monotonic_ns() - transition_started_ns) / 1_000_000,
             voice_processing=False,
             other_audio_ducking="off",
         )
+
+    def _restart_raw_helper(self) -> None:
+        self._restarting.set()
+        try:
+            self.close()
+            last_error: Exception | None = None
+            for attempt in range(1, self._restart_attempts + 1):
+                delay_seconds = self._restart_delay_seconds * (2 ** (attempt - 1))
+                if delay_seconds:
+                    time.sleep(delay_seconds)
+                try:
+                    self.start()
+                    return
+                except Exception as error:
+                    last_error = error
+                    self._logger.emit(
+                        "media.native_restart_retry",
+                        attempt=attempt,
+                        max_attempts=self._restart_attempts,
+                        retry_in_ms=(
+                            self._restart_delay_seconds * (2**attempt) * 1_000
+                            if attempt < self._restart_attempts
+                            else None
+                        ),
+                        detail=str(error),
+                    )
+            raise RuntimeError(
+                f"native media helper failed to restart after {self._restart_attempts} attempts"
+            ) from last_error
+        finally:
+            self._restarting.clear()
 
     def start(self) -> None:
         if self._process is not None:
@@ -504,7 +547,7 @@ class NativeWakeAudioSource:
             try:
                 samples = self._queue.get(timeout=0.25)
             except queue.Empty:
-                if not self._media.running:
+                if not self._media.running and not self._media.restarting:
                     return
                 continue
             if samples is None:

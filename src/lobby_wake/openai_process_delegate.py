@@ -6,6 +6,7 @@ import binascii
 import json
 import os
 import queue
+import shlex
 import sys
 import threading
 import time
@@ -24,7 +25,9 @@ from .conversation import (
     EndSource,
 )
 from .events import EventLogger, WakeEvent
-from .process_delegate import MAX_PROTOCOL_LINE_BYTES, PROTOCOL_VERSION
+from .peekaboo_task import DEFAULT_MAX_TASK_COST_USD, PeekabooTaskRunner
+from .playback import AudioPlayback, PlaybackPosition
+from .process_delegate import MAX_PROTOCOL_LINE_BYTES, PROTOCOL_VERSION, encode_pcm16_audio
 from .realtime import DEFAULT_INSTRUCTIONS, OpenAIRealtimeAgent
 from .ring_buffer import FloatAudio
 
@@ -70,7 +73,7 @@ class BridgeLogger:
 
     def emit(self, event: str, **fields: Any) -> int:
         now_ns = time.monotonic_ns()
-        if event.startswith("agent."):
+        if event.startswith(("agent.", "computer.")):
             self._writer.emit(
                 "event",
                 event=event,
@@ -81,6 +84,118 @@ class BridgeLogger:
 
     def close(self) -> None:
         pass
+
+
+class ProtocolAudioPlayback:
+    """Child-side playback proxy for harness-owned conversation media."""
+
+    def __init__(
+        self,
+        writer: ProtocolWriter,
+        sample_rate: int,
+        activation_id: Callable[[], str | None],
+    ) -> None:
+        self._writer = writer
+        self.sample_rate = sample_rate
+        self._activation_id = activation_id
+        self._lock = threading.Lock()
+        self._playing = False
+        self._started_at_ns: int | None = None
+        self._queued_samples = 0
+        self._item_ranges: dict[tuple[str, int], tuple[int, int]] = {}
+        self._latest_key: tuple[str, int] | None = None
+
+    @property
+    def playing(self) -> bool:
+        with self._lock:
+            return self._playing
+
+    def start(self) -> None:
+        pass
+
+    def enqueue(
+        self,
+        pcm16: bytes,
+        on_start: Callable[[], None] | None = None,
+        *,
+        item_id: str = "",
+        content_index: int = 0,
+    ) -> None:
+        activation_id = self._activation_id()
+        if not pcm16 or activation_id is None:
+            return
+        with self._lock:
+            if not self._playing:
+                self._started_at_ns = time.monotonic_ns()
+                self._queued_samples = 0
+            self._playing = True
+            key = (item_id, content_index)
+            chunk_samples = len(pcm16) // 2
+            item_start, item_samples = self._item_ranges.get(
+                key, (self._queued_samples, 0)
+            )
+            self._item_ranges[key] = (item_start, item_samples + chunk_samples)
+            self._queued_samples += chunk_samples
+            self._latest_key = key
+        self._writer.emit(
+            "playback_audio",
+            activation_id=activation_id,
+            item_id=item_id,
+            content_index=content_index,
+            audio=encode_pcm16_audio(pcm16),
+        )
+        if on_start is not None:
+            on_start()
+
+    def clear(self) -> None:
+        self.interrupt()
+
+    def interrupt(
+        self,
+        item_id: str | None = None,
+        content_index: int = 0,
+    ) -> PlaybackPosition | None:
+        activation_id = self._activation_id()
+        with self._lock:
+            key = (item_id, content_index) if item_id is not None else self._latest_key
+            started_at_ns = self._started_at_ns
+            item_start, item_samples = self._item_ranges.get(key, (0, 0))
+            self._reset_locked()
+        if activation_id is not None:
+            self._writer.emit(
+                "playback_clear",
+                activation_id=activation_id,
+                item_id=key[0] if key is not None else None,
+                content_index=key[1] if key is not None else 0,
+            )
+        if key is None:
+            return None
+        elapsed_samples = (
+            round((time.monotonic_ns() - started_at_ns) / 1_000_000_000 * self.sample_rate)
+            if started_at_ns is not None
+            else 0
+        )
+        return PlaybackPosition(
+            item_id=key[0],
+            content_index=key[1],
+            audio_end_ms=min(item_samples, max(0, elapsed_samples - item_start))
+            * 1000
+            // self.sample_rate,
+        )
+
+    def close(self) -> None:
+        self.clear()
+
+    def mark_idle(self) -> None:
+        with self._lock:
+            self._reset_locked()
+
+    def _reset_locked(self) -> None:
+        self._playing = False
+        self._started_at_ns = None
+        self._queued_samples = 0
+        self._item_ranges.clear()
+        self._latest_key = None
 
 
 def decode_float_audio(value: object) -> FloatAudio:
@@ -103,13 +218,17 @@ class OpenAIProcessWorker:
     def __init__(
         self,
         writer: ProtocolWriter,
-        agent_factory: Callable[[BridgeLogger, ConversationController], OpenAIRealtimeAgent],
+        agent_factory: Callable[
+            [BridgeLogger, ConversationController, AudioPlayback | None],
+            OpenAIRealtimeAgent,
+        ],
     ) -> None:
         self._writer = writer
         self._logger = BridgeLogger(writer)
         self._agent_factory = agent_factory
         self._controller = ConversationController(self._logger)  # type: ignore[arg-type]
         self._agent: OpenAIRealtimeAgent | None = None
+        self._playback: ProtocolAudioPlayback | None = None
         self._activation_id: str | None = None
         self._last_status: tuple[object, ...] | None = None
 
@@ -127,6 +246,9 @@ class OpenAIProcessWorker:
             self._request_end(message)
         elif message_type == "stop":
             self._stop(message)
+        elif message_type == "playback_idle":
+            if self._playback is not None:
+                self._playback.mark_idle()
         elif message_type == "close":
             return False
         else:
@@ -170,7 +292,21 @@ class OpenAIProcessWorker:
         if not isinstance(sample_rate, int) or sample_rate <= 0:
             raise ValueError("prepare requires a positive sample rate")
         if self._agent is None:
-            self._agent = self._agent_factory(self._logger, self._controller)
+            output = message.get("audio_output")
+            if isinstance(output, dict) and output.get("owner") == "harness":
+                output_sample_rate = output.get("sample_rate")
+                if not isinstance(output_sample_rate, int) or output_sample_rate <= 0:
+                    raise ValueError("harness audio output requires a positive sample rate")
+                self._playback = ProtocolAudioPlayback(
+                    self._writer,
+                    output_sample_rate,
+                    lambda: self._activation_id,
+                )
+            self._agent = self._agent_factory(
+                self._logger,
+                self._controller,
+                self._playback,
+            )
             self._agent.prepare(DelegatePrepareContext(sample_rate=sample_rate))
         self._publish_status(force=True)
 
@@ -310,6 +446,36 @@ def build_parser() -> argparse.ArgumentParser:
         choices=("low", "medium", "high", "auto"),
         default="high",
     )
+    parser.add_argument(
+        "--computer-use",
+        action=argparse.BooleanOptionalAction,
+        default=False,
+        help="Expose the supervised macOS computer tool to the voice agent.",
+    )
+    parser.add_argument("--computer-model", default="gpt-5.4-mini")
+    parser.add_argument(
+        "--computer-max-task-cost-usd",
+        type=float,
+        default=DEFAULT_MAX_TASK_COST_USD,
+        help=(
+            "Hard estimated model-cost ceiling for one computer task "
+            f"(default: ${DEFAULT_MAX_TASK_COST_USD:.2f}; use 0 to disable)."
+        ),
+    )
+    parser.add_argument(
+        "--computer-allow-app",
+        action="append",
+        default=None,
+        help=(
+            "Allowed macOS app name; repeat to add apps "
+            "(default: TextEdit and Google Chrome)."
+        ),
+    )
+    parser.add_argument(
+        "--peekaboo-command",
+        default="peekaboo mcp serve",
+        help="Shell-style argv for the Peekaboo MCP server.",
+    )
     return parser
 
 
@@ -322,7 +488,25 @@ def run(args: argparse.Namespace, *, input_stream: TextIO = sys.stdin) -> int:
     def create_agent(
         logger: BridgeLogger,
         controller: ConversationController,
+        player: AudioPlayback | None,
     ) -> OpenAIRealtimeAgent:
+        computer_tool = None
+        if args.computer_use:
+            allowed_applications = frozenset(
+                args.computer_allow_app or ["TextEdit", "Google Chrome"]
+            )
+            computer_tool = PeekabooTaskRunner(
+                logger,  # type: ignore[arg-type]
+                api_key=os.environ.get("OPENAI_API_KEY", ""),
+                model=args.computer_model,
+                max_task_cost_usd=(
+                    args.computer_max_task_cost_usd
+                    if args.computer_max_task_cost_usd != 0
+                    else None
+                ),
+                command=tuple(shlex.split(args.peekaboo_command)),
+                allowed_applications=allowed_applications,
+            )
         return OpenAIRealtimeAgent(
             logger,  # type: ignore[arg-type]
             api_key=os.environ.get("OPENAI_API_KEY", ""),
@@ -339,6 +523,8 @@ def run(args: argparse.Namespace, *, input_stream: TextIO = sys.stdin) -> int:
             vad_silence_duration_ms=args.vad_silence_ms,
             vad_eagerness=args.vad_eagerness,
             conversation_controller=controller,
+            player=player,
+            computer_tool=computer_tool,
         )
 
     worker = OpenAIProcessWorker(writer, create_agent)

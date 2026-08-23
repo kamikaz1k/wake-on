@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+import base64
 import json
 import os
 import sys
@@ -19,6 +20,7 @@ def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--request-end", action="store_true")
     parser.add_argument("--crash-on-start", action="store_true")
+    parser.add_argument("--emit-playback", action="store_true")
     args = parser.parse_args()
 
     for line in sys.stdin:
@@ -46,6 +48,18 @@ def main() -> int:
                 message="activation received",
                 fields={"initial_audio_samples": initial_audio.get("samples", 0)},
             )
+            if args.emit_playback:
+                emit(
+                    "playback_audio",
+                    activation_id=activation_id,
+                    item_id="fixture-item",
+                    content_index=0,
+                    audio={
+                        "encoding": "pcm16le",
+                        "samples": 2,
+                        "data": base64.b64encode(b"\x01\x00\x02\x00").decode(),
+                    },
+                )
             if args.request_end:
                 emit(
                     "request_end",

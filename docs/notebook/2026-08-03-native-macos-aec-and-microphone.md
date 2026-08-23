@@ -384,3 +384,65 @@ controlled comparison, the native helper should still expose
 readiness/state telemetry, then repeat identical Standard and Voice Isolation
 trials. That instrumentation is about measurement confidence, not a reason to
 discard this successful run.
+
+## 2026-08-09 retrospective: standalone WebRTC audio processing
+
+The browser WebRTC experiment came before the native Apple AEC implementation.
+It established that laptop-speaker full duplex and barge-in were feasible, but
+we chose Apple's Voice Processing I/O as the quickest headless native proof.
+The resulting implementation is not a custom echo-cancellation algorithm: our
+code owns capture, playback, resampling, and lifecycle switching around Apple's
+AEC.
+
+A useful alternative is WebRTC's Audio Processing Module (APM) without WebRTC
+network transport. The small freedesktop `webrtc-audio-processing` extraction,
+or the actively maintained Rust wrapper with a bundled build, can accept:
+
+- assistant playback as the reverse/render reference stream;
+- microphone frames as the capture stream; and
+- produce echo-cancelled microphone audio for the Realtime connection.
+
+This software-AEC path could keep ordinary microphone capture open continuously,
+avoid Apple's system-wide other-audio ducking, and potentially remove the
+measured raw-to-Voice-Processing-I/O activation pause. Those are hypotheses to
+validate on the built-in MacBook speaker and microphone, not guaranteed outcomes.
+
+The tradeoff is that WakeOn would own the difficult media alignment work. The
+render and capture streams need consistent sample rates and 10 ms framing, an
+accurate speaker-to-microphone delay estimate, and handling for playback
+underruns, audio-device changes, and capture/playback clock drift. Assistant
+audio already passes through our playback path, so supplying the render
+reference is feasible; reliability and echo rejection still require a bounded
+live comparison against the accepted Apple path.
+
+If we revisit the AEC implementation, the preferred first spike is a small Rust
+sidecar using [`webrtc-audio-processing`](https://github.com/tonarino/webrtc-audio-processing),
+backed by the standalone
+[`webrtc-audio-processing` source releases](https://gstreamer.freedesktop.org/src/mirror/webrtc-audio-processing/).
+Keep the current Apple implementation as the known-working baseline and compare
+ducking, activation latency, barge-in, false speech starts, and repeated echo
+rejection before changing the supported media policy.
+
+## 2026-08-13 process-delegate AEC teardown failure
+
+The first combined native-AEC, OpenAI process-delegate, and Peekaboo live run
+successfully initialized all three components. AEC entered voice-processing
+mode in 887.32 ms, Realtime response audio played through the harness, and a
+barge-in stopped playback and sent item truncation. This confirmed the new
+cross-process capture/playback route was active.
+
+The daemon stopped when the conversation ended. The AEC helper itself exited
+cleanly, but the immediate replacement raw-listening helper failed to acquire
+Core Audio with `com.apple.coreaudio.avfaudio error -10875` and exited with
+status 2. The process adapter had invoked media teardown from its child-stdout
+reader thread; the exception escaped that thread, while the wake source could
+also mistake the intentional helper replacement for permanent end-of-stream.
+
+The lifecycle now defers child-triggered media teardown to the harness polling
+thread. `NativeMacMedia` marks the AEC-to-raw replacement as a managed restart,
+waits briefly for Core Audio device release, and retries transient startup
+failures with bounded exponential backoff. `NativeWakeAudioSource` stays open
+while that managed restart is in progress. Regression tests cover transient
+restart failures, wake capture across a restart longer than the source's queue
+timeout, and protocol-thread delivery of the child's `ended` event. The full
+suite passes with 130 tests.

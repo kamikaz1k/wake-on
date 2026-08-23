@@ -3,6 +3,7 @@
 .env.*
 !.env.example
 .venv/
+.tools/
 __pycache__/
 .pytest_cache/
 native/macos-media-helper/.build/
