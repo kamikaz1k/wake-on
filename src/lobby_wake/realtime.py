@@ -60,9 +60,9 @@ def computer_scope_instructions(
     tool_list = ", ".join(tools) or "none"
     return (
         f" The approved target applications are: {application_list}."
-        f" The computer worker has these Peekaboo MCP tools: {tool_list}."
+        f" The computer worker has these operations: {tool_list}."
         " A task naming another target application will be denied; say so plainly instead of"
-        " implying broader access. Peekaboo's exposed tool catalog is authoritative. These"
+        " implying broader access. The exposed operation catalog is authoritative. These"
         " limits describe available capability, not user authorization:"
         " only operate the computer when the user asks."
     )
@@ -126,7 +126,7 @@ def build_use_computer_tool(
         "description": (
             "Perform one bounded task in an allowed macOS application. This returns "
             "immediately with a task ID while the task continues in the background. "
-            f"Allowed applications: {application_list}. Available Peekaboo tools: {tool_list}."
+            f"Allowed applications: {application_list}. Available operations: {tool_list}."
         ),
         "parameters": {
             "type": "object",

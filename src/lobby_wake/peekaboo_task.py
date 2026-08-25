@@ -79,6 +79,8 @@ class PeekabooTaskRunner:
         response_timeout_seconds: float = 30.0,
         request_json: Callable[[dict[str, Any]], dict[str, Any]] | None = None,
         mcp_client: PeekabooMCPClient | None = None,
+        backend_name: str = "Peekaboo MCP",
+        instructions_factory: Callable[[str, tuple[str, ...]], str] | None = None,
     ) -> None:
         if not api_key:
             raise ValueError("OPENAI_API_KEY is not set")
@@ -103,6 +105,8 @@ class PeekabooTaskRunner:
         self._max_task_cost_usd = max_task_cost_usd
         self._response_timeout_seconds = response_timeout_seconds
         self._request_json = request_json or self._post_response
+        self._backend_name = backend_name
+        self._instructions_factory = instructions_factory
         self._mcp = mcp_client or StdioMCPClient(
             command,
             stderr_callback=lambda line: self._logger.emit(
@@ -141,7 +145,7 @@ class PeekabooTaskRunner:
                 return
         tools = tuple(tool for tool in self._mcp.list_tools() if tool.name != "agent")
         if not tools:
-            raise RuntimeError("Peekaboo MCP did not expose any usable tools")
+            raise RuntimeError(f"{self._backend_name} did not expose any usable tools")
         with self._lock:
             if self._closed:
                 self._mcp.close()
@@ -181,7 +185,7 @@ class PeekabooTaskRunner:
             thread = threading.Thread(
                 target=self._run,
                 args=(active, task, application),
-                name=f"peekaboo-task-{active.task_id}",
+                name=f"computer-task-{active.task_id}",
                 daemon=True,
             )
         thread.start()
@@ -366,7 +370,7 @@ class PeekabooTaskRunner:
                         active.task_id,
                         active.generation,
                         "progress",
-                        f"Peekaboo tool {name} completed.",
+                        f"{self._backend_name} operation completed.",
                         False,
                     )
                 )
@@ -559,19 +563,40 @@ class PeekabooTaskRunner:
         return True
 
     @staticmethod
-    def _model_tool_output(result: MCPToolResult, *, max_text_chars: int = 32_000) -> str:
+    def _model_tool_output(
+        result: MCPToolResult, *, max_text_chars: int = 32_000
+    ) -> str | list[dict[str, Any]]:
         text_items = [
             str(item.get("text", ""))
             for item in result.content
             if item.get("type") == "text"
         ]
-        if text_items:
-            text = "\n".join(text_items)
-            if len(text) > max_text_chars:
-                text = text[:max_text_chars] + "\n[Tool output truncated]"
-            return f"Error: {text}" if result.is_error else text
+        text = "\n".join(text_items)
+        if len(text) > max_text_chars:
+            text = text[:max_text_chars] + "\n[Tool output truncated]"
         if result.is_error:
-            return "Error: Peekaboo tool failed without a text explanation."
+            text = f"Error: {text or 'Tool failed without a text explanation.'}"
+        images = [
+            item
+            for item in result.content
+            if item.get("type") == "image" and isinstance(item.get("data"), str)
+        ]
+        if images:
+            output: list[dict[str, Any]] = [
+                {"type": "input_text", "text": text or "Success"}
+            ]
+            for item in images[-1:]:
+                mime_type = str(item.get("mimeType") or "image/png")
+                output.append(
+                    {
+                        "type": "input_image",
+                        "detail": "low",
+                        "image_url": f"data:{mime_type};base64,{item['data']}",
+                    }
+                )
+            return output
+        if text_items or result.is_error:
+            return text
         if not result.content:
             return "Success"
         first = result.content[0]
@@ -614,7 +639,10 @@ class PeekabooTaskRunner:
         )
 
     def _instructions(self, application: str) -> str:
-        allowed = ", ".join(sorted(self._allowed_applications))
+        allowed_applications = tuple(sorted(self._allowed_applications))
+        if self._instructions_factory is not None:
+            return self._instructions_factory(application, allowed_applications)
+        allowed = ", ".join(allowed_applications)
         return (
             "You operate macOS through Peekaboo MCP. Complete the requested task by calling "
             "the provided tools. Their descriptions and JSON schemas are authoritative; do "

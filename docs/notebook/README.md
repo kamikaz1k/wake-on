@@ -20,6 +20,8 @@ time the work happened. They complement the architecture documents and ADRs:
 | 2026-08-22 | [Thin Peekaboo MCP integration](2026-08-22-thin-peekaboo-mcp-integration.md) | Removed the custom action/planner/executor stack; live Peekaboo MCP schemas and calls now pass through unchanged behind the existing asynchronous voice seam |
 | 2026-08-23 | [Interruptible computer subagent](2026-08-23-interruptible-computer-subagent.md) | Added goal revisions and voice-callable steering; stale plans cannot act after a revision, and MCP results are compacted before entering model context |
 | 2026-08-23 | [Peekaboo computer-agent latency](2026-08-23-peekaboo-agent-latency.md) | Live Chrome task took about 24 seconds and $0.036; sequential model turns dominated, while a direct 22.87-second Peekaboo failure exposed a secondary slow path |
+| 2026-08-23 | [Naive macOS Harness computer-use integration](2026-08-23-macos-harness-naive-integration.md) | One batch-oriented Python operation now replaces the default Peekaboo executor; real native capture, image handoff, cancellation, and the full test suite are verified |
+| 2026-08-24 | [macOS Harness live voice trial](2026-08-24-macos-harness-live-trial.md) | E2E works, but one task took 18.33s/7 model turns, permission acknowledgement could not resume a terminal task, and browser continuity was lost across fresh task contexts |
 
 ## Entry convention
 

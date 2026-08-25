@@ -86,8 +86,9 @@ only after a wake has been accepted.
 | `ConversationController` | One active generation and serialized end requests | Audio or delegate execution |
 | `ConversationHandle` | A restricted, generation-scoped delegate capability | Harness internals |
 | `ConversationDelegate` | Pre-wake preparation, activation, status, audio ownership, and shutdown contract | Any backend protocol |
-| `PeekabooTaskRunner` | One interruptible background task, goal revisions, live MCP tool discovery, schema-driven model loop, token/cost budget, cancellation, and task events | Wake routing or Realtime audio |
-| `StdioMCPClient` | MCP framing, request correlation, timeouts, and Peekaboo child-process supervision | Tool planning or application-specific behavior |
+| Computer task runner (`PeekabooTaskRunner`, legacy class name) | One interruptible background task, goal revisions, model loop, token/cost budget, cancellation, and task events | Wake routing or Realtime audio |
+| `MacOSHarnessClient` | One batch-oriented Python operation, supervised child execution, bounded output, screenshot handoff, and hard child cancellation | Task planning or voice behavior |
+| `StdioMCPClient` | Legacy Peekaboo MCP framing, request correlation, timeouts, and child-process supervision | Tool planning or application-specific behavior |
 | `OpenAIRealtimeAgent` | Realtime connection, audio conversion, model events, graceful farewell | Top-level lifecycle state |
 | `SherpaWakeWordEngine` | Local wake detection | Conversation audio |
 | `AudioPlayer` | Non-blocking assistant playback | Microphone capture |
@@ -104,20 +105,19 @@ the delegate contract.
 Computer use follows the same delegate seam. It is a capability of a selected
 delegate, not a responsibility of `WakeRouter`. A voice delegate may bridge a
 model tool call to its own background task runner. The current implementation
-is intentionally Peekaboo-specific: its live MCP schemas are authoritative and
-WakeOn does not redefine Peekaboo actions, application states, or argument
-names.
+gives the background planner one macOS Harness operation that executes a bounded
+Python burst. The older Peekaboo MCP backend remains selectable for comparison.
 
 ```mermaid
 flowchart LR
     A["Realtime voice model"] -->|"use_computer(task, app)"| B["Async delegate bridge"]
     B -->|"immediate accepted(task_id)"| A
-    B --> C["PeekabooTaskRunner"]
-    C -->|"tools/list schemas"| D["Background Responses tool loop"]
-    D -->|"exact tool name + arguments"| C
-    C -->|"tools/call"| E["Peekaboo MCP"]
-    E -->|"native MCP result"| C
-    C -->|"compact text / content descriptor"| D
+    B --> C["Async computer task runner"]
+    C --> D["Background Responses planner"]
+    D -->|"run_macos_harness(code)"| C
+    C -->|"Python over stdin"| E["macOS Harness child"]
+    E -->|"stdout / stderr / last PNG"| C
+    C -->|"bounded text + low-detail image"| D
     C -->|"terminal result"| B
     B -->|"queued system task result when voice is idle"| A
     A -->|"cancel_computer_task(task_id)"| B
@@ -142,36 +142,33 @@ task that remains active for ten seconds queues one reassurance behind foregroun
 voice activity. It does not repeat the reminder, and terminal notification still
 uses the normal voice-priority gate.
 
-Google Chrome remains part of Peekaboo rather than becoming a WakeOn browser
-Adapter. Peekaboo's `browser` tool description and input schema tell the model
-how to use Chrome DevTools; WakeOn forwards the model's selected tool name and
-arguments unchanged.
+Google Chrome remains part of macOS Harness rather than becoming a WakeOn
+browser adapter. Generated programs use its bundled Browser Harness helpers for
+CDP webpage work and `mac.*` for native browser chrome.
 
 ### Computer-task lifecycle
 
 ```mermaid
 stateDiagram-v2
-    [*] --> READY: discover MCP tools
+    [*] --> READY: expose one execution operation
     READY --> RUNNING: start task + generation
-    RUNNING --> RUNNING: model tool call → MCP result
+    RUNNING --> RUNNING: model program → harness result
     RUNNING --> RUNNING: steer → supersede plan + re-observe
     RUNNING --> COMPLETED: model returns final text
-    RUNNING --> FAILED: model / MCP / step limit
+    RUNNING --> FAILED: model / harness / step limit
     RUNNING --> CANCELLING: matching task cancel
-    CANCELLING --> CANCELLED: stop MCP child; suppress late result
+    CANCELLING --> CANCELLED: stop harness child; suppress late result
     COMPLETED --> RUNNING: next task
     FAILED --> RUNNING: next task
     CANCELLED --> RUNNING: next task
 ```
 
 The runner owns one task at a time and is independent of the active voice
-transport. It converts each discovered MCP definition mechanically into an
-OpenAI function definition while preserving the MCP input schema. Model tool
-calls go directly to `tools/call`. Results cross a compact model-context
-boundary: textual content is bounded, binary content becomes a descriptor, and
-raw MCP envelopes and metadata are not accumulated. Native error text returns
-to the model so it can recover using Peekaboo's own Interface. A matching cancellation stops
-the supervised MCP child and dominates any late result.
+transport. The planner receives one OpenAI function definition accepting Python
+source. Each call starts a supervised macOS Harness child and sends that source
+over stdin. Results cross a compact model-context boundary: text is bounded and
+the last printed PNG path becomes one low-detail image. A matching cancellation
+stops the supervised child and dominates any late result.
 
 Steering retains the task ID and increments its goal revision. Rapid steering
 collapses to the newest instruction. A model plan completed after steering is
@@ -192,11 +189,11 @@ process-delegate boundary. Models without a configured price still report token
 usage but cannot enforce a dollar ceiling.
 
 The selected target application is checked before task start and included in
-the model instruction. Peekaboo's native `PEEKABOO_ALLOW_TOOLS` configuration
-controls which tools appear in `tools/list`; the runner therefore exposes and
-describes the same capability it can execute. WakeOn does not currently claim
-hard per-tool enforcement beyond Peekaboo's own filtering or hard enforcement
-of application identity inside individual tool arguments.
+the model instruction. This initial macOS Harness spike is intentionally
+permissive: its stock namespace includes `mac`, `browser`, `Path`, and
+`subprocess`. WakeOn does not yet claim hard application, filesystem, shell, or
+generated-code isolation. Computer use remains opt-in while the end-to-end
+behavior is evaluated.
 
 Diagnostics log task IDs, generations, tool names, status, and typed transport
 errors. They do not log tool arguments, screen contents, user intent, or raw
@@ -535,8 +532,8 @@ speaker/microphone full duplex still requires an AEC media path; see the
 - Delegates receive a restricted capability, not the Realtime socket or
   orchestrator internals.
 - Graceful termination is bounded; emergency termination is always available.
-- Computer tasks start only for configured applications; Peekaboo's MCP tool
-  filter is authoritative for executable tools.
+- Computer tasks start only for configured applications; generated macOS Harness
+  programs are not yet capability-sandboxed beyond that admission check.
 - Accepted computer-task cancellation dominates queued and late results.
 - Screen content, screenshots, action parameters, and user intent stay out of
   ordinary lifecycle logs.
@@ -551,8 +548,9 @@ speaker/microphone full duplex still requires an AEC media path; see the
 | Delegate lifecycle contract | `src/lobby_wake/agent.py` |
 | End requests and delegate capability | `src/lobby_wake/conversation.py` |
 | Realtime connection, tools, and audio | `src/lobby_wake/realtime.py` |
-| Asynchronous schema-driven Peekaboo tasks | `src/lobby_wake/peekaboo_task.py` |
-| Supervised MCP stdio transport | `src/lobby_wake/mcp_stdio.py` |
+| Asynchronous computer-task planning and lifecycle | `src/lobby_wake/peekaboo_task.py` |
+| Default macOS Harness execution client | `src/lobby_wake/macos_harness_task.py` |
+| Legacy Peekaboo MCP stdio transport | `src/lobby_wake/mcp_stdio.py` |
 | Wake detection | `src/lobby_wake/wake.py` |
 | Microphone and WAV sources | `src/lobby_wake/audio.py` |
 | Rolling preroll buffer | `src/lobby_wake/ring_buffer.py` |

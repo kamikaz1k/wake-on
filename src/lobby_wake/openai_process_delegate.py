@@ -25,6 +25,7 @@ from .conversation import (
     EndSource,
 )
 from .events import EventLogger, WakeEvent
+from .macos_harness_task import MacOSHarnessClient, macos_harness_instructions
 from .peekaboo_task import DEFAULT_MAX_TASK_COST_USD, PeekabooTaskRunner
 from .playback import AudioPlayback, PlaybackPosition
 from .process_delegate import MAX_PROTOCOL_LINE_BYTES, PROTOCOL_VERSION, encode_pcm16_audio
@@ -468,13 +469,24 @@ def build_parser() -> argparse.ArgumentParser:
         default=None,
         help=(
             "Allowed macOS app name; repeat to add apps "
-            "(default: TextEdit and Google Chrome)."
+            "(default: ChatGPT and Google Chrome)."
         ),
+    )
+    parser.add_argument(
+        "--computer-backend",
+        choices=("macos-harness", "peekaboo"),
+        default="macos-harness",
+        help="Computer-use execution backend (default: macos-harness).",
+    )
+    parser.add_argument(
+        "--macos-harness-command",
+        default=f"{shlex.quote(sys.executable)} -m macos_harness.cli",
+        help="Shell-style argv for the macOS Harness CLI.",
     )
     parser.add_argument(
         "--peekaboo-command",
         default="peekaboo mcp serve",
-        help="Shell-style argv for the Peekaboo MCP server.",
+        help="Shell-style argv for the legacy Peekaboo MCP server.",
     )
     return parser
 
@@ -493,8 +505,21 @@ def run(args: argparse.Namespace, *, input_stream: TextIO = sys.stdin) -> int:
         computer_tool = None
         if args.computer_use:
             allowed_applications = frozenset(
-                args.computer_allow_app or ["TextEdit", "Google Chrome"]
+                args.computer_allow_app or ["ChatGPT", "Google Chrome"]
             )
+            runner_options: dict[str, Any] = {}
+            if args.computer_backend == "macos-harness":
+                runner_options = {
+                    "backend_name": "macOS Harness",
+                    "instructions_factory": macos_harness_instructions,
+                    "mcp_client": MacOSHarnessClient(
+                        tuple(shlex.split(args.macos_harness_command))
+                    ),
+                }
+            else:
+                runner_options = {
+                    "command": tuple(shlex.split(args.peekaboo_command)),
+                }
             computer_tool = PeekabooTaskRunner(
                 logger,  # type: ignore[arg-type]
                 api_key=os.environ.get("OPENAI_API_KEY", ""),
@@ -504,8 +529,8 @@ def run(args: argparse.Namespace, *, input_stream: TextIO = sys.stdin) -> int:
                     if args.computer_max_task_cost_usd != 0
                     else None
                 ),
-                command=tuple(shlex.split(args.peekaboo_command)),
                 allowed_applications=allowed_applications,
+                **runner_options,
             )
         return OpenAIRealtimeAgent(
             logger,  # type: ignore[arg-type]
