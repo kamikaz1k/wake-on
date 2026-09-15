@@ -50,6 +50,26 @@ class ComputerToolEvent:
     terminal: bool
 
 
+class ComputerTaskControl(Protocol):
+    @property
+    def allowed_applications(self) -> tuple[str, ...]: ...
+
+    @property
+    def available_tools(self) -> tuple[str, ...]: ...
+
+    def prepare(self) -> None: ...
+
+    def start(self, task: str, application: str) -> ComputerToolResult: ...
+
+    def steer(self, task_id: str | None, instruction: str) -> ComputerToolResult: ...
+
+    def poll_events(self) -> tuple[ComputerToolEvent, ...]: ...
+
+    def cancel(self, task_id: str | None = None, *, reason: str) -> ComputerToolResult: ...
+
+    def close(self) -> None: ...
+
+
 @dataclass(slots=True)
 class _ActiveTask:
     task_id: str
@@ -63,7 +83,7 @@ class _ActiveTask:
     cost_usd: float = 0.0
 
 
-class PeekabooTaskRunner:
+class ComputerTaskRunner:
     """Runs one asynchronous computer task against Peekaboo's live MCP tools."""
 
     def __init__(
@@ -714,3 +734,8 @@ class PeekabooTaskRunner:
         if not isinstance(result, dict):
             raise ValueError("OpenAI Responses result was not an object")
         return result
+
+
+# Compatibility for the historical public name while callers migrate to the
+# provider-neutral lifecycle name.
+PeekabooTaskRunner = ComputerTaskRunner

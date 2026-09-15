@@ -24,7 +24,7 @@ from .conversation import (
     EndSource,
 )
 from .events import EventLogger
-from .peekaboo_task import ComputerToolEvent, PeekabooTaskRunner
+from .peekaboo_task import ComputerTaskControl, ComputerToolEvent
 from .playback import AudioPlayback, AudioPlayer, ConversationCapture, PlaybackPosition
 from .ring_buffer import FloatAudio
 
@@ -306,7 +306,7 @@ class OpenAIRealtimeAgent:
         player: AudioPlayback | None = None,
         audio_input: AudioInputOwnership = AudioInputOwnership.HARNESS,
         capture: ConversationCapture | None = None,
-        computer_tool: PeekabooTaskRunner | None = None,
+        computer_tool: ComputerTaskControl | None = None,
     ) -> None:
         if not api_key:
             raise ValueError("OPENAI_API_KEY is not set")

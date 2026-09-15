@@ -88,6 +88,7 @@ only after a wake has been accepted.
 | `ConversationDelegate` | Pre-wake preparation, activation, status, audio ownership, and shutdown contract | Any backend protocol |
 | Computer task runner (`PeekabooTaskRunner`, legacy class name) | One interruptible background task, goal revisions, model loop, token/cost budget, cancellation, and task events | Wake routing or Realtime audio |
 | `MacOSHarnessClient` | One batch-oriented Python operation, supervised child execution, bounded output, screenshot handoff, and hard child cancellation | Task planning or voice behavior |
+| `CodexSkyTaskRunner` | One authenticated Codex/Sky task, Codex task identity, token telemetry, hard cancellation, and resume-based steering | Realtime voice, wake routing, or direct access to Sky's private native pipe |
 | `StdioMCPClient` | Legacy Peekaboo MCP framing, request correlation, timeouts, and child-process supervision | Tool planning or application-specific behavior |
 | `OpenAIRealtimeAgent` | Realtime connection, audio conversion, model events, graceful farewell | Top-level lifecycle state |
 | `SherpaWakeWordEngine` | Local wake detection | Conversation audio |
@@ -106,7 +107,9 @@ Computer use follows the same delegate seam. It is a capability of a selected
 delegate, not a responsibility of `WakeRouter`. A voice delegate may bridge a
 model tool call to its own background task runner. The current implementation
 gives the background planner one macOS Harness operation that executes a bounded
-Python burst. The older Peekaboo MCP backend remains selectable for comparison.
+Python burst. The optional Sky backend instead supervises a trusted Codex worker
+because Sky's native service authenticates its sender and rejects direct calls
+from Wake On. The older Peekaboo MCP backend remains selectable for comparison.
 
 ```mermaid
 flowchart LR
@@ -194,6 +197,15 @@ permissive: its stock namespace includes `mac`, `browser`, `Path`, and
 `subprocess`. WakeOn does not yet claim hard application, filesystem, shell, or
 generated-code isolation. Computer use remains opt-in while the end-to-end
 behavior is evaluated.
+
+The experimental Sky path preserves the same `start`, `poll`, `cancel`, and
+`steer` interface without adding a second planner in Wake On. A Codex child owns
+the authenticated `@oai/sky` Node session. Cancellation terminates the child
+process group; steering terminates the current turn and resumes the same Codex
+task with the revised goal. Codex JSONL usage events are accumulated as input,
+cached-input, uncached-input, and output tokens. This path is not the default:
+the first read-only trial loaded a much larger context than the macOS Harness
+worker, and a full live task comparison is still pending.
 
 Diagnostics log task IDs, generations, tool names, status, and typed transport
 errors. They do not log tool arguments, screen contents, user intent, or raw

@@ -26,11 +26,12 @@ from .conversation import (
 )
 from .events import EventLogger, WakeEvent
 from .macos_harness_task import MacOSHarnessClient, macos_harness_instructions
-from .peekaboo_task import DEFAULT_MAX_TASK_COST_USD, PeekabooTaskRunner
+from .peekaboo_task import DEFAULT_MAX_TASK_COST_USD, ComputerTaskRunner
 from .playback import AudioPlayback, PlaybackPosition
 from .process_delegate import MAX_PROTOCOL_LINE_BYTES, PROTOCOL_VERSION, encode_pcm16_audio
 from .realtime import DEFAULT_INSTRUCTIONS, OpenAIRealtimeAgent
 from .ring_buffer import FloatAudio
+from .sky_task import DEFAULT_CODEX_COMMAND, CodexSkyTaskRunner, parse_codex_command
 
 
 class ProtocolWriter:
@@ -474,9 +475,19 @@ def build_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument(
         "--computer-backend",
-        choices=("macos-harness", "peekaboo"),
+        choices=("sky", "macos-harness", "peekaboo"),
         default="macos-harness",
         help="Computer-use execution backend (default: macos-harness).",
+    )
+    parser.add_argument(
+        "--sky-codex-command",
+        default=DEFAULT_CODEX_COMMAND,
+        help="Shell-style argv for the trusted Codex executable used by Sky.",
+    )
+    parser.add_argument(
+        "--sky-codex-model",
+        default="gpt-5.6-luna",
+        help="Codex model used by the Sky computer subagent.",
     )
     parser.add_argument(
         "--macos-harness-command",
@@ -507,31 +518,43 @@ def run(args: argparse.Namespace, *, input_stream: TextIO = sys.stdin) -> int:
             allowed_applications = frozenset(
                 args.computer_allow_app or ["ChatGPT", "Google Chrome"]
             )
-            runner_options: dict[str, Any] = {}
-            if args.computer_backend == "macos-harness":
-                runner_options = {
-                    "backend_name": "macOS Harness",
-                    "instructions_factory": macos_harness_instructions,
-                    "mcp_client": MacOSHarnessClient(
+            if args.computer_backend == "sky":
+                computer_tool = CodexSkyTaskRunner(
+                    logger,  # type: ignore[arg-type]
+                    allowed_applications=allowed_applications,
+                    command=parse_codex_command(args.sky_codex_command),
+                    model=args.sky_codex_model,
+                )
+            elif args.computer_backend == "macos-harness":
+                computer_tool = ComputerTaskRunner(
+                    logger,  # type: ignore[arg-type]
+                    api_key=os.environ.get("OPENAI_API_KEY", ""),
+                    model=args.computer_model,
+                    max_task_cost_usd=(
+                        args.computer_max_task_cost_usd
+                        if args.computer_max_task_cost_usd != 0
+                        else None
+                    ),
+                    allowed_applications=allowed_applications,
+                    backend_name="macOS Harness",
+                    instructions_factory=macos_harness_instructions,
+                    mcp_client=MacOSHarnessClient(
                         tuple(shlex.split(args.macos_harness_command))
                     ),
-                }
+                )
             else:
-                runner_options = {
-                    "command": tuple(shlex.split(args.peekaboo_command)),
-                }
-            computer_tool = PeekabooTaskRunner(
-                logger,  # type: ignore[arg-type]
-                api_key=os.environ.get("OPENAI_API_KEY", ""),
-                model=args.computer_model,
-                max_task_cost_usd=(
-                    args.computer_max_task_cost_usd
-                    if args.computer_max_task_cost_usd != 0
-                    else None
-                ),
-                allowed_applications=allowed_applications,
-                **runner_options,
-            )
+                computer_tool = ComputerTaskRunner(
+                    logger,  # type: ignore[arg-type]
+                    api_key=os.environ.get("OPENAI_API_KEY", ""),
+                    model=args.computer_model,
+                    max_task_cost_usd=(
+                        args.computer_max_task_cost_usd
+                        if args.computer_max_task_cost_usd != 0
+                        else None
+                    ),
+                    allowed_applications=allowed_applications,
+                    command=tuple(shlex.split(args.peekaboo_command)),
+                )
         return OpenAIRealtimeAgent(
             logger,  # type: ignore[arg-type]
             api_key=os.environ.get("OPENAI_API_KEY", ""),

@@ -22,6 +22,7 @@ time the work happened. They complement the architecture documents and ADRs:
 | 2026-08-23 | [Peekaboo computer-agent latency](2026-08-23-peekaboo-agent-latency.md) | Live Chrome task took about 24 seconds and $0.036; sequential model turns dominated, while a direct 22.87-second Peekaboo failure exposed a secondary slow path |
 | 2026-08-23 | [Naive macOS Harness computer-use integration](2026-08-23-macos-harness-naive-integration.md) | One batch-oriented Python operation now replaces the default Peekaboo executor; real native capture, image handoff, cancellation, and the full test suite are verified |
 | 2026-08-24 | [macOS Harness live voice trial](2026-08-24-macos-harness-live-trial.md) | E2E works, but one task took 18.33s/7 model turns, permission acknowledgement could not resume a terminal task, and browser continuity was lost across fresh task contexts |
+| 2026-08-24 | [OAI Sky authenticated integration](2026-08-24-oai-sky-authenticated-integration.md) | Direct Node and signed MCP calls were rejected by sender authentication; a supervised Codex/Sky worker works but used 103,915 input tokens for one read-only call |
 
 ## Entry convention
 

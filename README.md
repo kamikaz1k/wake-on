@@ -319,6 +319,27 @@ off by default; repeat `--computer-allow-app` to expand its advertised
 application scope deliberately. The former Peekaboo backend remains available
 for comparison with `--computer-backend peekaboo --peekaboo-command "..."`.
 
+An experimental OAI Sky backend is also available. Sky rejects calls from an
+ordinary library process, so Wake On supervises a trusted Codex worker, which
+owns the `@oai/sky` session. Start it explicitly:
+
+```sh
+uv run lobby-wake \
+  --agent process \
+  --media-policy native-aec \
+  --delegate-command python -m lobby_wake.openai_process_delegate \
+  --computer-use \
+  --computer-backend sky \
+  --computer-allow-app "Google Chrome" \
+  --computer-allow-app ChatGPT
+```
+
+The Sky worker is asynchronous and can be cancelled or steered while Realtime
+voice continues. Steering terminates the active Codex turn and resumes the same
+Codex task with the revised goal. Logs record input, cached-input, uncached-input,
+and output tokens. Initial experiments found a large Codex context even for a
+single Sky call, so macOS Harness remains the default pending live comparison.
+
 Voice handoffs are deliberately terse. The agent gives one short pre-tool
 handoff, does not speak again when task acceptance succeeds, and explains only
 a rejected or failed acceptance. If an accepted task is still running after ten
