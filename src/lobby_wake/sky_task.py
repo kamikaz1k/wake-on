@@ -1,12 +1,14 @@
 from __future__ import annotations
 
 import json
+import math
 import os
 import queue
 import shlex
 import signal
 import subprocess
 import threading
+import time
 import uuid
 from collections.abc import Mapping, Sequence
 from contextlib import suppress
@@ -41,6 +43,9 @@ class _SkyTask:
     input_tokens: int = 0
     cached_input_tokens: int = 0
     output_tokens: int = 0
+    result_status: str | None = None
+    error: str | None = None
+    timed_out: bool = False
 
 
 class CodexSkyTaskRunner:
@@ -55,11 +60,15 @@ class CodexSkyTaskRunner:
         model: str = "gpt-5.6-luna",
         cwd: str | None = None,
         process_factory: ProcessFactory = subprocess.Popen,
+        timeout_seconds: float = 180,
     ) -> None:
         if not allowed_applications:
             raise ValueError("at least one allowed application is required")
         if not command:
             raise ValueError("Codex command cannot be empty")
+        if not math.isfinite(timeout_seconds) or timeout_seconds <= 0:
+            raise ValueError("timeout_seconds must be finite and positive")
+        self._timeout_seconds = timeout_seconds
         self._logger = logger
         self._allowed_applications = allowed_applications
         self._command = tuple(command)
@@ -210,6 +219,27 @@ class CodexSkyTaskRunner:
         self._logger.emit("computer.runner_closed", backend="OAI Sky via Codex")
 
     def _run(self, active: _SkyTask) -> None:
+        watchdog = threading.Timer(self._timeout_seconds, self._timeout, args=(active,))
+        watchdog.daemon = True
+        watchdog.start()
+        try:
+            self._run_task(active)
+        except Exception as error:
+            self._stop_process(active.process)
+            self._finish(active, "failed", f"Sky worker failed: {error}")
+        finally:
+            watchdog.cancel()
+
+    def _timeout(self, active: _SkyTask) -> None:
+        with self._lock:
+            if self._active is not active:
+                return
+            active.timed_out = True
+            active.cancel_event.set()
+            process = active.process
+        self._stop_process(process)
+
+    def _run_task(self, active: _SkyTask) -> None:
         self._logger.emit(
             "computer.task_started",
             task_id=active.task_id,
@@ -219,10 +249,14 @@ class CodexSkyTaskRunner:
         )
         prompt = self._initial_prompt(active)
         while not active.cancel_event.is_set():
+            active.summary = ""
+            active.result_status = None
+            active.error = None
             command = self._exec_command(active.session_id, prompt)
             try:
                 process = self._process_factory(
                     command,
+                    stdin=subprocess.DEVNULL,
                     stdout=subprocess.PIPE,
                     stderr=subprocess.PIPE,
                     text=True,
@@ -236,6 +270,9 @@ class CodexSkyTaskRunner:
             with self._lock:
                 if self._active is active:
                     active.process = process
+                stopping = active.cancel_event.is_set() or active.pending_steer is not None
+            if stopping:
+                self._stop_process(process)
             self._drain_stderr(active, process.stderr)
             self._read_events(active, process.stdout)
             returncode = process.wait()
@@ -253,8 +290,9 @@ class CodexSkyTaskRunner:
             if returncode == 0:
                 self._finish(
                     active,
-                    "completed",
-                    active.summary or "Computer task complete.",
+                    "completed" if active.result_status == "completed" and not active.error
+                    else "failed",
+                    active.error or active.summary or "Sky worker returned no verified result.",
                 )
             else:
                 self._finish(
@@ -304,10 +342,16 @@ class CodexSkyTaskRunner:
                     message=line.rstrip()[:1000],
                 )
                 continue
-            self._handle_event(active, event)
+            if isinstance(event, Mapping):
+                self._handle_event(active, event)
 
     def _handle_event(self, active: _SkyTask, event: Mapping[str, Any]) -> None:
         event_type = event.get("type")
+        if event_type in {"error", "turn.failed"}:
+            error = event.get("error", event)
+            active.error = str(error.get("message", "Codex turn failed"))[:2000] \
+                if isinstance(error, Mapping) else "Codex turn failed"
+            return
         if event_type == "thread.started" and isinstance(event.get("thread_id"), str):
             active.session_id = event["thread_id"]
             self._logger.emit(
@@ -322,6 +366,16 @@ class CodexSkyTaskRunner:
                 text = item.get("text")
                 if isinstance(text, str) and text.strip():
                     active.summary = text.strip()[:2000]
+                    active.result_status = None
+                    try:
+                        result = json.loads(text)
+                    except json.JSONDecodeError:
+                        result = None
+                    if isinstance(result, Mapping):
+                        status = result.get("status")
+                        if status in {"completed", "failed", "blocked"}:
+                            active.result_status = status
+                            active.summary = str(result.get("summary", text))[:2000]
             return
         if event_type != "turn.completed":
             return
@@ -373,6 +427,8 @@ class CodexSkyTaskRunner:
         threading.Thread(target=drain, name="sky-stderr", daemon=True).start()
 
     def _finish(self, active: _SkyTask, status: str, summary: str) -> None:
+        if active.timed_out:
+            status, summary = "failed", f"Sky task timed out after {self._timeout_seconds:g}s."
         with self._lock:
             if self._active is not active:
                 return
@@ -399,11 +455,17 @@ class CodexSkyTaskRunner:
     def _initial_prompt(self, active: _SkyTask) -> str:
         allowed = ", ".join(sorted(self._allowed_applications))
         return (
-            "Use the installed $computer-use skill and its @oai/sky API through node_repl. "
+            "Use @oai/sky through the trusted node_repl runtime. Read the installed "
+            "$computer-use skill if available. If that SDK or trusted runtime is unavailable, "
+            "report blocked immediately; do not substitute a different backend or alter host auth. "
+            'Import with const { sky } = await import("@oai/sky"); '
             "Do not use Chrome/browser plugins, shell UI automation, AppleScript, or another "
             "computer-use backend. Keep the current app and window unless the user explicitly "
             "requests a new one. Prefer accessibility text and element indices; observe before "
             "acting and verify the final state. Keep model commentary minimal. "
+            'Your final response must be ONLY a JSON object with "status" '
+            '("completed", "failed", or "blocked") and "summary" (a short string). '
+            "Use completed only after actually using Sky and verifying the requested outcome. "
             f"Operate only in {active.application!r}; allowed applications: {allowed}. "
             f"User task: {active.original_goal}"
         )
@@ -413,7 +475,7 @@ class CodexSkyTaskRunner:
         return (
             "The user changed the active computer task. Stop pursuing the prior goal, preserve "
             f"useful UI state, continue only in {active.application!r}, and follow this revised "
-            f"instruction: {instruction}"
+            f"instruction: {instruction}. Preserve the original Sky-only and final JSON rules."
         )
 
     @staticmethod
@@ -425,6 +487,14 @@ class CodexSkyTaskRunner:
         except OSError:
             with suppress(OSError):
                 process.terminate()
+        # A stalled child must not keep a cancelled task (or its pipe readers) alive.
+        def kill_if_running() -> None:
+            time.sleep(2)
+            if process.poll() is None:
+                with suppress(OSError):
+                    os.killpg(process.pid, signal.SIGKILL)
+
+        threading.Thread(target=kill_if_running, name="sky-kill", daemon=False).start()
 
     @staticmethod
     def _integer(value: Any) -> int:

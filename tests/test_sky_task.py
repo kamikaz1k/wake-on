@@ -58,7 +58,9 @@ def test_sky_runner_supervises_codex_and_records_usage() -> None:
                 {"type": "thread.started", "thread_id": "sky-session"},
                 {
                     "type": "item.completed",
-                    "item": {"type": "agent_message", "text": "Chrome is ready."},
+                    "item": {"type": "agent_message", "text": json.dumps({
+                        "status": "completed", "summary": "Chrome is ready.",
+                    })},
                 },
                 {
                     "type": "turn.completed",
@@ -125,3 +127,68 @@ def test_sky_resume_command_preserves_session_for_steering() -> None:
     assert command[:4] == ["codex-fixture", "exec", "resume", "--json"]
     assert "session-123" in command
     assert command[-1] == "Search for cats"
+
+
+def test_zero_exit_without_structured_success_is_failure() -> None:
+    for text in ('Sky is unavailable.', '{"status":"blocked","summary":"No trusted runtime"}'):
+        factory = FakeProcessFactory([[{
+            "type": "item.completed", "item": {"type": "agent_message", "text": text},
+        }]])
+        logger = EventLogger(stream=io.StringIO())
+        runner = CodexSkyTaskRunner(logger, allowed_applications=frozenset({"Finder"}),
+                                   command=("fake",), process_factory=factory)
+        try:
+            runner.prepare()
+            runner.start("Read state", "Finder")
+            assert _terminal(runner).status == "failed"
+        finally:
+            runner.close()
+            logger.close()
+
+
+def test_failed_turn_overrides_success_message() -> None:
+    factory = FakeProcessFactory([[
+        {"type": "item.completed", "item": {"type": "agent_message", "text":
+            '{"status":"completed","summary":"Done"}'}},
+        {"type": "turn.failed", "error": {"message": "Authentication expired"}},
+    ]])
+    logger = EventLogger(stream=io.StringIO())
+    runner = CodexSkyTaskRunner(logger, allowed_applications=frozenset({"Finder"}),
+                               command=("fake",), process_factory=factory)
+    try:
+        runner.prepare()
+        runner.start("Read state", "Finder")
+        event = _terminal(runner)
+        assert event.status == "failed"
+        assert event.summary == "Authentication expired"
+    finally:
+        runner.close()
+        logger.close()
+
+
+def test_timeout_stops_blocked_worker(monkeypatch: Any) -> None:
+    import threading
+
+    released = threading.Event()
+
+    class BlockingProcess(FakeProcess):
+        def wait(self) -> int:
+            assert released.wait(1)
+            return -15
+
+    process = BlockingProcess([])
+    monkeypatch.setattr(CodexSkyTaskRunner, "_stop_process", lambda *args: released.set())
+    logger = EventLogger(stream=io.StringIO())
+    runner = CodexSkyTaskRunner(logger, allowed_applications=frozenset({"Finder"}),
+                               command=("fake",), process_factory=lambda *a, **kw: process,
+                               timeout_seconds=0.03)
+    try:
+        runner.prepare()
+        runner.start("Read state", "Finder")
+        event = _terminal(runner)
+        assert event.status == "failed"
+        assert "timed out" in event.summary
+        assert released.is_set()
+    finally:
+        runner.close()
+        logger.close()

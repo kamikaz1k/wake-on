@@ -340,6 +340,11 @@ Codex task with the revised goal. Logs record input, cached-input, uncached-inpu
 and output tokens. Initial experiments found a large Codex context even for a
 single Sky call, so macOS Harness remains the default pending live comparison.
 
+For standalone Sky diagnostics and a task without starting voice, see
+[the Sky prototype guide](docs/sky-computer.md). The October 2026 smoke test
+verified a real `sky.list_apps()` call through the signed-in Codex host. Direct
+use of the archived package still requires that host's trusted runtime.
+
 Voice handoffs are deliberately terse. The agent gives one short pre-tool
 handoff, does not speak again when task acceptance succeeds, and explains only
 a rejected or failed acceptance. If an accepted task is still running after ten

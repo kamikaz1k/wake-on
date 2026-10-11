@@ -490,6 +490,12 @@ def build_parser() -> argparse.ArgumentParser:
         help="Codex model used by the Sky computer subagent.",
     )
     parser.add_argument(
+        "--sky-timeout",
+        type=float,
+        default=180,
+        help="Maximum seconds for a Sky task, including steering (default: 180).",
+    )
+    parser.add_argument(
         "--macos-harness-command",
         default=f"{shlex.quote(sys.executable)} -m macos_harness.cli",
         help="Shell-style argv for the macOS Harness CLI.",
@@ -524,6 +530,7 @@ def run(args: argparse.Namespace, *, input_stream: TextIO = sys.stdin) -> int:
                     allowed_applications=allowed_applications,
                     command=parse_codex_command(args.sky_codex_command),
                     model=args.sky_codex_model,
+                    timeout_seconds=args.sky_timeout,
                 )
             elif args.computer_backend == "macos-harness":
                 computer_tool = ComputerTaskRunner(
