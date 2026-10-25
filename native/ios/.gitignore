@@ -1,0 +1,10 @@
+Vendor/
+Resources/*.onnx
+Resources/tokens.txt
+Resources/hey-lobby.txt
+Resources/wake-fixture.wav
+build/
+build-device/
+*.xcuserstate
+xcuserdata/
+__pycache__/

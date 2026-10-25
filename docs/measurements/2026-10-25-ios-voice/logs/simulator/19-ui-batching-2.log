@@ -1,0 +1,93 @@
+VOICE start trigger=launch_argument
+VOICE mark start_entered 0.0ms
+VOICE mark key_loaded 2.9ms source=keychain
+VOICE mark connect_task_begin 209.4ms
+VOICE mark microphone_permission 211.8ms granted=true waitMs=2.364125
+VOICE mark config 212.9ms delegation=true delegationModel=gpt-5.6-terra effort=low iceQuietMs=25 webSearch=true
+VOICE mark webrtc_warm 219.9ms warmupMs=67.646334
+VOICE mark peer_created 220.5ms
+VOICE mark offer_created 250.9ms
+VOICE mark local_description_set 251.6ms
+VOICE mark ice_gathering_done 288.5ms beforeTimeout=true candidates=8 complete=false sdpBytes=2505
+VOICE mark http_request_begin 288.8ms
+VOICE mark http_response 538.4ms downloadMs=3.1419992446899414 protocol=h3 reusedConnection=true serverWaitMs=244.40395832061768 status=201 totalMs=249.35197830200195 uploadMs=0.558018684387207
+VOICE mark remote_description_begin 538.7ms
+VOICE mark ice_checking 583.4ms
+VOICE mark remote_track_added 584.5ms
+VOICE mark remote_description_set 584.6ms
+VOICE mark audio_session_begin 288.8ms
+VOICE mark audio_session_active 400.6ms inputLatencyMs=0.09999999747378752 ioBufferMs=10.0 outputLatencyMs=0.09999999747378752 route=Speaker sampleRate=48000.0
+VOICE mark audio_unit_enabled 400.8ms
+VOICE mark peer_connected 738.2ms
+VOICE mark ice_connected 738.3ms
+VOICE mark data_channel_open 845.0ms
+VOICE mark session_started 902.2ms
+VOICE probe greeting sent
+VOICE mark first_audio_packet_received 1508.2ms
+VOICE setup readyMs=1508
+VOICE voice_probe:greeting answered first_reply_transcript@602 reply_audio_start@820
+VOICE stop reason=end_after
+VOICE mark session_closed 5716.3ms reason=close_requested
+VOICE ended reason=close_requested callMs=5815 usageSeconds=15.0
+VOICE start trigger=repeat
+VOICE mark start_entered 0.0ms
+VOICE mark key_loaded 4.9ms source=keychain
+VOICE mark connect_task_begin 24.1ms
+VOICE mark microphone_permission 24.2ms granted=true waitMs=0.030584
+VOICE mark config 27.6ms delegation=true delegationModel=gpt-5.6-terra effort=low iceQuietMs=25 webSearch=true
+VOICE mark webrtc_warm 30.0ms warmupMs=67.646334
+VOICE mark peer_created 30.9ms
+VOICE mark offer_created 31.2ms
+VOICE mark local_description_set 31.8ms
+VOICE mark ice_gathering_done 69.1ms beforeTimeout=true candidates=8 complete=false sdpBytes=2508
+VOICE mark http_request_begin 69.4ms
+VOICE mark http_response 305.5ms downloadMs=2.7740001678466797 protocol=h3 reusedConnection=true serverWaitMs=230.74698448181152 status=201 totalMs=235.8400821685791 uploadMs=0.6369352340698242
+VOICE mark remote_description_begin 305.7ms
+VOICE mark ice_checking 328.4ms
+VOICE mark remote_track_added 329.6ms
+VOICE mark remote_description_set 329.6ms
+VOICE mark audio_session_begin 69.4ms
+VOICE mark audio_session_active 175.4ms inputLatencyMs=0.09999999747378752 ioBufferMs=10.0 outputLatencyMs=0.09999999747378752 route=Speaker sampleRate=48000.0
+VOICE mark audio_unit_enabled 175.5ms
+VOICE mark peer_connected 482.6ms
+VOICE mark ice_connected 482.7ms
+VOICE mark data_channel_open 594.0ms
+VOICE mark session_started 650.2ms
+VOICE probe greeting sent
+VOICE mark first_audio_packet_received 1252.1ms
+VOICE setup readyMs=1252
+VOICE voice_probe:greeting answered first_reply_transcript@550 reply_audio_start@833
+VOICE stop reason=end_after
+VOICE mark session_closed 5499.3ms reason=close_requested
+VOICE ended reason=close_requested callMs=5600 usageSeconds=15.0
+VOICE start trigger=repeat
+VOICE mark start_entered 0.0ms
+VOICE mark key_loaded 5.8ms source=keychain
+VOICE mark connect_task_begin 5.9ms
+VOICE mark microphone_permission 6.0ms granted=true waitMs=0.032167
+VOICE mark config 6.1ms delegation=true delegationModel=gpt-5.6-terra effort=low iceQuietMs=25 webSearch=true
+VOICE mark webrtc_warm 26.9ms warmupMs=67.646334
+VOICE mark peer_created 28.0ms
+VOICE mark offer_created 30.0ms
+VOICE mark local_description_set 30.8ms
+VOICE mark ice_gathering_done 64.0ms beforeTimeout=true candidates=8 complete=false sdpBytes=2506
+VOICE mark http_request_begin 64.2ms
+VOICE mark http_response 248.7ms downloadMs=0.5010366439819336 protocol=h3 reusedConnection=true serverWaitMs=182.10089206695557 status=201 totalMs=184.22794342041016 uploadMs=0.5410909652709961
+VOICE mark remote_description_begin 248.9ms
+VOICE mark ice_checking 263.6ms
+VOICE mark remote_track_added 264.8ms
+VOICE mark remote_description_set 264.8ms
+VOICE mark audio_session_begin 64.3ms
+VOICE mark audio_session_active 177.4ms inputLatencyMs=0.09999999747378752 ioBufferMs=10.0 outputLatencyMs=0.09999999747378752 route=Speaker sampleRate=48000.0
+VOICE mark audio_unit_enabled 177.5ms
+VOICE mark peer_connected 418.4ms
+VOICE mark ice_connected 418.4ms
+VOICE mark data_channel_open 532.6ms
+VOICE mark session_started 588.2ms
+VOICE probe greeting sent
+VOICE mark first_audio_packet_received 1116.7ms
+VOICE setup readyMs=1117
+VOICE voice_probe:greeting answered first_reply_transcript@528 reply_audio_start@850
+VOICE stop reason=end_after
+VOICE mark session_closed 5503.4ms reason=close_requested
+VOICE ended reason=close_requested callMs=5679 usageSeconds=15.0

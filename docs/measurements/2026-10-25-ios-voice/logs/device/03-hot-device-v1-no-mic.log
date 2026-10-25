@@ -1,0 +1,81 @@
+VOICE start trigger=launch_argument
+VOICE mark start_entered 0.0ms
+VOICE mark key_loaded 1.2ms source=keychain
+VOICE mark connect_task_begin 43.8ms
+VOICE mark microphone_permission 44.9ms granted=true waitMs=1.0605
+VOICE mark config 45.0ms delegation=true delegationModel=gpt-5.6-terra effort=low iceQuietMs=25 webSearch=true
+VOICE mark webrtc_warm 46.7ms warmupMs=17.088875
+VOICE mark peer_created 47.3ms
+VOICE mark offer_created 47.6ms
+VOICE mark local_description_set 48.1ms
+VOICE mark ice_gathering_done 84.6ms beforeTimeout=true candidates=9 complete=false sdpBytes=2641
+VOICE mark http_request_begin 84.8ms
+VOICE mark http_response 273.4ms connectMs=11.999964714050293 dnsMs=0.0 downloadMs=3.0080080032348633 protocol=h3 reusedConnection=false serverWaitMs=164.89708423614502 status=201 tlsMs=10.999917984008789 totalMs=187.26396560668945 uploadMs=0.14698505401611328
+VOICE mark remote_description_begin 278.5ms
+VOICE mark audio_armed 430.1ms alreadyArmed=false engineMs=285.355708 inputRate=48000.0 ioBufferMs=10.0 outputRate=48000.0 sessionMs=137.109834
+VOICE mark ice_checking 1258.4ms
+VOICE mark remote_track_added 1262.1ms
+VOICE mark remote_description_set 1262.2ms
+VOICE mark peer_connected 1415.2ms
+VOICE mark ice_connected 1415.2ms
+VOICE mark data_channel_open 1526.5ms
+VOICE mark session_started 1598.3ms
+VOICE probe greeting sent
+VOICE stop reason=end_after
+VOICE server error The session closed before the estimated context injection completed.
+VOICE mark session_closed 5522.7ms reason=close_requested
+VOICE ended reason=close_requested callMs=5555 usageSeconds=15.0
+VOICE start trigger=repeat
+VOICE mark start_entered 0.0ms
+VOICE mark key_loaded 3.5ms source=keychain
+VOICE mark connect_task_begin 21.8ms
+VOICE mark microphone_permission 21.9ms granted=true waitMs=0.028083
+VOICE mark config 22.0ms delegation=true delegationModel=gpt-5.6-terra effort=low iceQuietMs=25 webSearch=true
+VOICE mark webrtc_warm 23.3ms warmupMs=17.088875
+VOICE mark peer_created 24.3ms
+VOICE mark offer_created 24.6ms
+VOICE mark local_description_set 25.2ms
+VOICE mark ice_gathering_done 58.6ms beforeTimeout=true candidates=9 complete=false sdpBytes=2644
+VOICE mark http_request_begin 59.1ms
+VOICE mark audio_armed 420.7ms alreadyArmed=false engineMs=279.9595 inputRate=48000.0 ioBufferMs=10.0 outputRate=48000.0 sessionMs=137.878792
+VOICE mark http_response 892.7ms downloadMs=0.7259845733642578 protocol=h3 reusedConnection=true serverWaitMs=830.0579786300659 status=201 totalMs=833.1149816513062 uploadMs=0.9620189666748047
+VOICE mark remote_description_begin 893.2ms
+VOICE mark ice_checking 1280.3ms
+VOICE mark remote_track_added 1295.2ms
+VOICE mark remote_description_set 1295.3ms
+VOICE mark peer_connected 1445.1ms
+VOICE mark ice_connected 1445.2ms
+VOICE mark data_channel_open 1555.2ms
+VOICE mark session_started 1611.2ms
+VOICE probe greeting sent
+VOICE stop reason=end_after
+VOICE server error The session closed before the estimated context injection completed.
+VOICE mark session_closed 5527.2ms reason=close_requested
+VOICE ended reason=close_requested callMs=5564 usageSeconds=15.0
+VOICE start trigger=repeat
+VOICE mark start_entered 0.0ms
+VOICE mark key_loaded 9.1ms source=keychain
+VOICE mark connect_task_begin 25.9ms
+VOICE mark microphone_permission 26.0ms granted=true waitMs=0.022875
+VOICE mark config 26.1ms delegation=true delegationModel=gpt-5.6-terra effort=low iceQuietMs=25 webSearch=true
+VOICE mark webrtc_warm 27.3ms warmupMs=17.088875
+VOICE mark peer_created 28.3ms
+VOICE mark offer_created 28.7ms
+VOICE mark local_description_set 29.2ms
+VOICE mark ice_gathering_done 61.9ms beforeTimeout=true candidates=9 complete=false sdpBytes=2641
+VOICE mark http_request_begin 62.4ms
+VOICE mark http_response 302.8ms downloadMs=0.14495849609375 protocol=h3 reusedConnection=true serverWaitMs=237.9920482635498 status=201 totalMs=240.19300937652588 uploadMs=0.7590055465698242
+VOICE mark remote_description_begin 302.9ms
+VOICE mark audio_armed 423.8ms alreadyArmed=false engineMs=269.443083 inputRate=48000.0 ioBufferMs=10.0 outputRate=48000.0 sessionMs=142.06275
+VOICE mark ice_checking 785.3ms
+VOICE mark remote_track_added 828.0ms
+VOICE mark remote_description_set 828.8ms
+VOICE mark peer_connected 979.6ms
+VOICE mark ice_connected 979.6ms
+VOICE mark data_channel_open 1092.3ms
+VOICE mark session_started 1148.6ms
+VOICE probe greeting sent
+VOICE stop reason=end_after
+VOICE server error The session closed before the estimated context injection completed.
+VOICE mark session_closed 5506.8ms reason=close_requested
+VOICE ended reason=close_requested callMs=5544 usageSeconds=15.0

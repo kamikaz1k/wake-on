@@ -1,0 +1,115 @@
+VOICE @1ms app_launch pid=20110
+VOICE audio deferred: app in background
+VOICE start trigger=app_intent_fast
+VOICE mark start_entered 0.0ms
+VOICE @61ms intent FastTalkIntent entered appAgeMs=61 state=2
+VOICE mark connect_task_begin 3.7ms
+VOICE mark webrtc_warm 4.0ms warmupMs=24.236167
+VOICE mark peer_created 7.9ms
+VOICE mark offer_created 8.5ms
+VOICE mark local_description_set 14.9ms
+VOICE @106ms scene inactive
+VOICE mark ice_gathering_done 90.5ms beforeTimeout=true candidates=9 complete=false sdpBytes=2647
+VOICE mark http_request_begin 91.9ms
+VOICE mark continued_in_foreground 91.9ms
+VOICE @153ms intent FastTalkIntent foregrounded
+VOICE mark audio_prebuilt 216.5ms buildMs=187.916167 sessionActive=true sessionMs=23.746083
+VOICE mark app_became_active 349.3ms
+VOICE @417ms scene active
+VOICE mark device:engine_started 497.4ms detail=engine_started running=true prebuilt=true
+VOICE mark audio_armed 508.2ms alreadyArmed=false engineMs=147.754916 inputRate=48000.0 ioBufferMs=10.0 outputRate=48000.0 sessionMs=0.188459
+VOICE mark http_response 629.9ms connectMs=27.99999713897705 dnsMs=24.000048637390137 downloadMs=1.1429786682128906 protocol=h3 reusedConnection=false serverWaitMs=454.6999931335449 status=201 tlsMs=26.999950408935547 totalMs=525.331974029541 uploadMs=0.5000829696655273
+VOICE mark remote_description_begin 630.4ms
+VOICE mark device:startPlayout 635.7ms detail=startPlayout
+VOICE mark ice_checking 636.3ms
+VOICE mark remote_track_added 639.2ms
+VOICE mark remote_description_set 639.3ms
+VOICE level mic=0.000 reply=0.000 speaking=no
+VOICE mark device:first_playout 645.8ms detail=first_playout frames=480 status=0
+VOICE mark peer_connected 793.2ms
+VOICE mark ice_connected 793.3ms
+VOICE mark device:startRecording 796.3ms detail=startRecording
+VOICE mark microphone_delivered_to_webrtc 806.4ms
+VOICE mark device:first_deliver 806.5ms detail=first_deliver frames=480 status=0
+VOICE mark first_microphone_packet_sent 850.9ms
+VOICE mark data_channel_open 903.5ms
+VOICE mark session_started 963.2ms
+VOICE mark listening 963.6ms
+VOICE listening triggerToListeningMs=964
+VOICE mark first_audio_packet_received 1405.7ms
+VOICE setup readyMs=1406
+VOICE level mic=0.000 reply=0.000 speaking=no
+VOICE level mic=0.434 reply=0.000 speaking=yes
+VOICE level mic=0.000 reply=0.000 speaking=yes
+VOICE transcript You:  This is the cold
+VOICE stop reason=user
+VOICE mark session_closed 4431.8ms reason=close_requested
+VOICE transcript You:  start
+VOICE ended reason=close_requested callMs=4613 usageSeconds=15.0
+VOICE mark device:stopPlayout 4435.9ms detail=stopPlayout
+VOICE mark device:stopRecording 4436.5ms detail=stopRecording
+VOICE mark device:stopPlayout 4626.2ms detail=stopPlayout
+VOICE mark device:stopRecording 4626.2ms detail=stopRecording
+VOICE mark device:terminate 4626.2ms detail=terminate
+VOICE mark device:route_change 4626.9ms detail=route_change reason=8 running=false
+VOICE mark device:initialize 4632.2ms detail=initialize preferredIn=48000.0 preferredOut=48000.0
+VOICE mark device:route_change 4652.7ms detail=route_change reason=3 running=false
+VOICE @5706ms scene inactive
+VOICE @6297ms scene background
+VOICE audio deferred: app in background
+VOICE start trigger=app_intent_fast
+VOICE mark start_entered 0.0ms
+VOICE mark http_request_begin 0.4ms prepared=true
+VOICE @7944ms intent FastTalkIntent entered appAgeMs=7944 state=2
+VOICE mark connect_task_begin 9.9ms
+VOICE mark offer_reused 10.2ms ageMs=3213.642667 candidates=9 prepareMs=49.258833
+VOICE mark device:route_change 30.8ms detail=route_change reason=3 running=false
+VOICE @7987ms scene inactive
+VOICE mark continued_in_foreground 83.3ms
+VOICE @8027ms intent FastTalkIntent foregrounded
+VOICE mark device:route_change 135.9ms detail=route_change reason=8 running=false
+VOICE mark audio_prebuilt 161.1ms buildMs=133.944291 sessionActive=true sessionMs=26.880917
+VOICE mark device:engine_configuration_change 264.1ms detail=engine_configuration_change running=false
+VOICE mark app_became_active 359.3ms
+VOICE @8314ms scene active
+VOICE mark device:engine_started 509.5ms detail=engine_started running=true prebuilt=true
+VOICE mark audio_armed 520.7ms alreadyArmed=false engineMs=149.515791 inputRate=48000.0 ioBufferMs=10.0 outputRate=48000.0 sessionMs=0.398834
+VOICE mark http_response 530.8ms connectMs=46.000003814697266 dnsMs=0.0 downloadMs=1.0439157485961914 protocol=h3 reusedConnection=false serverWaitMs=461.5740776062012 status=201 tlsMs=46.000003814697266 totalMs=530.0829410552979 uploadMs=0.28002262115478516
+VOICE mark remote_description_begin 531.1ms
+VOICE mark device:startPlayout 531.8ms detail=startPlayout
+VOICE mark ice_checking 531.9ms
+VOICE mark remote_track_added 534.6ms
+VOICE mark remote_description_set 534.7ms
+VOICE level mic=0.000 reply=0.000 speaking=no
+VOICE mark device:first_playout 537.0ms detail=first_playout frames=480 status=0
+VOICE mark peer_connected 691.3ms
+VOICE mark ice_connected 691.5ms
+VOICE mark device:startRecording 694.0ms detail=startRecording
+VOICE mark microphone_delivered_to_webrtc 697.1ms
+VOICE mark device:first_deliver 697.2ms detail=first_deliver frames=480 status=0
+VOICE mark first_microphone_packet_sent 750.5ms
+VOICE mark data_channel_open 800.2ms
+VOICE mark session_started 858.2ms
+VOICE mark listening 858.6ms
+VOICE listening triggerToListeningMs=859
+VOICE mark first_audio_packet_received 1356.0ms
+VOICE setup readyMs=1356
+VOICE level mic=0.350 reply=0.001 speaking=yes
+VOICE level mic=0.554 reply=0.000 speaking=yes
+VOICE level mic=0.000 reply=0.000 speaking=no
+VOICE transcript You:  And this is the background
+VOICE stop reason=user
+VOICE level mic=0.000 reply=0.000 speaking=no
+VOICE mark session_closed 4784.4ms reason=close_requested
+VOICE transcript You:  start
+VOICE ended reason=close_requested callMs=4960 usageSeconds=15.0
+VOICE mark device:stopPlayout 4788.3ms detail=stopPlayout
+VOICE mark device:stopRecording 4788.4ms detail=stopRecording
+VOICE mark device:stopPlayout 4970.6ms detail=stopPlayout
+VOICE mark device:stopRecording 4970.6ms detail=stopRecording
+VOICE mark device:terminate 4970.6ms detail=terminate
+VOICE mark device:route_change 4971.1ms detail=route_change reason=8 running=false
+VOICE mark device:initialize 4972.6ms detail=initialize preferredIn=48000.0 preferredOut=48000.0
+VOICE mark device:route_change 5002.4ms detail=route_change reason=3 running=false
+VOICE @14627ms scene inactive
+VOICE @15170ms scene background

@@ -1,0 +1,59 @@
+VOICE start trigger=launch_argument
+VOICE mark start_entered 0.0ms
+VOICE @0ms app_launch pid=10738
+VOICE mark connect_task_begin 621.3ms
+VOICE mark device:engine_started 375.1ms detail=engine_started running=true prebuilt=false
+VOICE mark audio_armed 375.1ms alreadyArmed=false engineMs=10.458625 inputRate=48000.0 ioBufferMs=5.333333333333333 outputRate=48000.0 sessionMs=363.222833
+VOICE mark listening 393.9ms
+VOICE listening triggerToListeningMs=394
+VOICE mark device:engine_configuration_change 471.1ms detail=engine_configuration_change running=true
+VOICE mark webrtc_warm 792.3ms warmupMs=38.370375
+VOICE mark peer_created 794.8ms
+VOICE mark device:initialize 793.3ms detail=initialize preferredIn=48000.0 preferredOut=48000.0
+VOICE mark offer_created 822.7ms
+VOICE @1901ms scene active
+VOICE mark local_description_set 841.9ms
+VOICE mark ice_gathering_done 868.0ms beforeTimeout=true candidates=8 complete=false sdpBytes=2506
+VOICE mark http_request_begin 869.3ms
+VOICE mark http_response 1827.2ms downloadMs=1.9810199737548828 protocol=h3 reusedConnection=true serverWaitMs=802.5829792022705 status=201 totalMs=955.9080600738525 uploadMs=0.9919404983520508
+VOICE mark remote_description_begin 1832.9ms
+VOICE mark device:startPlayout 1835.6ms detail=startPlayout
+VOICE mark ice_checking 1835.7ms
+VOICE mark remote_track_added 1836.8ms
+VOICE mark remote_description_set 1836.8ms
+VOICE level mic=0.000 reply=0.000 speaking=no
+VOICE mark device:first_playout 1845.2ms detail=first_playout frames=513 status=0
+VOICE mark peer_connected 1993.6ms
+VOICE mark ice_connected 1993.6ms
+VOICE mark device:startRecording 1994.8ms detail=startRecording
+VOICE mark data_channel_open 2134.5ms
+VOICE mark session_started 2193.2ms
+VOICE mark microphone_delivered_to_webrtc 2197.5ms
+VOICE mark device:first_deliver 2197.5ms detail=first_deliver frames=2048 status=0
+VOICE mark first_microphone_packet_sent 2225.7ms
+VOICE mark audio_reaching_openai 2225.8ms
+VOICE reaching triggerToReachingOpenAIMs=2226
+VOICE mark first_audio_packet_received 2497.1ms
+VOICE setup readyMs=2497
+VOICE mark backlog_sent 2794.3ms backlogMs=2410.6666666666665
+VOICE backlog sent backlogMs=2411
+VOICE level mic=0.007 reply=0.000 speaking=yes
+VOICE level mic=0.003 reply=0.000 speaking=yes
+VOICE level mic=0.004 reply=0.000 speaking=no
+VOICE level mic=0.011 reply=0.000 speaking=no
+VOICE level mic=0.006 reply=0.000 speaking=yes
+VOICE level mic=0.005 reply=0.000 speaking=no
+VOICE level mic=0.002 reply=0.000 speaking=no
+VOICE level mic=0.005 reply=0.000 speaking=no
+VOICE level mic=0.014 reply=0.000 speaking=no
+VOICE level mic=0.002 reply=0.000 speaking=no
+VOICE level mic=0.003 reply=0.000 speaking=no
+VOICE stop reason=end_after
+VOICE mark session_closed 14223.2ms reason=close_requested
+VOICE ended reason=close_requested callMs=14318 usageSeconds=15.0
+VOICE mark device:stopPlayout 14225.3ms detail=stopPlayout
+VOICE mark device:stopRecording 14225.3ms detail=stopRecording
+VOICE mark device:stopPlayout 14318.4ms detail=stopPlayout
+VOICE mark device:stopRecording 14318.4ms detail=stopRecording
+VOICE mark device:terminate 14318.4ms detail=terminate
+VOICE mark device:initialize 14345.7ms detail=initialize preferredIn=48000.0 preferredOut=48000.0

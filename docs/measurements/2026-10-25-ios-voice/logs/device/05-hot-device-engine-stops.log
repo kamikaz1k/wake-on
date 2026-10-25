@@ -1,0 +1,47 @@
+VOICE start trigger=launch_argument
+VOICE mark start_entered 0.0ms
+VOICE mark key_loaded 1.8ms source=keychain
+VOICE mark connect_task_begin 43.4ms
+VOICE mark microphone_permission 45.8ms granted=true waitMs=2.425333
+VOICE mark config 45.9ms delegation=true delegationModel=gpt-5.6-terra effort=low iceQuietMs=25 webSearch=true
+VOICE mark webrtc_warm 47.7ms warmupMs=18.608458
+VOICE mark peer_created 48.3ms
+VOICE mark device:initialize 48.0ms detail=initialize preferredIn=48000.0 preferredOut=48000.0
+VOICE mark offer_created 49.1ms
+VOICE mark local_description_set 49.9ms
+VOICE mark ice_gathering_done 81.5ms beforeTimeout=true candidates=9 complete=false sdpBytes=2640
+VOICE mark http_request_begin 81.8ms
+VOICE mark http_response 350.8ms connectMs=50.999999046325684 dnsMs=0.0 downloadMs=2.830028533935547 protocol=h3 reusedConnection=false serverWaitMs=199.2039680480957 status=201 tlsMs=49.99995231628418 totalMs=266.664981842041 uploadMs=0.5779266357421875
+VOICE mark remote_description_begin 351.0ms
+VOICE mark device:engine_started 366.8ms detail=engine_started running=true autoShutdown=false
+VOICE mark audio_armed 371.9ms alreadyArmed=false engineMs=253.917167 inputRate=48000.0 ioBufferMs=10.0 outputRate=48000.0 sessionMs=105.804792
+VOICE mark device:startPlayout 398.5ms detail=startPlayout armed=false
+VOICE mark device:engine_configuration_change 502.5ms detail=engine_configuration_change running=false
+VOICE mark device:route_change 609.8ms detail=route_change reason=3 running=false
+VOICE mark device:route_change 622.3ms detail=route_change reason=3 running=false
+VOICE mark device:route_change 694.5ms detail=route_change reason=8 running=false
+VOICE mark ice_checking 770.9ms
+VOICE mark remote_track_added 773.5ms
+VOICE mark remote_description_set 773.6ms
+VOICE mark device:route_change 780.5ms detail=route_change reason=8 running=false
+VOICE mark device:route_change 799.7ms detail=route_change reason=8 running=false
+VOICE mark peer_connected 924.5ms
+VOICE mark ice_connected 924.5ms
+VOICE mark device:startRecording 925.8ms detail=startRecording armed=false
+VOICE mark device:route_change 996.5ms detail=route_change reason=3 running=false
+VOICE mark device:route_change 1007.5ms detail=route_change reason=3 running=false
+VOICE mark data_channel_open 1042.4ms
+VOICE mark device:route_change 1096.0ms detail=route_change reason=8 running=false
+VOICE mark session_started 1103.8ms
+VOICE probe greeting sent
+VOICE mark device:route_change 1128.8ms detail=route_change reason=8 running=false
+VOICE stop reason=end_after
+VOICE server error The session closed before the estimated context injection completed.
+VOICE mark session_closed 6560.5ms reason=close_requested
+VOICE ended reason=close_requested callMs=6598 usageSeconds=15.0
+VOICE mark device:stopPlayout 6564.2ms detail=stopPlayout
+VOICE mark device:stopRecording 6564.3ms detail=stopRecording
+VOICE mark device:stopPlayout 6622.7ms detail=stopPlayout
+VOICE mark device:stopRecording 6622.7ms detail=stopRecording
+VOICE mark device:terminate 6622.7ms detail=terminate
+VOICE mark device:route_change 6637.1ms detail=route_change reason=3 running=false

@@ -1,0 +1,32 @@
+import AppIntents
+import Foundation
+
+struct StartRecordingIntent: AppIntent {
+    static var title: LocalizedStringResource = "Start recording"
+    static var description = IntentDescription("Open Wake On and immediately capture a five-second audio handoff.")
+    // Foreground microphone capture also supports the iOS 17 deployment target.
+    static var openAppWhenRun: Bool = true
+    @available(iOS 26.0, *)
+    static var supportedModes: IntentModes { .foreground(.immediate) }
+
+    @MainActor
+    func perform() async throws -> some IntentResult {
+        let entered = DispatchTime.now().uptimeNanoseconds
+        VoiceSessionController.appLog("intent StartRecordingIntent entered")
+        try await WakeController.shared.startDirect(source: "app_intent", entered: entered)
+        return .result()
+    }
+}
+
+struct WakeShortcuts: AppShortcutsProvider {
+    static var appShortcuts: [AppShortcut] {
+        AppShortcut(intent: TalkIntent(), phrases: ["Talk to Lobby with \(.applicationName)"],
+                    shortTitle: "Talk to Lobby", systemImageName: "waveform")
+        AppShortcut(intent: FastTalkIntent(), phrases: ["Fast talk to Lobby with \(.applicationName)"],
+                    shortTitle: "Talk to Lobby (fast start)", systemImageName: "bolt.fill")
+        AppShortcut(intent: EndTalkIntent(), phrases: ["End the Lobby call in \(.applicationName)"],
+                    shortTitle: "End Lobby call", systemImageName: "phone.down.fill")
+        AppShortcut(intent: StartRecordingIntent(), phrases: ["Start recording with \(.applicationName)"],
+                    shortTitle: "Start recording", systemImageName: "mic.fill")
+    }
+}

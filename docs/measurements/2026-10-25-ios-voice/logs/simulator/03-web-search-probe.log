@@ -1,0 +1,45 @@
+VOICE start trigger=launch_argument
+VOICE mark start_entered 0.0ms
+VOICE mark key_loaded 3.2ms source=keychain
+VOICE mark connect_task_begin 222.0ms
+VOICE mark microphone_permission 224.5ms granted=true waitMs=2.447042
+VOICE mark config 225.8ms delegation=true delegationModel=gpt-5.6-terra webSearch=true
+VOICE mark peer_created 246.3ms
+VOICE mark offer_created 275.3ms
+VOICE mark local_description_set 277.8ms
+VOICE mark ice_gathering_done 381.8ms candidates=16 complete=true sdpBytes=3596
+VOICE mark http_request_begin 383.0ms
+VOICE mark audio_session_begin 383.1ms
+VOICE mark audio_session_active 479.7ms inputLatencyMs=0.09999999747378752 ioBufferMs=10.0 outputLatencyMs=0.09999999747378752 route=Speaker sampleRate=48000.0
+VOICE mark audio_unit_enabled 479.8ms
+VOICE mark http_response 560.7ms downloadMs=1.0520219802856445 protocol=h3 reusedConnection=true serverWaitMs=174.46398735046387 status=201 totalMs=177.29604244232178 uploadMs=0.47194957733154297
+VOICE mark remote_description_begin 560.9ms
+VOICE mark ice_checking 742.5ms
+VOICE mark remote_track_added 743.4ms
+VOICE mark remote_description_set 744.7ms
+VOICE mark peer_connected 896.3ms
+VOICE mark ice_connected 896.3ms
+VOICE mark data_channel_open 1010.8ms
+VOICE mark session_started 1065.6ms
+VOICE probe search sent
+VOICE delegation target=responses
+VOICE backend response.created
+VOICE backend response.in_progress
+VOICE mark first_audio_packet_received 1681.3ms
+VOICE setup readyMs=1683
+VOICE backend response.output_item.added
+VOICE backend response.web_search_call.in_progress
+VOICE backend response.web_search_call.searching
+VOICE backend response.web_search_call.completed
+VOICE backend response.output_item.done
+VOICE backend response.content_part.added
+VOICE backend response.output_text.delta
+VOICE backend response.output_text.done
+VOICE backend response.content_part.done
+VOICE backend response.completed
+VOICE voice_probe:search answered delegation_created@121 backend:response.created@122 backend:response.in_progress@148 first_reply_transcript@578 backend:response.output_item.added@663 backend:response.web_search_call.in_progress@664 reply_audio_start@670 backend:response.web_search_call.searching@758 backend:response.web_search_call.completed@1208 backend:response.output_item.done@1211 backend:response.content_part.added@1215 backend:response.output_text.delta@1265 backend:response.output_text.done@1501 backend:response.content_part.done@1503 backend:response.completed@1731 answer_transcript@2932
+VOICE turn responseMs=864 rttMs=55 jitterMs=23
+VOICE voice_turn answered first_reply_transcript@720 reply_audio_start@863
+VOICE stop reason=end_after
+VOICE mark session_closed 16760.8ms reason=close_requested
+VOICE ended reason=close_requested callMs=16864 usageSeconds=15.0

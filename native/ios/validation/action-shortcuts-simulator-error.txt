@@ -1,0 +1,2 @@
+Timestamp               Ty Process[PID:TID]
+2026-10-22 21:19:34.445 E  Shortcuts[46348:168788fd] [com.apple.shortcuts:General] Unable to run App Shortcut: Error Domain=LNActionForAutoShortcutPhraseFetchError Code=1 "Couldn't find AppShortcutsProvider." UserInfo={NSLocalizedDescription=Couldn't find AppShortcutsProvider.}

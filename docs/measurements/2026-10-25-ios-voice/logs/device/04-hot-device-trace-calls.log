@@ -1,0 +1,35 @@
+VOICE start trigger=launch_argument
+VOICE mark start_entered 0.0ms
+VOICE mark key_loaded 1.2ms source=keychain
+VOICE mark connect_task_begin 41.1ms
+VOICE mark microphone_permission 42.8ms granted=true waitMs=1.618292
+VOICE mark config 42.8ms delegation=true delegationModel=gpt-5.6-terra effort=low iceQuietMs=25 webSearch=true
+VOICE mark webrtc_warm 44.6ms warmupMs=16.872708
+VOICE mark peer_created 45.3ms
+VOICE mark device:initialize 45.0ms detail=initialize preferredIn=48000.0 preferredOut=48000.0
+VOICE mark offer_created 46.2ms
+VOICE mark local_description_set 47.3ms
+VOICE mark ice_gathering_done 82.6ms beforeTimeout=true candidates=9 complete=false sdpBytes=2638
+VOICE mark http_request_begin 83.0ms
+VOICE mark http_response 355.1ms connectMs=13.000011444091797 dnsMs=18.000006675720215 downloadMs=2.5539398193359375 protocol=h3 reusedConnection=false serverWaitMs=228.8280725479126 status=201 tlsMs=11.999964714050293 totalMs=270.73395252227783 uploadMs=0.308990478515625
+VOICE mark remote_description_begin 355.4ms
+VOICE mark audio_armed 396.3ms alreadyArmed=false engineMs=267.300208 inputRate=48000.0 ioBufferMs=10.0 outputRate=48000.0 sessionMs=120.723792
+VOICE mark device:startPlayout 422.0ms detail=startPlayout armed=false
+VOICE mark ice_checking 737.2ms
+VOICE mark remote_track_added 771.2ms
+VOICE mark remote_description_set 771.4ms
+VOICE mark peer_connected 920.8ms
+VOICE mark ice_connected 920.8ms
+VOICE mark device:startRecording 922.1ms detail=startRecording armed=false
+VOICE mark data_channel_open 1031.9ms
+VOICE mark session_started 1090.8ms
+VOICE probe greeting sent
+VOICE stop reason=end_after
+VOICE server error The session closed before the estimated context injection completed.
+VOICE mark session_closed 6590.1ms reason=close_requested
+VOICE ended reason=close_requested callMs=6628 usageSeconds=15.0
+VOICE mark device:stopPlayout 6594.1ms detail=stopPlayout
+VOICE mark device:stopRecording 6594.2ms detail=stopRecording
+VOICE mark device:stopPlayout 6661.5ms detail=stopPlayout
+VOICE mark device:stopRecording 6661.5ms detail=stopRecording
+VOICE mark device:terminate 6661.5ms detail=terminate

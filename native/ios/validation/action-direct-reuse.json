@@ -1,0 +1,15 @@
+{
+  "backgroundAtWake": false,
+  "complete": true,
+  "detected": true,
+  "endFrame": 80000,
+  "engineRunning": true,
+  "phrase": "DIRECT_RECORDING",
+  "recordedAt": "2026-10-23T01:17:04Z",
+  "sampleCount": 80000,
+  "sampleRate": 16000,
+  "source": "microphone",
+  "startFrame": 0,
+  "testID": "0304b427-67da-4ef4-ab80-6b92616571ba",
+  "wakeFrame": 0
+}

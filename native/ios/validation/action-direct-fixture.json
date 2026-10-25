@@ -1,0 +1,16 @@
+{
+  "backgroundAtWake": false,
+  "complete": true,
+  "detected": true,
+  "endFrame": 80000,
+  "engineRunning": true,
+  "exactBufferMatch": true,
+  "phrase": "DIRECT_RECORDING",
+  "recordedAt": "2026-10-23T01:09:25Z",
+  "sampleCount": 80000,
+  "sampleRate": 16000,
+  "source": "fixture",
+  "startFrame": 0,
+  "testID": "d1d046f4-52f2-4b0c-8e97-d01511b13d20",
+  "wakeFrame": 0
+}

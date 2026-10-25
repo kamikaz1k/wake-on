@@ -1,0 +1,16 @@
+{
+  "backgroundAtWake": false,
+  "complete": true,
+  "detected": true,
+  "endFrame": 101760,
+  "engineRunning": true,
+  "exactBufferMatch": true,
+  "phrase": "HEY_LOBBY",
+  "recordedAt": "2026-10-13T01:29:19Z",
+  "sampleCount": 80000,
+  "sampleRate": 16000,
+  "source": "fixture",
+  "startFrame": 21760,
+  "testID": "011093dd-dd23-418f-9cc7-8519fea97eaa",
+  "wakeFrame": 53760
+}

@@ -1,0 +1,44 @@
+VOICE start trigger=launch_argument
+VOICE mark start_entered 0.0ms
+VOICE mark key_loaded 2.9ms source=keychain
+VOICE mark connect_task_begin 216.3ms
+VOICE mark microphone_permission 218.8ms granted=true waitMs=2.364667
+VOICE mark config 219.9ms delegation=true delegationModel=gpt-5.6-terra effort=none webSearch=true
+VOICE mark peer_created 221.3ms
+VOICE mark offer_created 227.3ms
+VOICE mark local_description_set 249.1ms
+VOICE mark ice_gathering_done 335.5ms candidates=16 complete=true sdpBytes=3595
+VOICE mark http_request_begin 336.8ms
+VOICE mark audio_session_begin 336.8ms
+VOICE mark audio_session_active 445.2ms inputLatencyMs=0.09999999747378752 ioBufferMs=10.0 outputLatencyMs=0.09999999747378752 route=Speaker sampleRate=48000.0
+VOICE mark audio_unit_enabled 445.3ms
+VOICE mark http_response 513.3ms downloadMs=6.904959678649902 protocol=h3 reusedConnection=true serverWaitMs=166.91195964813232 status=201 totalMs=176.14901065826416 uploadMs=0.7361173629760742
+VOICE mark remote_description_begin 514.0ms
+VOICE mark ice_checking 708.3ms
+VOICE mark remote_track_added 709.4ms
+VOICE mark remote_description_set 711.4ms
+VOICE mark peer_connected 862.5ms
+VOICE mark ice_connected 862.6ms
+VOICE mark data_channel_open 980.5ms
+VOICE mark session_started 1035.5ms
+VOICE probe search sent
+VOICE delegation target=responses
+VOICE backend response.created
+VOICE backend response.in_progress
+VOICE mark first_audio_packet_received 1529.8ms
+VOICE setup readyMs=1530
+VOICE backend response.output_item.added
+VOICE backend response.web_search_call.in_progress
+VOICE backend response.web_search_call.searching
+VOICE backend response.web_search_call.completed
+VOICE backend response.output_item.done
+VOICE backend response.content_part.added
+VOICE backend response.output_text.delta
+VOICE backend response.output_text.done
+VOICE backend response.content_part.done
+VOICE backend response.completed
+VOICE voice_probe:search answered delegation_created@133 backend:response.created@134 backend:response.in_progress@149 first_reply_transcript@472 reply_audio_start@814 backend:response.output_item.added@961 backend:response.web_search_call.in_progress@963 backend:response.web_search_call.searching@1093 backend:response.web_search_call.completed@1565 backend:response.output_item.done@1568 backend:response.content_part.added@1568 backend:response.output_text.delta@1638 backend:response.output_text.done@1823 backend:response.content_part.done@1824 backend:response.completed@2008 answer_transcript@2074
+VOICE voice_turn answered backend:response.completed@521 first_reply_transcript@587 answer_transcript@587
+VOICE stop reason=end_after
+VOICE mark session_closed 14696.8ms reason=close_requested
+VOICE ended reason=close_requested callMs=14807 usageSeconds=15.0
