@@ -232,6 +232,32 @@ a handful of runs is not a stable latency benchmark.
 - `StartRecordingIntent.swift`: foreground App Intent and discoverable App Shortcut.
 - `LatencyTrace.swift`: monotonic milestones, signposts and bounded JSONL export.
 - `ContentView.swift`: listener controls and handoff inspection.
+- `Visualizer/`: animated voice visualizers for calls (see below).
+
+### Voice visualizer
+
+`VoiceVisualizer()` draws the default sky orb from live call audio. It needs no
+setup: `HotAudioDevice` copies the microphone and the assistant's playout into
+`VoiceAudioTap.shared`, and `VoiceSignal.live` turns that into loudness, a
+32-band spectrum, a bounce spring and a "thinking" state (a pause after you speak).
+
+```swift
+VoiceVisualizer()                                   // sky orb, live audio
+VoiceVisualizer(style: .waveOrb, palette: .ocean)   // any style and color preset
+VoiceVisualizer(signal: .simulated())               // SwiftUI previews
+```
+
+Styles: sky orb, wave orb, bouncing pills, particle sphere, ring tunnel, Saturn,
+particle terrain, particle torus, radial spectrum. The two orbs are SwiftUI
+Metal shaders (`VoiceOrbShaders.metal`), so Xcode needs its Metal Toolchain
+(`xcodebuild -downloadComponent MetalToolchain`, once). The others use `Canvas`.
+
+The call screen shows the chosen style while connecting or live. **Visualizer**
+in the voice section opens a gallery that plays a recorded two-voice
+conversation (`Resources/VisualizerSamples`) to compare styles and pick one. In
+Debug builds, launch with `-visualizer-gallery -visualizer-autoplay` to open it
+directly. The browser prototype these were designed in lives in
+`prototypes/voice-visualizer` at the repository root.
 
 The future voice adapter can consume the initial `AudioHandoff` at wake and the
 subsequent samples at the same serial processing boundary. This prototype uses a

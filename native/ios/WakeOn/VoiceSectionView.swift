@@ -4,9 +4,18 @@ import SwiftUI
 struct VoiceSectionView: View {
     @ObservedObject var voice: VoiceSessionController
     @State private var keyDraft = ""
+    @AppStorage(VoiceVisualizerSettings.styleKey) private var visualizerStyle: VoiceVisualizerStyle = .skyOrb
+    @AppStorage(VoiceVisualizerSettings.paletteKey) private var visualizerPalette = VoicePalette.default.name
 
     var body: some View {
         Section {
+            if voice.phase == .connecting || voice.phase == .live {
+                VoiceVisualizer(style: visualizerStyle, palette: .named(visualizerPalette))
+                    .frame(height: 260)
+                    .listRowBackground(Color.black)
+                    .listRowInsets(EdgeInsets())
+                    .accessibilityIdentifier("voice-visualizer")
+            }
             Label(voice.status, systemImage: icon).font(.headline)
                 .accessibilityIdentifier("voice-status")
             switch voice.phase {
@@ -32,6 +41,12 @@ struct VoiceSectionView: View {
             if let error = voice.error {
                 Text(error).foregroundStyle(.red).accessibilityIdentifier("voice-error")
             }
+            NavigationLink {
+                VoiceVisualizerGallery()
+            } label: {
+                LabeledContent("Visualizer", value: visualizerStyle.title)
+            }
+            .accessibilityIdentifier("visualizer-gallery")
         } header: { Text("Voice assistant") } footer: {
             Text("Assign Talk to Lobby to the Action Button: Settings › Action Button › Shortcut › Wake On.")
         }

@@ -409,6 +409,8 @@ final class HotAudioDevice: NSObject, @unchecked Sendable {
         let speakerFormat = engine.outputNode.outputFormat(forBus: 0)
         let playFormat = AVAudioFormat(commonFormat: .pcmFormatInt16, sampleRate: speakerFormat.sampleRate,
                                        channels: 1, interleaved: true)!
+        VoiceAudioTap.shared.microphone.sampleRate = micFormat.sampleRate
+        VoiceAudioTap.shared.assistant.sampleRate = speakerFormat.sampleRate
         makeChime(sampleRate: speakerFormat.sampleRate)
 
         let sink = AVAudioSinkNode { [unowned self] timestamp, frames, buffers in
@@ -558,6 +560,7 @@ final class HotAudioDevice: NSObject, @unchecked Sendable {
         }
         let rateChanged = micFormat.sampleRate != inputFormat?.sampleRate
         inputFormat = micFormat
+        VoiceAudioTap.shared.microphone.sampleRate = micFormat.sampleRate
         if rateChanged, let delegate {
             delegate.dispatchAsync { delegate.notifyAudioInputParametersChange() }
         }
@@ -591,6 +594,8 @@ final class HotAudioDevice: NSObject, @unchecked Sendable {
         guard let first = list.first, let data = first.mData?.assumingMemoryBound(to: Float.self) else { return noErr }
         let stride = Int(first.mNumberChannels)
         let count = Int(frames)
+        let tap = VoiceAudioTap.shared
+        if !tap.microphoneMuted { tap.microphone.write(data, count: count, stride: stride) }
         for index in 0..<count {
             let sample = max(-1, min(1, data[index * stride]))
             scratch[index] = Int16(sample * 32767)
@@ -673,6 +678,10 @@ final class HotAudioDevice: NSObject, @unchecked Sendable {
         var flags = AudioUnitRenderActionFlags()
         let status = playout(&flags, timestamp, 0, frames, output)
         if mixChime(into: output, frames: Int(frames), replace: false) { flags.remove(.unitRenderAction_OutputIsSilence) }
+        // Feed the visualizer what the speaker is about to play (Int16 mono).
+        if let data = UnsafeMutableAudioBufferListPointer(output).first?.mData {
+            VoiceAudioTap.shared.assistant.write(int16: data.assumingMemoryBound(to: Int16.self), count: Int(frames))
+        }
         if !playedOnce {
             playedOnce = true
             trace("first_playout frames=\(frames) status=\(status)")

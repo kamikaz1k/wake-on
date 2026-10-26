@@ -28,9 +28,12 @@ def configs(name, settings):
         ids.append(add(name+mode, 'XCBuildConfiguration', name=mode, buildSettings=merged))
     return add(name+'configs', 'XCConfigurationList', buildConfigurations=ids, defaultConfigurationIsVisible=0, defaultConfigurationName='Release')
 
-sources=[file(str(p.relative_to(root)), 'sourcecode.swift') for p in sorted((root/'WakeOn').glob('*.swift'))]
+sources=[file(str(p.relative_to(root)), 'sourcecode.swift') for p in sorted((root/'WakeOn').rglob('*.swift'))]
+sources+=[file(str(p.relative_to(root)), 'sourcecode.metal') for p in sorted((root/'WakeOn').rglob('*.metal'))]
 tests=[file(str(p.relative_to(root)), 'sourcecode.swift') for p in sorted((root/'Tests').glob('*.swift'))]
 resources=[file('Resources/'+n, 'file') for n in ['encoder.onnx','decoder.onnx','joiner.onnx','tokens.txt','hey-lobby.txt','wake-fixture.wav']]
+# Recorded two-voice conversation for the visualizer gallery.
+resources+=[file(str(p.relative_to(root)), 'audio.wav') for p in sorted((root/'Resources/VisualizerSamples').glob('*.wav'))]
 frameworks=[file('Vendor/build-ios-no-tts/'+p, 'wrapper.xcframework') for p in ['sherpa-onnx.xcframework','ios-onnxruntime/1.27.0/onnxruntime.xcframework']]
 # WebRTC is a dynamic framework: link it and embed it in the app bundle.
 webrtc=file('Vendor/WebRTC.xcframework', 'wrapper.xcframework')

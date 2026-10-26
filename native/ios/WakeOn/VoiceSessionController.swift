@@ -188,6 +188,7 @@ final class VoiceSessionController: ObservableObject {
         jitterBufferMs = nil
         usageSeconds = nil
         muted = false
+        VoiceAudioTap.shared.microphoneMuted = false
         tracker = TurnTracker()
         sessionStarted = false
         firstAudio = false
@@ -337,6 +338,7 @@ final class VoiceSessionController: ObservableObject {
     func toggleMute() {
         muted.toggle()
         provider?.setMuted(muted)
+        VoiceAudioTap.shared.microphoneMuted = muted
     }
 
     func saveKey(_ key: String) {

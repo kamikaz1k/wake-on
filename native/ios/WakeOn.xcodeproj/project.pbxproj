@@ -22,6 +22,12 @@
 				<string>6DFDA75F1ECB6EFBF3C21E46</string>
 				<string>4CD946F6E32CA2BB00F8B91D</string>
 				<string>E456AFA48DF51D1482D7854E</string>
+				<string>7C00743840BBDF44C1A235E4</string>
+				<string>ADAA82655AC6C4D45728DDA5</string>
+				<string>D0F09E2D13E3D4E0889AC86C</string>
+				<string>AB253D8DEF578F882C3AD98F</string>
+				<string>DFE2289E0900BFE0098B1A52</string>
+				<string>7964352DDE2EB6CBD9B52FFD</string>
 			</array>
 			<key>isa</key>
 			<string>PBXResourcesBuildPhase</string>
@@ -58,6 +64,13 @@
 		<dict>
 			<key>fileRef</key>
 			<string>579F4EE51E22157FC1503151</string>
+			<key>isa</key>
+			<string>PBXBuildFile</string>
+		</dict>
+		<key>0F3BF8A23D1FDE6611CE4A9A</key>
+		<dict>
+			<key>fileRef</key>
+			<string>4F39308818B726E435B8F2A1</string>
 			<key>isa</key>
 			<string>PBXBuildFile</string>
 		</dict>
@@ -106,6 +119,17 @@
 			<string>XCBuildConfiguration</string>
 			<key>name</key>
 			<string>Debug</string>
+		</dict>
+		<key>0FA61C68DF833338CD63C969</key>
+		<dict>
+			<key>isa</key>
+			<string>PBXFileReference</string>
+			<key>lastKnownFileType</key>
+			<string>audio.wav</string>
+			<key>path</key>
+			<string>Resources/VisualizerSamples/viz-a1.wav</string>
+			<key>sourceTree</key>
+			<string>&lt;group&gt;</string>
 		</dict>
 		<key>141FC4B68CEA3CBAC086E734</key>
 		<dict>
@@ -160,6 +184,13 @@
 			<string>WakeOn/ContentView.swift</string>
 			<key>sourceTree</key>
 			<string>&lt;group&gt;</string>
+		</dict>
+		<key>1EF92A614D429A1E40A833B8</key>
+		<dict>
+			<key>fileRef</key>
+			<string>63A0F22F27112C50B07F9861</string>
+			<key>isa</key>
+			<string>PBXBuildFile</string>
 		</dict>
 		<key>206BA2F968C3FC3C92318888</key>
 		<dict>
@@ -225,6 +256,17 @@
 			<key>sourceTree</key>
 			<string>&lt;group&gt;</string>
 		</dict>
+		<key>25F3246285C958650A5E1323</key>
+		<dict>
+			<key>isa</key>
+			<string>PBXFileReference</string>
+			<key>lastKnownFileType</key>
+			<string>audio.wav</string>
+			<key>path</key>
+			<string>Resources/VisualizerSamples/viz-u2.wav</string>
+			<key>sourceTree</key>
+			<string>&lt;group&gt;</string>
+		</dict>
 		<key>2A360B901BD7C9951074CD18</key>
 		<dict>
 			<key>fileRef</key>
@@ -243,6 +285,13 @@
 		<dict>
 			<key>fileRef</key>
 			<string>43916129615D067FEEB4464D</string>
+			<key>isa</key>
+			<string>PBXBuildFile</string>
+		</dict>
+		<key>31CF634437FF1CA20604D2BE</key>
+		<dict>
+			<key>fileRef</key>
+			<string>3F1E21A7DC27A28E0003C40A</string>
 			<key>isa</key>
 			<string>PBXBuildFile</string>
 		</dict>
@@ -276,6 +325,17 @@
 			<string>8D6F34E7725B3AD5A0F6CAF0</string>
 			<key>isa</key>
 			<string>PBXBuildFile</string>
+		</dict>
+		<key>3F1E21A7DC27A28E0003C40A</key>
+		<dict>
+			<key>isa</key>
+			<string>PBXFileReference</string>
+			<key>lastKnownFileType</key>
+			<string>sourcecode.swift</string>
+			<key>path</key>
+			<string>WakeOn/Visualizer/VoicePalette.swift</string>
+			<key>sourceTree</key>
+			<string>&lt;group&gt;</string>
 		</dict>
 		<key>40C95F44524CD4C23904F439</key>
 		<dict>
@@ -313,12 +373,52 @@
 			<key>isa</key>
 			<string>PBXBuildFile</string>
 		</dict>
+		<key>465181E730208576E4526A9D</key>
+		<dict>
+			<key>fileRef</key>
+			<string>BDB40084956B0055F5BBA3CB</string>
+			<key>isa</key>
+			<string>PBXBuildFile</string>
+		</dict>
+		<key>47C20025F5E8A35638FCC3FE</key>
+		<dict>
+			<key>isa</key>
+			<string>PBXFileReference</string>
+			<key>lastKnownFileType</key>
+			<string>sourcecode.swift</string>
+			<key>path</key>
+			<string>WakeOn/Visualizer/SampleConversationPlayer.swift</string>
+			<key>sourceTree</key>
+			<string>&lt;group&gt;</string>
+		</dict>
+		<key>48D1551B54BA62CF771F6761</key>
+		<dict>
+			<key>isa</key>
+			<string>PBXFileReference</string>
+			<key>lastKnownFileType</key>
+			<string>audio.wav</string>
+			<key>path</key>
+			<string>Resources/VisualizerSamples/viz-a2.wav</string>
+			<key>sourceTree</key>
+			<string>&lt;group&gt;</string>
+		</dict>
 		<key>4CD946F6E32CA2BB00F8B91D</key>
 		<dict>
 			<key>fileRef</key>
 			<string>B97D5DA01D02B855250F3BB8</string>
 			<key>isa</key>
 			<string>PBXBuildFile</string>
+		</dict>
+		<key>4F39308818B726E435B8F2A1</key>
+		<dict>
+			<key>isa</key>
+			<string>PBXFileReference</string>
+			<key>lastKnownFileType</key>
+			<string>sourcecode.swift</string>
+			<key>path</key>
+			<string>Tests/VoiceSpectrumTests.swift</string>
+			<key>sourceTree</key>
+			<string>&lt;group&gt;</string>
 		</dict>
 		<key>50AFC405A6062934BEA58612</key>
 		<dict>
@@ -494,6 +594,24 @@
 			<key>isa</key>
 			<string>PBXBuildFile</string>
 		</dict>
+		<key>63A0F22F27112C50B07F9861</key>
+		<dict>
+			<key>isa</key>
+			<string>PBXFileReference</string>
+			<key>lastKnownFileType</key>
+			<string>sourcecode.swift</string>
+			<key>path</key>
+			<string>WakeOn/Visualizer/VoiceVisualizer.swift</string>
+			<key>sourceTree</key>
+			<string>&lt;group&gt;</string>
+		</dict>
+		<key>65AA1421743FE13342BBD60F</key>
+		<dict>
+			<key>fileRef</key>
+			<string>DF594260BA11BF317125D44B</string>
+			<key>isa</key>
+			<string>PBXBuildFile</string>
+		</dict>
 		<key>6DFDA75F1ECB6EFBF3C21E46</key>
 		<dict>
 			<key>fileRef</key>
@@ -511,6 +629,7 @@
 				<string>F5A8AD6DD1708ECCF94AA2E2</string>
 				<string>44DA201589CF3D2915F60C94</string>
 				<string>D20988A742E8A10B39F7CB23</string>
+				<string>0F3BF8A23D1FDE6611CE4A9A</string>
 				<string>06EC84C75A1861F3AB6AD29C</string>
 			</array>
 			<key>isa</key>
@@ -568,6 +687,27 @@
 			<string>PBXFrameworksBuildPhase</string>
 			<key>runOnlyForDeploymentPostprocessing</key>
 			<integer>0</integer>
+		</dict>
+		<key>7964352DDE2EB6CBD9B52FFD</key>
+		<dict>
+			<key>fileRef</key>
+			<string>E0678D08500F2A583925D8DB</string>
+			<key>isa</key>
+			<string>PBXBuildFile</string>
+		</dict>
+		<key>7C00743840BBDF44C1A235E4</key>
+		<dict>
+			<key>fileRef</key>
+			<string>0FA61C68DF833338CD63C969</string>
+			<key>isa</key>
+			<string>PBXBuildFile</string>
+		</dict>
+		<key>7C5A1951B4BEF1420051F995</key>
+		<dict>
+			<key>fileRef</key>
+			<string>E31B5919A1444094040D0A2C</string>
+			<key>isa</key>
+			<string>PBXBuildFile</string>
 		</dict>
 		<key>7D1043473D55BFA90E8530D3</key>
 		<dict>
@@ -750,6 +890,24 @@
 			<key>sourceTree</key>
 			<string>&lt;group&gt;</string>
 		</dict>
+		<key>A459CE8F90BA65D343EC2072</key>
+		<dict>
+			<key>fileRef</key>
+			<string>47C20025F5E8A35638FCC3FE</string>
+			<key>isa</key>
+			<string>PBXBuildFile</string>
+		</dict>
+		<key>A501D9A4B3CB8108DC6CD4A7</key>
+		<dict>
+			<key>isa</key>
+			<string>PBXFileReference</string>
+			<key>lastKnownFileType</key>
+			<string>audio.wav</string>
+			<key>path</key>
+			<string>Resources/VisualizerSamples/viz-a3.wav</string>
+			<key>sourceTree</key>
+			<string>&lt;group&gt;</string>
+		</dict>
 		<key>A52E1E1026008ABCCF27FFB3</key>
 		<dict>
 			<key>isa</key>
@@ -765,6 +923,20 @@
 		<dict>
 			<key>fileRef</key>
 			<string>44B03283B94CFD4EFE847D7E</string>
+			<key>isa</key>
+			<string>PBXBuildFile</string>
+		</dict>
+		<key>AB253D8DEF578F882C3AD98F</key>
+		<dict>
+			<key>fileRef</key>
+			<string>DC8FEB53129D810CC810AADF</string>
+			<key>isa</key>
+			<string>PBXBuildFile</string>
+		</dict>
+		<key>ADAA82655AC6C4D45728DDA5</key>
+		<dict>
+			<key>fileRef</key>
+			<string>48D1551B54BA62CF771F6761</string>
 			<key>isa</key>
 			<string>PBXBuildFile</string>
 		</dict>
@@ -840,17 +1012,35 @@
 				<string>C096918F71FEAB2E9FC49F58</string>
 				<string>A735366E67E1349A675D19BE</string>
 				<string>2A360B901BD7C9951074CD18</string>
+				<string>A459CE8F90BA65D343EC2072</string>
+				<string>65AA1421743FE13342BBD60F</string>
+				<string>31CF634437FF1CA20604D2BE</string>
+				<string>465181E730208576E4526A9D</string>
+				<string>1EF92A614D429A1E40A833B8</string>
+				<string>CADE20D81BC4978C4F735840</string>
 				<string>B25C341EA2F712E25C458EC9</string>
 				<string>5D69C6E58D4481C84AD14096</string>
 				<string>C1A248E97250536E9457FB6A</string>
 				<string>DDB2574CFA5C25FCC5D10F1B</string>
 				<string>92404B1FF440E3A7B6630303</string>
 				<string>2F254AB562BEFDB66262B1D5</string>
+				<string>7C5A1951B4BEF1420051F995</string>
 			</array>
 			<key>isa</key>
 			<string>PBXSourcesBuildPhase</string>
 			<key>runOnlyForDeploymentPostprocessing</key>
 			<integer>0</integer>
+		</dict>
+		<key>BDB40084956B0055F5BBA3CB</key>
+		<dict>
+			<key>isa</key>
+			<string>PBXFileReference</string>
+			<key>lastKnownFileType</key>
+			<string>sourcecode.swift</string>
+			<key>path</key>
+			<string>WakeOn/Visualizer/VoiceSignal.swift</string>
+			<key>sourceTree</key>
+			<string>&lt;group&gt;</string>
 		</dict>
 		<key>C096918F71FEAB2E9FC49F58</key>
 		<dict>
@@ -877,6 +1067,13 @@
 			<key>sourceTree</key>
 			<string>&lt;group&gt;</string>
 		</dict>
+		<key>CADE20D81BC4978C4F735840</key>
+		<dict>
+			<key>fileRef</key>
+			<string>E6BBB8D808FE964AEF86FDF6</string>
+			<key>isa</key>
+			<string>PBXBuildFile</string>
+		</dict>
 		<key>CFBEB6CB84730A0BF5F268E7</key>
 		<dict>
 			<key>isa</key>
@@ -887,6 +1084,13 @@
 			<string>WakeOn/VoiceSectionView.swift</string>
 			<key>sourceTree</key>
 			<string>&lt;group&gt;</string>
+		</dict>
+		<key>D0F09E2D13E3D4E0889AC86C</key>
+		<dict>
+			<key>fileRef</key>
+			<string>A501D9A4B3CB8108DC6CD4A7</string>
+			<key>isa</key>
+			<string>PBXBuildFile</string>
 		</dict>
 		<key>D20988A742E8A10B39F7CB23</key>
 		<dict>
@@ -965,16 +1169,24 @@
 				<string>DCE26BF595E449F720C1CEAD</string>
 				<string>44B03283B94CFD4EFE847D7E</string>
 				<string>D901E739FA33909C40A270E5</string>
+				<string>47C20025F5E8A35638FCC3FE</string>
+				<string>DF594260BA11BF317125D44B</string>
+				<string>3F1E21A7DC27A28E0003C40A</string>
+				<string>BDB40084956B0055F5BBA3CB</string>
+				<string>63A0F22F27112C50B07F9861</string>
+				<string>E6BBB8D808FE964AEF86FDF6</string>
 				<string>CA35135A887A9C332D00398C</string>
 				<string>CFBEB6CB84730A0BF5F268E7</string>
 				<string>524F3925915545FFD660FF3F</string>
 				<string>5F8D1447DF26309D45C4CBCF</string>
 				<string>F36E746150097572D76CB5C2</string>
 				<string>43916129615D067FEEB4464D</string>
+				<string>E31B5919A1444094040D0A2C</string>
 				<string>9F2F0D7B8211BA8CBE1CF982</string>
 				<string>A52E1E1026008ABCCF27FFB3</string>
 				<string>7208E077BFADA885CC025FBD</string>
 				<string>D9C92472F248312173947DD4</string>
+				<string>4F39308818B726E435B8F2A1</string>
 				<string>579F4EE51E22157FC1503151</string>
 				<string>8F74F34C7B6E3E70FA09817C</string>
 				<string>62CCEF872899BA435086821E</string>
@@ -982,6 +1194,12 @@
 				<string>FC461014C9F4D497078ED35A</string>
 				<string>B97D5DA01D02B855250F3BB8</string>
 				<string>60A3508D9209F6BB16CE4484</string>
+				<string>0FA61C68DF833338CD63C969</string>
+				<string>48D1551B54BA62CF771F6761</string>
+				<string>A501D9A4B3CB8108DC6CD4A7</string>
+				<string>DC8FEB53129D810CC810AADF</string>
+				<string>25F3246285C958650A5E1323</string>
+				<string>E0678D08500F2A583925D8DB</string>
 				<string>FE84B97285FF2B40E137CB81</string>
 				<string>23302364766C959F3F1FECD5</string>
 				<string>8D6F34E7725B3AD5A0F6CAF0</string>
@@ -989,6 +1207,17 @@
 			</array>
 			<key>isa</key>
 			<string>PBXGroup</string>
+			<key>sourceTree</key>
+			<string>&lt;group&gt;</string>
+		</dict>
+		<key>DC8FEB53129D810CC810AADF</key>
+		<dict>
+			<key>isa</key>
+			<string>PBXFileReference</string>
+			<key>lastKnownFileType</key>
+			<string>audio.wav</string>
+			<key>path</key>
+			<string>Resources/VisualizerSamples/viz-u1.wav</string>
 			<key>sourceTree</key>
 			<string>&lt;group&gt;</string>
 		</dict>
@@ -1019,6 +1248,46 @@
 			<key>targetProxy</key>
 			<string>D799BAE6088A90139B415FCC</string>
 		</dict>
+		<key>DF594260BA11BF317125D44B</key>
+		<dict>
+			<key>isa</key>
+			<string>PBXFileReference</string>
+			<key>lastKnownFileType</key>
+			<string>sourcecode.swift</string>
+			<key>path</key>
+			<string>WakeOn/Visualizer/VoiceAudioTap.swift</string>
+			<key>sourceTree</key>
+			<string>&lt;group&gt;</string>
+		</dict>
+		<key>DFE2289E0900BFE0098B1A52</key>
+		<dict>
+			<key>fileRef</key>
+			<string>25F3246285C958650A5E1323</string>
+			<key>isa</key>
+			<string>PBXBuildFile</string>
+		</dict>
+		<key>E0678D08500F2A583925D8DB</key>
+		<dict>
+			<key>isa</key>
+			<string>PBXFileReference</string>
+			<key>lastKnownFileType</key>
+			<string>audio.wav</string>
+			<key>path</key>
+			<string>Resources/VisualizerSamples/viz-u3.wav</string>
+			<key>sourceTree</key>
+			<string>&lt;group&gt;</string>
+		</dict>
+		<key>E31B5919A1444094040D0A2C</key>
+		<dict>
+			<key>isa</key>
+			<string>PBXFileReference</string>
+			<key>lastKnownFileType</key>
+			<string>sourcecode.metal</string>
+			<key>path</key>
+			<string>WakeOn/Visualizer/VoiceOrbShaders.metal</string>
+			<key>sourceTree</key>
+			<string>&lt;group&gt;</string>
+		</dict>
 		<key>E456AFA48DF51D1482D7854E</key>
 		<dict>
 			<key>fileRef</key>
@@ -1032,6 +1301,17 @@
 			<string>9F81E2B6F38D383DBF87C9B7</string>
 			<key>isa</key>
 			<string>PBXBuildFile</string>
+		</dict>
+		<key>E6BBB8D808FE964AEF86FDF6</key>
+		<dict>
+			<key>isa</key>
+			<string>PBXFileReference</string>
+			<key>lastKnownFileType</key>
+			<string>sourcecode.swift</string>
+			<key>path</key>
+			<string>WakeOn/Visualizer/VoiceVisualizerGallery.swift</string>
+			<key>sourceTree</key>
+			<string>&lt;group&gt;</string>
 		</dict>
 		<key>E6DE6C99132752C914FEF632</key>
 		<dict>

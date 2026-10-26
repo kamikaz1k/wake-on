@@ -3,6 +3,10 @@ import SwiftUI
 // A functional native test surface: listening controls first, then the actual captured handoff.
 struct ContentView: View {
     @ObservedObject var controller: WakeController
+    #if DEBUG
+    /// Launch with `-visualizer-gallery` (add `-visualizer-autoplay` to start the sample) for screenshots.
+    @State private var openGallery = ProcessInfo.processInfo.arguments.contains("-visualizer-gallery")
+    #endif
     var body: some View {
         NavigationStack {
             List {
@@ -71,6 +75,11 @@ struct ContentView: View {
                 }
             }
             .navigationTitle("Wake On")
+            #if DEBUG
+            .navigationDestination(isPresented: $openGallery) {
+                VoiceVisualizerGallery(autoplay: ProcessInfo.processInfo.arguments.contains("-visualizer-autoplay"))
+            }
+            #endif
         }
     }
 }
