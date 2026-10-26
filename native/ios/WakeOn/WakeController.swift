@@ -30,6 +30,12 @@ final class WakeController: NSObject, ObservableObject, UNUserNotificationCenter
     private var direct = false // worker-queue confined
     private var readyWaiters: [CheckedContinuation<Void, Error>] = []
     private var firstAudio = false // worker-queue confined
+    /// Wake-word call starting: listener audio is fed to the call until its microphone runs.
+    private var bridging = false // worker-queue confined
+    /// 16 kHz sample offset, in the chunk being ingested, where the bridge starts.
+    private var bridgeStart16k: Int? // worker-queue confined
+    /// Main thread: the listener is handing its microphone over to a voice call.
+    private(set) var handingOver = false
     private var callbackCount = 0
     private var maxQueueDelayMs = 0.0
     private var maxConvertMs = 0.0
@@ -109,6 +115,13 @@ final class WakeController: NSObject, ObservableObject, UNUserNotificationCenter
                     // setCategory/setActive can post this after startMicrophone returns.
                     // Output-only changes also leave our input converter valid.
                     guard mustStop else { return }
+                    if self.handingOver {
+                        // The call's microphone starting posts this (an override). The listener's
+                        // engine usually keeps running, so let it record up to the seam; stopping
+                        // now would throw away its partly recorded 100 ms chunk.
+                        VoiceSessionController.appLog("wake_handover_route_change_ignored reason=\(raw) engineRunning=\(self.engine.isRunning)")
+                        return
+                    }
                     resume = .soon
                     stopReason = "route_change reason=\(raw)(\(Self.routeReasonName(reason))) inputChanged=\(self.captureRoute != current) engineRunning=\(self.engine.isRunning) inputs=\(current.inputIDs.joined(separator: ","))"
                     message = "The microphone connection or audio format changed. Tap Enable listening to resume."
@@ -125,6 +138,11 @@ final class WakeController: NSObject, ObservableObject, UNUserNotificationCenter
                     stopReason = "media_services_reset"
                     resume = .soon
                     message = "The system audio service restarted. Tap Enable listening to resume."
+                }
+                if self.handingOver {
+                    // The call is taking the microphone; it brings listening back when it ends.
+                    self.completeHandover(reason: stopReason)
+                    return
                 }
                 self.stop(reason: stopReason)
                 if ListenerSettings.current.autoResume, resume != .never {
@@ -367,6 +385,7 @@ final class WakeController: NSObject, ObservableObject, UNUserNotificationCenter
                     self.maxConvertMs = max(self.maxConvertMs, convertMs)
                     self.totalConvertMs += convertMs
                     self.ingest(converted)
+                    if self.bridging { self.feedBridge(copy, audioTime) }
                 }
                 catch { DispatchQueue.main.async { self.fail(error) } }
             }
@@ -419,6 +438,13 @@ final class WakeController: NSObject, ObservableObject, UNUserNotificationCenter
             buffer.append(block)
             if buffer.handoff == nil, let phrase = detector?.accept(block) {
                 workerTrace?.mark("wake_detected")
+                let talk = ListenerSettings.current.talkOnWake
+                if talk, OpenAILiveVoiceProvider.useHotAudio {
+                    // Keep everything said after the wake phrase for the call (see HotAudioDevice).
+                    HotAudioDevice.shared.openBridge()
+                    bridging = true
+                    bridgeStart16k = offset + block.count
+                }
                 let capture = buffer.trigger(phrase)
                 print("WAKE_AUDIO detected phrase=\(phrase) prerollFrames=\(capture.samples.count)")
                 DispatchQueue.main.async {
@@ -428,8 +454,9 @@ final class WakeController: NSObject, ObservableObject, UNUserNotificationCenter
                     self.handoff = capture
                     BatteryMonitor.shared.noteWake()
                     self.status = "Wake detected · capturing handoff"
-                    if ListenerSettings.current.talkOnWake {
+                    if talk {
                         // Experiment: go straight into a conversation, locked or not.
+                        self.handingOver = OpenAILiveVoiceProvider.useHotAudio
                         VoiceSessionController.appLog("wake_word_talk appState=\(UIApplication.shared.applicationState.rawValue)")
                         MainActor.assumeIsolated { VoiceSessionController.shared.start(trigger: "wake_word") }
                     } else if self.wakeWasBackground {
@@ -469,6 +496,42 @@ final class WakeController: NSObject, ObservableObject, UNUserNotificationCenter
     /// `reason` is recorded with the battery session and in the debug log.
     /// `releaseSession: false` hands the audio session straight to a voice call: deactivating it
     /// (and notifying other apps) costs ~100+ ms that a call would pay on its critical path.
+    /// Worker queue: stages this chunk for the call, from the wake phrase's end on.
+    private func feedBridge(_ pcm: AVAudioPCMBuffer, _ time: AVAudioTime) {
+        let start = bridgeStart16k.map { Int((Double($0) * pcm.format.sampleRate / 16_000).rounded()) } ?? 0
+        bridgeStart16k = nil
+        guard time.isHostTimeValid else {
+            bridging = false
+            DispatchQueue.main.async { self.completeHandover(reason: "no_host_time") }
+            return
+        }
+        switch HotAudioDevice.shared.feedBridge(pcm, from: min(start, Int(pcm.frameLength)), hostTime: time.hostTime) {
+        case .more: break
+        case .cancelled: bridging = false
+        case .done:
+            bridging = false
+            DispatchQueue.main.async { self.completeHandover(reason: "call_microphone_live") }
+        }
+    }
+
+    /// The call's microphone has taken over (or must now): stop listening, keep the session.
+    func completeHandover(reason: String) {
+        guard handingOver else { return }
+        VoiceSessionController.appLog("wake_handover_done reason=\(reason)")
+        HotAudioDevice.shared.finishBridge()
+        stop(reason: "voice_call", releaseSession: false)
+        MainActor.assumeIsolated { VoiceSessionController.shared.listenerHandedOver(reason: reason) }
+    }
+
+    /// The call ended before taking the microphone: keep listening as before.
+    func cancelHandover() {
+        guard handingOver else { return }
+        VoiceSessionController.appLog("wake_handover_cancelled")
+        handingOver = false
+        HotAudioDevice.shared.cancelBridge()
+        queue.async { self.bridging = false; self.bridgeStart16k = nil }
+    }
+
     func stop(finalizeTrace: Bool = true, reason: String = "user", releaseSession: Bool = true) {
         if enabled || busy {
             // Synchronously, before `enabled` changes and the battery session closes.
@@ -491,7 +554,14 @@ final class WakeController: NSObject, ObservableObject, UNUserNotificationCenter
         engine.stop()
         if tapInstalled { engine.inputNode.removeTap(onBus: 0); tapInstalled = false }
         captureRoute = nil
+        if handingOver {
+            // The call gets whatever was staged up to now.
+            handingOver = false
+            HotAudioDevice.shared.finishBridge()
+        }
         queue.sync {
+            bridging = false
+            bridgeStart16k = nil
             running = false
             fixtureTimer?.cancel()
             fixtureTimer = nil

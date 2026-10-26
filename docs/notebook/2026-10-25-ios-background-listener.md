@@ -62,8 +62,46 @@ Options considered for recovering after media apps:
 - **Step aside while media plays:** poll `isOtherAudioPlaying` and keep the app awake
   with silent playback. Not built; App Review rejects keep-alive audio.
 
+## Talking after "Hey Lobby" (experiment)
+
+With "Talk after Hey Lobby" on, a wake word starts a realtime voice call, even with the
+phone locked. iOS refuses to configure an exclusive voice-chat session from the
+background (`'!int'`), so the call starts its echo-cancelling engine inside the listener's
+shared session. In the background, echo cancellation still started every time
+(`voiceProcessing=true backgroundStart=true`).
+
+Words said right after the wake phrase were lost. Three device tests showed why:
+
+| Build | Seam gap | What the call heard |
+|---|---|---|
+| Listener stops at wake | ~358 ms of no microphone | First words cut |
+| Bridge, listener stops on route change | 74 ms, 136 ms | Clipped at the seam |
+| Bridge, route change ignored during handover | 0 ms | ~300 ms of exact zeros (−180 dB) inside the bridge |
+
+- **Bridge:** the listener keeps recording through the handover. Its audio, from the 20 ms
+  block where the wake was detected, is staged in `HotAudioDevice` and cut at the host time
+  of the call microphone's first frame, then placed in front of the call's backlog before
+  anything is sent. The listener's tap delivers 100 ms chunks ~100 ms late, so the cut has
+  to use timestamps; a 0.6 s watchdog stops a stalled bridge from holding the call.
+- **The call's microphone starting posts a route change (override).** Treating it as
+  "stop" discarded the listener's partly recorded chunk; ignoring it during the handover
+  closed the seam to 0 ms.
+- **Starting echo cancellation silences the iPhone's microphone for ~300 ms**, for every
+  engine in the app. The audio is never recorded, so no handover can recover it.
+- **Ready chime (adopted):** wake-word calls play a 0.17 s two-note chime the moment the
+  call's microphone records (~380 ms after the wake); the microphone is muted for the
+  chime plus 0.1 s so the model does not hear it. Two locked tests transcribed the full
+  question; the Action Button flow is unchanged (no chime, reply as before).
+
+Options not taken: start the call on the listener's microphone and switch to echo
+cancellation at the user's first pause (no lost words, much more complex); keep echo
+cancellation running while listening (no gap, but changes other apps' sound and costs
+battery).
+
 ## Open
 
 - Calls and alarms are expected to end with `shouldResume=true`; test with a Clock timer.
 - Wake-word accuracy in default mode over music: one detection so far.
 - A multi-hour unplugged session for a real battery rate.
+- Echo cancellation also silences ~40 ms when it is switched on mid-call; seen in a
+  wake-word backlog, likely on Action Button calls too.

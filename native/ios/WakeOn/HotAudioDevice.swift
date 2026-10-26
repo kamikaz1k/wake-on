@@ -81,6 +81,188 @@ final class HotAudioDevice: NSObject, @unchecked Sendable {
         backlogResetRequested = true
     }
 
+    // MARK: Wake-word handover
+    //
+    // The call's echo-cancelling microphone takes ~330 ms to start. So that nothing said
+    // right after "Hey Lobby" is lost, the listener keeps recording until then and its audio
+    // is staged here, cut at the host time of the call microphone's first frame, then placed in
+    // front of the call's backlog before anything is sent. Staging is shared with the listener's
+    // worker thread under a lock; the real-time thread only ever tries the lock.
+
+    enum BridgeFeed { case more, done, cancelled }
+    private enum BridgeState { case idle, collecting, ready }
+    private let bridgeLock: UnsafeMutablePointer<os_unfair_lock> = {
+        let lock = UnsafeMutablePointer<os_unfair_lock>.allocate(capacity: 1)
+        lock.initialize(to: os_unfair_lock())
+        return lock
+    }()
+    private let bridgeCapacity = 240_000 // 5 s at 48 kHz
+    private let bridgeBuffer = UnsafeMutablePointer<Int16>.allocate(capacity: 240_000)
+    // Guarded by bridgeLock.
+    private var bridgeState = BridgeState.idle
+    private var bridgeCount = 0
+    private var bridgeRate = 48_000.0
+    private var bridgeCallStart: UInt64 = 0 // host time of the call microphone's first frame
+    private var bridgeEndHost: UInt64 = 0   // host time just after the last staged frame
+    private var bridgeTailLevel = -1.0      // RMS of the last staged chunk (dBFS), to spot silence
+    // Real-time thread only.
+    private var bridgeSettled = true
+    private var callFirstHost: UInt64 = 0
+    /// Microphone thread: the listener's audio was merged. Arguments: frames, gap at the seam (ms),
+    /// level of the last staged chunk (dBFS; very low means the listener was fed silence).
+    var onBridgeMerged: ((Int, Double, Double) -> Void)?
+
+    /// Starts staging listener audio for the call about to start.
+    func openBridge() {
+        let rate = inputFormat?.sampleRate ?? 48_000
+        os_unfair_lock_lock(bridgeLock)
+        bridgeState = .collecting
+        bridgeCount = 0
+        bridgeRate = rate
+        bridgeCallStart = 0
+        bridgeEndHost = 0
+        bridgeTailLevel = -1
+        os_unfair_lock_unlock(bridgeLock)
+    }
+
+    /// Listener worker thread: stages `pcm` from frame `start` on (channel 0), up to the call
+    /// microphone's first frame. `.done` once the call microphone has taken over.
+    func feedBridge(_ pcm: AVAudioPCMBuffer, from start: Int, hostTime: UInt64) -> BridgeFeed {
+        os_unfair_lock_lock(bridgeLock)
+        defer { os_unfair_lock_unlock(bridgeLock) }
+        switch bridgeState {
+        case .idle: return .cancelled
+        case .ready: return .done
+        case .collecting: break
+        }
+        guard let channel = pcm.floatChannelData?[0] else { return .more }
+        let rate = pcm.format.sampleRate
+        var end = Int(pcm.frameLength)
+        if bridgeCallStart != 0 {
+            let before = bridgeCallStart > hostTime
+                ? AVAudioTime.seconds(forHostTime: bridgeCallStart - hostTime) * rate : 0
+            end = min(end, Int(before.rounded(.up)))
+        }
+        if end > start {
+            let ratio = bridgeRate / rate
+            let count = min(Int(Double(end - start) * ratio), bridgeCapacity - bridgeCount)
+            for index in 0..<count {
+                let source = ratio == 1 ? start + index : min(start + Int(Double(index) / ratio), end - 1)
+                bridgeBuffer[bridgeCount + index] = Int16(max(-1, min(1, channel[source])) * 32767)
+            }
+            var energy = 0.0
+            for index in 0..<count { let value = Double(bridgeBuffer[bridgeCount + index]) / 32767; energy += value * value }
+            if count > 0 { bridgeTailLevel = 10 * log10(max(energy / Double(count), 1e-12)) }
+            bridgeCount += count
+            bridgeEndHost = hostTime + AVAudioTime.hostTime(forSeconds: Double(end) / rate)
+        }
+        if bridgeCount >= bridgeCapacity || (bridgeCallStart != 0 && end < Int(pcm.frameLength)) {
+            bridgeState = .ready
+            return .done
+        }
+        return .more
+    }
+
+    /// The listener stopped (or took too long): use what was staged.
+    func finishBridge() {
+        os_unfair_lock_lock(bridgeLock)
+        if bridgeState == .collecting { bridgeState = .ready }
+        os_unfair_lock_unlock(bridgeLock)
+    }
+
+    #if DEBUG
+    func publishCallStartForTesting(_ hostTime: UInt64) {
+        os_unfair_lock_lock(bridgeLock); bridgeCallStart = hostTime; os_unfair_lock_unlock(bridgeLock)
+    }
+    var stagedFramesForTesting: Int {
+        os_unfair_lock_lock(bridgeLock); defer { os_unfair_lock_unlock(bridgeLock) }; return bridgeCount
+    }
+    #endif
+
+    func cancelBridge() {
+        os_unfair_lock_lock(bridgeLock)
+        bridgeState = .idle
+        bridgeCount = 0
+        os_unfair_lock_unlock(bridgeLock)
+    }
+
+    /// Real-time thread: publishes the call microphone's start, merges a finished bridge.
+    private func syncBridge() {
+        guard os_unfair_lock_trylock(bridgeLock) else { return }
+        defer { os_unfair_lock_unlock(bridgeLock) }
+        switch bridgeState {
+        case .idle:
+            bridgeSettled = true
+        case .collecting:
+            if bridgeCallStart == 0, callFirstHost != 0 { bridgeCallStart = callFirstHost }
+        case .ready:
+            // Nothing has been sent yet (sending waits for this), so the backlog can shift.
+            let count = min(bridgeCount, backlogCapacity - backlogCount)
+            if count > 0 {
+                if backlogCount > 0 { (backlog + count).update(from: backlog, count: backlogCount) }
+                backlog.update(from: bridgeBuffer + (bridgeCount - count), count: count)
+                backlogCount += count
+            }
+            let seam = callFirstHost != 0 ? callFirstHost : mach_absolute_time()
+            let gapMs = bridgeEndHost == 0 ? -1
+                : (seam >= bridgeEndHost ? AVAudioTime.seconds(forHostTime: seam - bridgeEndHost) * 1000
+                                         : -AVAudioTime.seconds(forHostTime: bridgeEndHost - seam) * 1000)
+            bridgeState = .idle
+            bridgeCount = 0
+            bridgeSettled = true
+            onBridgeMerged?(count, gapMs, bridgeTailLevel)
+        }
+    }
+
+    // MARK: Ready chime
+    //
+    // Starting echo cancellation silences the iPhone's microphone for ~300 ms, so a wake-word
+    // call plays a short chime the moment its microphone records: "talk now". The microphone
+    // is muted while the chime plays so the model does not hear it.
+
+    /// Play the chime when the next call's microphone first records (set per call).
+    var chimeOnFirstCapture = false
+    private static let chimeSeconds = 0.17
+    private let chime = UnsafeMutablePointer<Int16>.allocate(capacity: 48_000)
+    private var chimeLength = 0
+    private var chimeStart = false     // set by the microphone thread, consumed by the render thread
+    private var chimePosition = -1     // render thread; -1 = not playing
+    private var micMuteRemaining = 0   // microphone thread
+    /// Microphone thread: the chime was started.
+    var onChime: (() -> Void)?
+
+    /// Two short rising notes with soft edges (not on an audio thread).
+    private func makeChime(sampleRate: Double) {
+        let notes: [(frequency: Double, seconds: Double)] = [(1_318.5, 0.07), (1_760, 0.10)]
+        var index = 0
+        for note in notes {
+            let count = Int(note.seconds * sampleRate)
+            for n in 0..<count where index < 48_000 {
+                let t = Double(n) / sampleRate
+                let envelope = min(1, t / 0.005) * min(1, (note.seconds - t) / 0.03)
+                chime[index] = Int16(0.22 * envelope * sin(2 * .pi * note.frequency * t) * 32767)
+                index += 1
+            }
+        }
+        chimeLength = index
+    }
+
+    /// Render thread: mixes the chime into `output` (Int16 mono). Returns true while it plays.
+    private func mixChime(into output: UnsafeMutablePointer<AudioBufferList>, frames: Int, replace: Bool) -> Bool {
+        if chimeStart { chimeStart = false; chimePosition = 0 }
+        guard chimePosition >= 0, let data = UnsafeMutableAudioBufferListPointer(output).first?.mData else { return false }
+        let samples = data.assumingMemoryBound(to: Int16.self)
+        let count = min(frames, chimeLength - chimePosition)
+        for index in 0..<frames {
+            let tone = index < count ? Int32(chime[chimePosition + index]) : 0
+            let mixed = replace ? tone : Int32(samples[index]) + tone
+            samples[index] = Int16(max(-32768, min(32767, mixed)))
+        }
+        chimePosition += count
+        if chimePosition >= chimeLength { chimePosition = -1 }
+        return true
+    }
+
     /// Called on the audio thread the first time WebRTC is given microphone audio.
     var onFirstDelivery: (() -> Void)?
     private var deliveredOnce = false
@@ -227,6 +409,7 @@ final class HotAudioDevice: NSObject, @unchecked Sendable {
         let speakerFormat = engine.outputNode.outputFormat(forBus: 0)
         let playFormat = AVAudioFormat(commonFormat: .pcmFormatInt16, sampleRate: speakerFormat.sampleRate,
                                        channels: 1, interleaved: true)!
+        makeChime(sampleRate: speakerFormat.sampleRate)
 
         let sink = AVAudioSinkNode { [unowned self] timestamp, frames, buffers in
             self.deliverMicrophone(timestamp: timestamp, frames: frames, buffers: buffers)
@@ -392,8 +575,16 @@ final class HotAudioDevice: NSObject, @unchecked Sendable {
             backlogCount = 0
             backlogRead = 0
             capturedOnce = false
+            callFirstHost = 0
+            bridgeSettled = false
         }
-        let sending = recording && released
+        if !capturedOnce && buffering && callFirstHost == 0 {
+            let stamp = timestamp.pointee
+            callFirstHost = stamp.mFlags.contains(.hostTimeValid) ? stamp.mHostTime : mach_absolute_time()
+        }
+        if !bridgeSettled { syncBridge() }
+        // A wake-word handover holds sending until the listener's audio is in front of the backlog.
+        let sending = recording && released && bridgeSettled
         guard sending || buffering else { return noErr }
         // Channel 0 of the voice-processed microphone, Float32 → Int16.
         let list = UnsafeMutableAudioBufferListPointer(UnsafeMutablePointer(mutating: buffers))
@@ -406,7 +597,19 @@ final class HotAudioDevice: NSObject, @unchecked Sendable {
         }
         if !capturedOnce {
             capturedOnce = true
+            if chimeOnFirstCapture {
+                chimeOnFirstCapture = false
+                // Mute for the chime plus speaker latency and room echo.
+                micMuteRemaining = Int((Self.chimeSeconds + 0.1) * (inputFormat?.sampleRate ?? 48_000))
+                chimeStart = true
+                onChime?()
+            }
             onFirstCapture?()
+        }
+        if micMuteRemaining > 0 {
+            let muted = min(count, micMuteRemaining)
+            scratch.update(repeating: 0, count: muted)
+            micMuteRemaining -= muted
         }
         if !sending {
             // Not connected yet: keep what the user says (up to 10 s) to send once it is.
@@ -464,11 +667,12 @@ final class HotAudioDevice: NSObject, @unchecked Sendable {
             for buffer in UnsafeMutableAudioBufferListPointer(output) {
                 if let data = buffer.mData { memset(data, 0, Int(buffer.mDataByteSize)) }
             }
-            isSilence.pointee = true
+            isSilence.pointee = ObjCBool(!mixChime(into: output, frames: Int(frames), replace: true))
             return noErr
         }
         var flags = AudioUnitRenderActionFlags()
         let status = playout(&flags, timestamp, 0, frames, output)
+        if mixChime(into: output, frames: Int(frames), replace: false) { flags.remove(.unitRenderAction_OutputIsSilence) }
         if !playedOnce {
             playedOnce = true
             trace("first_playout frames=\(frames) status=\(status)")

@@ -54,6 +54,13 @@
 			<key>productType</key>
 			<string>com.apple.product-type.bundle.unit-test</string>
 		</dict>
+		<key>06EC84C75A1861F3AB6AD29C</key>
+		<dict>
+			<key>fileRef</key>
+			<string>579F4EE51E22157FC1503151</string>
+			<key>isa</key>
+			<string>PBXBuildFile</string>
+		</dict>
 		<key>0F3D67935A4F199E058A017A</key>
 		<dict>
 			<key>buildSettings</key>
@@ -350,6 +357,17 @@
 			<key>isa</key>
 			<string>PBXBuildFile</string>
 		</dict>
+		<key>579F4EE51E22157FC1503151</key>
+		<dict>
+			<key>isa</key>
+			<string>PBXFileReference</string>
+			<key>lastKnownFileType</key>
+			<string>sourcecode.swift</string>
+			<key>path</key>
+			<string>Tests/WakeBridgeTests.swift</string>
+			<key>sourceTree</key>
+			<string>&lt;group&gt;</string>
+		</dict>
 		<key>5A8C91857F674E16E2724F47</key>
 		<dict>
 			<key>buildSettings</key>
@@ -493,6 +511,7 @@
 				<string>F5A8AD6DD1708ECCF94AA2E2</string>
 				<string>44DA201589CF3D2915F60C94</string>
 				<string>D20988A742E8A10B39F7CB23</string>
+				<string>06EC84C75A1861F3AB6AD29C</string>
 			</array>
 			<key>isa</key>
 			<string>PBXSourcesBuildPhase</string>
@@ -956,6 +975,7 @@
 				<string>A52E1E1026008ABCCF27FFB3</string>
 				<string>7208E077BFADA885CC025FBD</string>
 				<string>D9C92472F248312173947DD4</string>
+				<string>579F4EE51E22157FC1503151</string>
 				<string>8F74F34C7B6E3E70FA09817C</string>
 				<string>62CCEF872899BA435086821E</string>
 				<string>5D1EA6ABA87368CF90FC5B8D</string>

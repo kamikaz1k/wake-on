@@ -77,6 +77,7 @@ final class VoiceSessionController: ObservableObject {
     /// Starts a call. `origin` is when the trigger happened (an Action Button press, a tap).
     func start(trigger: String, origin: UInt64 = DispatchTime.now().uptimeNanoseconds, probe: Probe? = nil) {
         if phase != .idle {
+            WakeController.shared.cancelHandover()
             if phase == .live, let probe { runProbe(probe) }
             return
         }
@@ -86,7 +87,9 @@ final class VoiceSessionController: ObservableObject {
         // Bring the listener back after the call if it was on, or paused waiting to resume.
         resumeWakeListener = wake.enabled || wake.autoResumePending
         wake.cancelAutoResume()
-        let wakeWasActive = wake.enabled || wake.busy || wake.isPlaying
+        // A wake-word start keeps the listener recording until the call's microphone runs.
+        let handover = wake.handingOver
+        let wakeWasActive = !handover && (wake.enabled || wake.busy || wake.isPlaying)
         if wakeWasActive { wake.stop(reason: "voice_call", releaseSession: false) }
         let wakeStopped = DispatchTime.now().uptimeNanoseconds
         let inBackground = UIApplication.shared.applicationState == .background
@@ -95,7 +98,24 @@ final class VoiceSessionController: ObservableObject {
             let device = HotAudioDevice.shared
             device.onFirstCapture = { [weak self] in
                 let time = DispatchTime.now().uptimeNanoseconds
-                Task { @MainActor in self?.markLocalListening(at: time) }
+                Task { @MainActor in
+                    self?.markLocalListening(at: time)
+                    // The listener's chunks arrive ~100–200 ms late; never hold the call longer.
+                    if WakeController.shared.handingOver {
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) {
+                            WakeController.shared.completeHandover(reason: "watchdog")
+                        }
+                    }
+                }
+            }
+            device.onBridgeMerged = { [weak self] frames, gapMs, tailDb in
+                let time = DispatchTime.now().uptimeNanoseconds
+                Task { @MainActor in
+                    self?.record("wake_bridge_merged", at: time, fields: ["bridgeMs": Double(frames) / 48.0, "seamGapMs": gapMs,
+                                                                         "tailDb": tailDb])
+                    self?.log(String(format: "wake bridge merged bridgeMs=%.0f seamGapMs=%.1f tailDb=%.0f",
+                                     Double(frames) / 48.0, gapMs, tailDb))
+                }
             }
             device.onBacklogDrained = { [weak self] frames in
                 let time = DispatchTime.now().uptimeNanoseconds
@@ -127,6 +147,12 @@ final class VoiceSessionController: ObservableObject {
             // in a shared session, instead of waiting for the app to come forward.
             let backgroundWake = inBackground && trigger == "wake_word"
             HotAudioDevice.shared.backgroundStart = backgroundWake
+            // A wake-word call has no screen to watch: a chime says when the microphone records.
+            HotAudioDevice.shared.chimeOnFirstCapture = trigger == "wake_word"
+            HotAudioDevice.shared.onChime = { [weak self] in
+                let time = DispatchTime.now().uptimeNanoseconds
+                Task { @MainActor in self?.record("ready_chime", at: time) }
+            }
             HotAudioDevice.shared.mayArm = !inBackground || backgroundWake
             if inBackground && !backgroundWake { armWhenActive() } else { armAudio() }
         }
@@ -631,6 +657,11 @@ final class VoiceSessionController: ObservableObject {
 
     /// The microphone is capturing: what the user says from now on is kept (and sent once
     /// connected), so the app can say "Listening" before OpenAI is reachable.
+    /// The wake listener stopped after handing its microphone to this call.
+    func listenerHandedOver(reason: String) {
+        record("wake_listener_stopped", fields: ["handover": reason])
+    }
+
     private func markLocalListening(at time: UInt64) {
         guard !localListening, phase == .connecting || phase == .live else { return }
         localListening = true
@@ -672,6 +703,7 @@ final class VoiceSessionController: ObservableObject {
         if OpenAILiveVoiceProvider.useHotAudio {
             HotAudioDevice.shared.endBuffering()
             HotAudioDevice.shared.backgroundStart = false
+            HotAudioDevice.shared.chimeOnFirstCapture = false
         }
         if error == nil { status = "Call ended" }
         #if DEBUG
@@ -680,6 +712,11 @@ final class VoiceSessionController: ObservableObject {
         let noPrepare = false
         #endif
         if !noPrepare { prepareNext() }
+        if WakeController.shared.handingOver {
+            // Ended before its microphone took over: the listener never stopped.
+            WakeController.shared.cancelHandover()
+            resumeWakeListener = false
+        }
         if resumeWakeListener {
             resumeWakeListener = false
             WakeController.shared.start()
@@ -710,6 +747,10 @@ final class VoiceSessionController: ObservableObject {
         setupTrace = nil
         if provider == nil {
             phase = .idle
+            if WakeController.shared.handingOver {
+                WakeController.shared.cancelHandover()
+                resumeWakeListener = false
+            }
             if resumeWakeListener {
                 resumeWakeListener = false
                 WakeController.shared.start()
