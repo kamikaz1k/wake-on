@@ -116,9 +116,16 @@ final class HotAudioDevice: NSObject, @unchecked Sendable {
             // (session ~43 ms + start ~240 ms vs ~100 + ~180), and stopping frees the hardware.
             engine?.stop()
             enginePrepared = false
-            engine?.inputNode.isVoiceProcessingBypassed = true
+            if voiceProcessingOn {
+                engine?.inputNode.isVoiceProcessingBypassed = true
+            } else {
+                // A plain-microphone fallback engine: rebuild with echo cancellation next time.
+                teardownEngine()
+            }
             sessionReady = false
-            try? AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
+            if !backgroundStart {
+                try? AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
+            }
         }
     }
 
@@ -127,7 +134,7 @@ final class HotAudioDevice: NSObject, @unchecked Sendable {
     /// first words. Turned on when the call goes live, before the assistant can speak.
     func enableVoiceProcessing() {
         queue.async {
-            guard let engine = self.engine, engine.inputNode.isVoiceProcessingBypassed else { return }
+            guard self.voiceProcessingOn, let engine = self.engine, engine.inputNode.isVoiceProcessingBypassed else { return }
             let start = DispatchTime.now().uptimeNanoseconds
             engine.inputNode.isVoiceProcessingBypassed = false
             self.trace(String(format: "voice_processing_on ms=%.1f running=%@",
@@ -140,10 +147,30 @@ final class HotAudioDevice: NSObject, @unchecked Sendable {
 
     /// Sets the voice-chat category and activates the session unless that is already done:
     /// repeating it costs ~90–105 ms even when nothing changes.
+    /// Whether the current engine has voice processing (echo cancellation). A background start
+    /// falls back to a plain microphone if iOS refuses voice processing there.
+    private var voiceProcessingOn = true
+    private var allowVoiceProcessing = true
+
+    /// Wake-word call started in the background: a shared session (iOS refuses to activate an
+    /// exclusive one from the background) that stays active after the call, so the listener can
+    /// take the running session back without a fresh start.
+    var backgroundStart = false
+
     private func activateSessionIfNeeded() throws {
         let session = AVAudioSession.sharedInstance()
+        if backgroundStart {
+            // iOS refuses voice-chat (exclusive) configuration from the background ('!int').
+            // The listener's shared session is still active: start the engine inside it.
+            trace("session_kept category=\(session.category.rawValue) mode=\(session.mode.rawValue) options=\(session.categoryOptions.rawValue)")
+            sessionReady = true
+            return
+        }
         if sessionReady, session.category == .playAndRecord, session.mode == .voiceChat { return }
-        try session.setCategory(.playAndRecord, mode: .voiceChat, options: [.defaultToSpeaker, .allowBluetoothHFP])
+        var options: AVAudioSession.CategoryOptions = [.defaultToSpeaker, .allowBluetoothHFP]
+        if backgroundStart { options.insert(.mixWithOthers) }
+        trace("session_configure backgroundStart=\(backgroundStart) wasActiveCategory=\(session.category.rawValue) mode=\(session.mode.rawValue)")
+        try session.setCategory(.playAndRecord, mode: .voiceChat, options: options)
         try? session.setPreferredIOBufferDuration(0.01)
         try session.setActive(true)
         sessionReady = true
@@ -189,9 +216,10 @@ final class HotAudioDevice: NSObject, @unchecked Sendable {
         let engine = AVAudioEngine()
         // Enable voice processing (echo cancellation) right after creation, via the output
         // node so the input node is not created early; later changes are crash-prone.
-        try engine.outputNode.setVoiceProcessingEnabled(true)
+        if allowVoiceProcessing { try engine.outputNode.setVoiceProcessingEnabled(true) }
+        voiceProcessingOn = allowVoiceProcessing
         let input = engine.inputNode
-        input.isVoiceProcessingBypassed = true
+        if voiceProcessingOn { input.isVoiceProcessingBypassed = true }
         let micFormat = input.outputFormat(forBus: 0)
         guard micFormat.sampleRate > 0, micFormat.channelCount > 0 else {
             throw VoiceError.message("No microphone input is available.")
@@ -238,19 +266,22 @@ final class HotAudioDevice: NSObject, @unchecked Sendable {
         }
         let start = DispatchTime.now().uptimeNanoseconds
         let prebuilt = engine != nil
-        if prebuilt {
-            // A kept engine: the session may have been changed in between (wake listener).
-            try activateSessionIfNeeded()
-            if !enginePrepared { prepareKeptEngine() }
-        } else {
-            _ = try buildLocked()
+        var sessionDone = start
+        do {
+            sessionDone = try buildAndStart(prebuilt: prebuilt)
+        } catch where backgroundStart && voiceProcessingOn {
+            // Experiment: echo cancellation may be refused in the background; try a plain microphone.
+            trace("voice_processing_start_failed error=\((error as NSError).domain):\((error as NSError).code) prebuilt=\(prebuilt)")
+            teardownEngine()
+            allowVoiceProcessing = false
+            defer { allowVoiceProcessing = true }
+            sessionDone = try buildAndStart(prebuilt: false)
         }
-        let sessionDone = DispatchTime.now().uptimeNanoseconds
         guard let engine, let micFormat = pendingInputFormat, let playFormat = pendingOutputFormat else {
             throw VoiceError.message("Audio engine was not built.")
         }
-        if !engine.isRunning { try engine.start() }
         let engineDone = DispatchTime.now().uptimeNanoseconds
+        trace("engine_running voiceProcessing=\(voiceProcessingOn) backgroundStart=\(backgroundStart)")
         trace("engine_started running=\(engine.isRunning) prebuilt=\(prebuilt)")
 
         let previousInput = inputFormat?.sampleRate ?? 48_000
@@ -294,6 +325,34 @@ final class HotAudioDevice: NSObject, @unchecked Sendable {
                 self?.queue.async { self?.sessionReady = false }
             },
         ]
+    }
+
+    /// Builds (or re-prepares) the engine and starts it. Returns when the session step finished.
+    private func buildAndStart(prebuilt: Bool) throws -> UInt64 {
+        if prebuilt {
+            // A kept engine: the session may have been changed in between (wake listener).
+            try activateSessionIfNeeded()
+            if !enginePrepared { prepareKeptEngine() }
+        } else {
+            _ = try buildLocked()
+        }
+        let sessionDone = DispatchTime.now().uptimeNanoseconds
+        guard let engine else { throw VoiceError.message("Audio engine was not built.") }
+        if !engine.isRunning { try engine.start() }
+        return sessionDone
+    }
+
+    /// Destroys the engine so the next arm builds a fresh one.
+    private func teardownEngine() {
+        engine?.stop()
+        if let sink { engine?.detach(sink) }
+        if let source { engine?.detach(source) }
+        engine = nil
+        sink = nil
+        source = nil
+        pendingInputFormat = nil
+        pendingOutputFormat = nil
+        enginePrepared = false
     }
 
     /// Restarts the existing engine (voice processing often stops it once right after start).

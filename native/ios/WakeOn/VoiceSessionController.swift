@@ -123,8 +123,12 @@ final class VoiceSessionController: ObservableObject {
             device.beginBuffering()
         }
         if OpenAILiveVoiceProvider.useHotAudio {
-            HotAudioDevice.shared.mayArm = !inBackground
-            if inBackground { armWhenActive() } else { armAudio() }
+            // Experiment: a wake word heard in the background tries to start audio right away,
+            // in a shared session, instead of waiting for the app to come forward.
+            let backgroundWake = inBackground && trigger == "wake_word"
+            HotAudioDevice.shared.backgroundStart = backgroundWake
+            HotAudioDevice.shared.mayArm = !inBackground || backgroundWake
+            if inBackground && !backgroundWake { armWhenActive() } else { armAudio() }
         }
         let credentials = OpenAIKeyStore.load()
         let permitted = AVAudioApplication.shared.recordPermission == .granted
@@ -282,7 +286,10 @@ final class VoiceSessionController: ObservableObject {
                                           "alreadyArmed": timing.alreadyArmed, "inputRate": timing.inputRate,
                                           "outputRate": timing.outputRate, "ioBufferMs": timing.ioBufferMs])
                 case .failure(let error):
+                    self?.log("audio_arm_failed error=\(WakeController.describe(error)) appState=\(UIApplication.shared.applicationState.rawValue)")
                     self?.fail("Audio could not start: \(error.localizedDescription)")
+                    // Without audio the call is useless: hang up instead of sitting connected and silent.
+                    self?.provider?.close(reason: "audio_failed")
                 }
             }
         }
@@ -662,7 +669,10 @@ final class VoiceSessionController: ObservableObject {
         log(String(format: "ended reason=%@ callMs=%.0f usageSeconds=%.1f", reason, callMs, usageSeconds ?? -1))
         phase = .idle
         timeline = pendingTimeline
-        if OpenAILiveVoiceProvider.useHotAudio { HotAudioDevice.shared.endBuffering() }
+        if OpenAILiveVoiceProvider.useHotAudio {
+            HotAudioDevice.shared.endBuffering()
+            HotAudioDevice.shared.backgroundStart = false
+        }
         if error == nil { status = "Call ended" }
         #if DEBUG
         let noPrepare = ProcessInfo.processInfo.arguments.contains("--no-prepare")

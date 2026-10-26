@@ -428,7 +428,13 @@ final class WakeController: NSObject, ObservableObject, UNUserNotificationCenter
                     self.handoff = capture
                     BatteryMonitor.shared.noteWake()
                     self.status = "Wake detected · capturing handoff"
-                    if self.wakeWasBackground { self.notifyWake() }
+                    if ListenerSettings.current.talkOnWake {
+                        // Experiment: go straight into a conversation, locked or not.
+                        VoiceSessionController.appLog("wake_word_talk appState=\(UIApplication.shared.applicationState.rawValue)")
+                        MainActor.assumeIsolated { VoiceSessionController.shared.start(trigger: "wake_word") }
+                    } else if self.wakeWasBackground {
+                        self.notifyWake()
+                    }
                 }
             }
             if let capture = buffer.handoff, capture.complete, !didComplete {

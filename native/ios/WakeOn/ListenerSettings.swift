@@ -15,12 +15,15 @@ struct ListenerSettings: Equatable {
     /// mode switches off system audio processing for the whole route, so other apps' playback
     /// loses its EQ, loudness and spatial effects while the listener runs.
     var fullSoundForOthers = true
+    /// Experiment: start a voice conversation when "Hey Lobby" is heard, even in the background.
+    var talkOnWake = false
 
     enum Key {
         static let shareAudio = "listener.shareAudio"
         static let autoResume = "listener.autoResume"
         static let builtInMicrophone = "listener.builtInMicrophone"
         static let fullSoundForOthers = "listener.fullSoundForOthers"
+        static let talkOnWake = "listener.talkOnWake"
     }
 
     /// Bump to reset everyone's saved listener choices to the current defaults once.
@@ -39,10 +42,11 @@ struct ListenerSettings: Equatable {
 
     static var current: ListenerSettings {
         let defaults = UserDefaults.standard
-        func value(_ key: String) -> Bool { defaults.object(forKey: key) as? Bool ?? true }
+        func value(_ key: String, _ fallback: Bool = true) -> Bool { defaults.object(forKey: key) as? Bool ?? fallback }
         return ListenerSettings(shareAudio: value(Key.shareAudio), autoResume: value(Key.autoResume),
                                 builtInMicrophone: value(Key.builtInMicrophone),
-                                fullSoundForOthers: value(Key.fullSoundForOthers))
+                                fullSoundForOthers: value(Key.fullSoundForOthers),
+                                talkOnWake: value(Key.talkOnWake, false))
     }
 
     /// Measurement mode gives the wake model unprocessed audio; it only costs other apps
