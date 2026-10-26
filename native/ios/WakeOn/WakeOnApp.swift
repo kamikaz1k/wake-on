@@ -5,6 +5,8 @@ import SwiftUI
 final class AppDelegate: NSObject, UIApplicationDelegate {
     func application(_ application: UIApplication,
                      didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil) -> Bool {
+        // Battery sessions follow the wake listener and calls from launch on.
+        Task { @MainActor in BatteryMonitor.shared.activate() }
         if application.applicationState == .background, OpenAILiveVoiceProvider.useHotAudio {
             HotAudioDevice.shared.mayArm = false
             HotAudioDevice.shared.prebuildAsync { result in
@@ -25,6 +27,7 @@ struct WakeOnApp: App {
     @Environment(\.scenePhase) private var scenePhase
     init() {
         _ = LatencyTrace.processStart
+        ListenerSettings.migrate()
         VoiceSessionController.appLog("app_launch pid=\(ProcessInfo.processInfo.processIdentifier)")
         // Pay WebRTC's one-time setup while the first screen draws.
         #if DEBUG
@@ -88,7 +91,15 @@ struct WakeOnApp: App {
                             }
                             catch { controller.error = error.localizedDescription }
                         }
-                    } else if ProcessInfo.processInfo.arguments.contains("--autostart") { controller.start() }
+                    } else if ProcessInfo.processInfo.arguments.contains("--autostart") {
+                        controller.start()
+                        // --talk-after N: start a voice call while the listener runs (hand-off test).
+                        if let index = args.firstIndex(of: "--talk-after"), index + 1 < args.count, let seconds = Double(args[index + 1]) {
+                            DispatchQueue.main.asyncAfter(deadline: .now() + seconds) {
+                                VoiceSessionController.shared.start(trigger: "talk_after", probe: .greeting)
+                            }
+                        }
+                    }
                     #endif
                 }
         }

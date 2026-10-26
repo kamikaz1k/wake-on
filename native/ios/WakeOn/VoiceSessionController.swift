@@ -83,9 +83,11 @@ final class VoiceSessionController: ObservableObject {
         // Fast path first, before any bookkeeping or UI work: free the microphone, start audio,
         // and send the prepared offer. Timestamps are written into the trace afterwards.
         let wake = WakeController.shared
-        resumeWakeListener = wake.enabled
+        // Bring the listener back after the call if it was on, or paused waiting to resume.
+        resumeWakeListener = wake.enabled || wake.autoResumePending
+        wake.cancelAutoResume()
         let wakeWasActive = wake.enabled || wake.busy || wake.isPlaying
-        if wakeWasActive { wake.stop() }
+        if wakeWasActive { wake.stop(reason: "voice_call", releaseSession: false) }
         let wakeStopped = DispatchTime.now().uptimeNanoseconds
         let inBackground = UIApplication.shared.applicationState == .background
         earlyArmTried = false

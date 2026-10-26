@@ -64,6 +64,12 @@ final class WakeController: NSObject, ObservableObject, UNUserNotificationCenter
     private var fixtureMode = false
     private var wakeWasBackground = false
     private var didComplete = false
+    fileprivate(set) var pendingResumeCause: String?
+    fileprivate var resumeTask: UIBackgroundTaskIdentifier = .invalid
+    /// The cause being resumed from while `start()` runs, so a failure can retry.
+    fileprivate var resumeInProgress: String?
+    fileprivate var resumeRetries = 0
+    fileprivate var pausedNoticePosted = false
 
     override init() {
         super.init()
@@ -72,14 +78,27 @@ final class WakeController: NSObject, ObservableObject, UNUserNotificationCenter
                      UIApplication.didEnterBackgroundNotification, UIApplication.willEnterForegroundNotification] {
             observers.append(NotificationCenter.default.addObserver(forName: name, object: nil, queue: .main) { [weak self] _ in
                 self?.trace?.mark("lifecycle", fields: ["notification": name.rawValue])
+                if name == UIApplication.didBecomeActiveNotification, self?.autoResumePending == true {
+                    self?.performAutoResume(trigger: "app_active")
+                }
             })
         }
         for name in [AVAudioSession.interruptionNotification, AVAudioSession.routeChangeNotification,
                      AVAudioSession.mediaServicesWereResetNotification] {
             observers.append(NotificationCenter.default.addObserver(forName: name, object: nil, queue: .main) {
                 [weak self] notification in
-                guard let self, self.enabled else { return }
+                guard let self else { return }
+                if name == AVAudioSession.interruptionNotification,
+                   (notification.userInfo?[AVAudioSessionInterruptionTypeKey] as? UInt) == AVAudioSession.InterruptionType.ended.rawValue {
+                    let options = notification.userInfo?[AVAudioSessionInterruptionOptionKey] as? UInt ?? 0
+                    self.interruptionEnded(shouldResume: options & AVAudioSession.InterruptionOptions.shouldResume.rawValue != 0)
+                    return
+                }
+                guard self.enabled else { return }
                 let message: String
+                var stopReason = "unknown"
+                // Whether listening comes back by itself once the cause has passed.
+                var resume: ResumeWhen = .never
                 if name == AVAudioSession.routeChangeNotification {
                     let raw = notification.userInfo?[AVAudioSessionRouteChangeReasonKey] as? UInt ?? 0
                     let reason = AVAudioSession.RouteChangeReason(rawValue: raw) ?? .unknown
@@ -90,18 +109,35 @@ final class WakeController: NSObject, ObservableObject, UNUserNotificationCenter
                     // setCategory/setActive can post this after startMicrophone returns.
                     // Output-only changes also leave our input converter valid.
                     guard mustStop else { return }
+                    resume = .soon
+                    stopReason = "route_change reason=\(raw)(\(Self.routeReasonName(reason))) inputChanged=\(self.captureRoute != current) engineRunning=\(self.engine.isRunning) inputs=\(current.inputIDs.joined(separator: ","))"
                     message = "The microphone connection or audio format changed. Tap Enable listening to resume."
                 } else if name == AVAudioSession.interruptionNotification {
                     guard let type = notification.userInfo?[AVAudioSessionInterruptionTypeKey] as? UInt,
                           type == AVAudioSession.InterruptionType.began.rawValue else { return }
                     print("WAKE_AUDIO interruption began")
+                    let why = notification.userInfo?[AVAudioSessionInterruptionReasonKey] as? UInt
+                    stopReason = "interruption reason=\(why.map(String.init) ?? "none")(\(Self.interruptionReasonName(why)))"
+                    resume = .whenInterruptionEnds
                     message = "Another audio session interrupted listening. Tap Enable listening to resume."
                 } else {
                     print("WAKE_AUDIO media services reset")
+                    stopReason = "media_services_reset"
+                    resume = .soon
                     message = "The system audio service restarted. Tap Enable listening to resume."
                 }
-                self.stop()
-                self.error = message
+                self.stop(reason: stopReason)
+                if ListenerSettings.current.autoResume, resume != .never {
+                    self.scheduleAutoResume(resume, cause: stopReason)
+                    // Tell the user now, not when the other audio ends: in the background iOS will
+                    // not let an exclusive session restart, so a tap is usually needed. The notice
+                    // is removed if listening comes back by itself.
+                    if resume == .whenInterruptionEnds, UIApplication.shared.applicationState != .active {
+                        self.notifyPaused()
+                    }
+                } else {
+                    self.error = message
+                }
             })
         }
     }
@@ -271,9 +307,12 @@ final class WakeController: NSObject, ObservableObject, UNUserNotificationCenter
     private func startMicrophone(token: Int) throws {
         trace?.mark("session_configuration_begin")
         let session = AVAudioSession.sharedInstance()
-        try session.setCategory(.playAndRecord, mode: .measurement,
-                                options: [.defaultToSpeaker, .allowBluetoothHFP])
-        trace?.mark("session_activation_begin")
+        let settings = ListenerSettings.current
+        try session.setCategory(.playAndRecord, mode: settings.mode, options: settings.categoryOptions)
+        // With headphones connected, keep recording from the iPhone itself (see ListenerSettings).
+        let builtIn = settings.builtInMicrophone ? session.availableInputs?.first { $0.portType == .builtInMic } : nil
+        try? session.setPreferredInput(builtIn)
+        trace?.mark("session_activation_begin", fields: ["settings": settings.summary])
         try session.setPreferredIOBufferDuration(0.01)
         try session.setActive(true)
         trace?.mark("session_activation_end", fields: ["actualIOBufferMs": session.ioBufferDuration * 1000,
@@ -341,6 +380,12 @@ final class WakeController: NSObject, ObservableObject, UNUserNotificationCenter
         captureRoute = AudioInputRoute.current()
         print("WAKE_AUDIO started inputRate=\(format.sampleRate) inputChannels=\(format.channelCount)")
         enabled = true
+        if let cause = resumeInProgress {
+            VoiceSessionController.appLog("wake_listener_auto_resume_succeeded after=\(cause) retries=\(resumeRetries)")
+            clearPausedNotice()
+            resumeInProgress = nil
+            resumeRetries = 0
+        }
         busy = false
         status = "Waiting for first audio…"
         if !readyWaiters.isEmpty { armReadyTimeout() }
@@ -381,6 +426,7 @@ final class WakeController: NSObject, ObservableObject, UNUserNotificationCenter
                     self.wakeWasBackground = UIApplication.shared.applicationState == .background
                     self.wakeLocation = self.wakeWasBackground ? "Detected in background" : "Detected in foreground"
                     self.handoff = capture
+                    BatteryMonitor.shared.noteWake()
                     self.status = "Wake detected · capturing handoff"
                     if self.wakeWasBackground { self.notifyWake() }
                 }
@@ -407,15 +453,29 @@ final class WakeController: NSObject, ObservableObject, UNUserNotificationCenter
                     #if DEBUG
                     self.writeReport(capture, fixture: fixture)
                     #endif
-                    if isDirect { self.stop(finalizeTrace: false); self.status = "Audio handoff ready" }
+                    if isDirect { self.stop(finalizeTrace: false, reason: "direct_capture_done"); self.status = "Audio handoff ready" }
                     metric?.finish("completed", fields: summary)
                 }
             }
         }
     }
 
-    func stop(finalizeTrace: Bool = true) {
-        trace?.mark("stop_requested")
+    /// `reason` is recorded with the battery session and in the debug log.
+    /// `releaseSession: false` hands the audio session straight to a voice call: deactivating it
+    /// (and notifying other apps) costs ~100+ ms that a call would pay on its critical path.
+    func stop(finalizeTrace: Bool = true, reason: String = "user", releaseSession: Bool = true) {
+        if enabled || busy {
+            // Synchronously, before `enabled` changes and the battery session closes.
+            // stop() always runs on the main thread (UI, main-queue observers, the voice controller).
+            if Thread.isMainThread {
+                MainActor.assumeIsolated { BatteryMonitor.shared.noteListenerStop(reason: reason) }
+            }
+            VoiceSessionController.appLog("wake_listener_stopped reason=\(reason)")
+        }
+        trace?.mark("stop_requested", fields: ["reason": reason])
+        cancelAutoResume()
+        // A failed resume attempt keeps the notice; any deliberate stop removes it.
+        if !reason.hasPrefix("failure") { clearPausedNotice() }
         readyTimeout?.cancel()
         readyTimeout = nil
         let waiters = readyWaiters
@@ -435,7 +495,9 @@ final class WakeController: NSObject, ObservableObject, UNUserNotificationCenter
         // Recreate after interruptions/media resets; do not retain an invalid audio graph.
         engine = AVAudioEngine()
         stopReplay()
-        try? AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
+        if releaseSession {
+            try? AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
+        }
         enabled = false
         busy = false
         status = "Listening is off"
@@ -473,8 +535,18 @@ final class WakeController: NSObject, ObservableObject, UNUserNotificationCenter
     private func fail(_ failure: Error) {
         print("WAKE_AUDIO failure \(failure.localizedDescription)")
         trace?.mark("failure", fields: ["error": failure.localizedDescription])
-        stop(finalizeTrace: false)
+        let resumingFrom = resumeInProgress
+        stop(finalizeTrace: false, reason: "failure \(failure.localizedDescription)")
         trace?.finish("failed")
+        if let cause = resumingFrom {
+            // Usually another app's audio still holds the session. Keep waiting rather than give up.
+            VoiceSessionController.appLog("wake_listener_resume_failed error=\(Self.describe(failure)) otherAudio=\(AVAudioSession.sharedInstance().isOtherAudioPlaying) appState=\(UIApplication.shared.applicationState.rawValue)")
+            scheduleAutoResume(.retry, cause: cause, retry: resumeRetries + 1)
+            // iOS does not let a background app start recording again after another app's audio
+            // (it only lets it continue). Tell the user; tapping opens the app, which resumes.
+            if UIApplication.shared.applicationState != .active { notifyPaused() }
+            return
+        }
         error = failure.localizedDescription
         status = "Listening stopped"
     }
@@ -613,4 +685,155 @@ final class WakeController: NSObject, ObservableObject, UNUserNotificationCenter
         } catch { self.error = "Could not save test report: \(error.localizedDescription)" }
     }
     #endif
+}
+
+extension WakeController {
+    static func routeReasonName(_ reason: AVAudioSession.RouteChangeReason) -> String {
+        switch reason {
+        case .newDeviceAvailable: "new_device"
+        case .oldDeviceUnavailable: "device_removed"
+        case .categoryChange: "category_change"
+        case .override: "override"
+        case .wakeFromSleep: "wake_from_sleep"
+        case .noSuitableRouteForCategory: "no_suitable_route"
+        case .routeConfigurationChange: "configuration_change"
+        default: "unknown"
+        }
+    }
+
+    static func interruptionReasonName(_ raw: UInt?) -> String {
+        guard let raw, let reason = AVAudioSession.InterruptionReason(rawValue: raw) else { return "default" }
+        switch reason {
+        case .builtInMicMuted: return "built_in_mic_muted"
+        case .routeDisconnected: return "route_disconnected"
+        default: return "default"
+        }
+    }
+}
+
+// MARK: - Automatic resume
+
+extension WakeController {
+    enum ResumeWhen { case never, soon, whenInterruptionEnds, retry }
+
+    /// Seconds between resume attempts while another app's audio holds the session.
+    static let resumeRetryDelays: [Double] = [1, 2, 4, 6, 8, 10]
+
+    /// Listening stopped for a cause that passes (a call, Siri, an alarm, a route or audio
+    /// service change) and will restart by itself.
+    var autoResumePending: Bool { pendingResumeCause != nil }
+
+    /// Called by the voice call before it starts: the call owns audio and brings the listener
+    /// back itself when it ends, so a resume must not fire in between.
+    func cancelAutoResume() {
+        pendingResumeCause = nil
+        resumeInProgress = nil
+        endResumeBackgroundTask()
+    }
+
+    func scheduleAutoResume(_ when: ResumeWhen, cause: String, retry: Int = 0) {
+        pendingResumeCause = cause
+        resumeRetries = retry
+        status = "Paused · resumes automatically"
+        error = nil
+        VoiceSessionController.appLog("wake_listener_resume_pending cause=\(cause) retry=\(retry)")
+        // Keep running briefly so a short interruption (Siri, an alarm) can be followed by a
+        // resume even with the screen locked. Longer ones resume when the app is next active.
+        if resumeTask == .invalid {
+            resumeTask = UIApplication.shared.beginBackgroundTask(withName: "wake.resume") { [weak self] in
+                self?.endResumeBackgroundTask()
+            }
+        }
+        if when == .soon {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self] in
+                self?.performAutoResume(trigger: "after_change")
+            }
+        }
+        if when == .retry {
+            // Within the background task's ~30 s. After that, iOS suspends the app and the
+            // listener resumes when the app is next active (or iOS ends another interruption).
+            guard retry <= Self.resumeRetryDelays.count else {
+                VoiceSessionController.appLog("wake_listener_resume_waiting_for_app trigger=retries_exhausted")
+                status = "Paused · resumes when you open Wake On"
+                endResumeBackgroundTask()
+                return
+            }
+            let delay = Self.resumeRetryDelays[retry - 1]
+            DispatchQueue.main.asyncAfter(deadline: .now() + delay) { [weak self] in
+                guard let self, self.autoResumePending else { return }
+                let active = UIApplication.shared.applicationState == .active
+                if active || !AVAudioSession.sharedInstance().isOtherAudioPlaying {
+                    self.performAutoResume(trigger: "retry_\(retry)")
+                } else {
+                    // Still playing: count this as an attempt and wait again.
+                    self.scheduleAutoResume(.retry, cause: cause, retry: retry + 1)
+                }
+            }
+        }
+    }
+
+    func interruptionEnded(shouldResume: Bool) {
+        guard autoResumePending else { return }
+        VoiceSessionController.appLog("wake_listener_interruption_ended shouldResume=\(shouldResume)")
+        // Resume either way: the listener's session is mixable, so it does not take audio
+        // away from whatever was playing.
+        performAutoResume(trigger: "interruption_ended")
+    }
+
+    func performAutoResume(trigger: String) {
+        guard let cause = pendingResumeCause else { return }
+        // Never while a voice call owns audio; the call restarts the listener when it ends.
+        let callActive = MainActor.assumeIsolated { VoiceSessionController.shared.phase != .idle }
+        guard !callActive, !enabled, !busy else { return }
+        pendingResumeCause = nil
+        endResumeBackgroundTask()
+        VoiceSessionController.appLog("wake_listener_auto_resume trigger=\(trigger) after=\(cause) otherAudio=\(AVAudioSession.sharedInstance().isOtherAudioPlaying)")
+        resumeInProgress = cause
+        start()
+    }
+
+    /// "Listening paused · tap to resume", posted once per pause, removed when listening is back.
+    func notifyPaused() {
+        guard !pausedNoticePosted else { return }
+        pausedNoticePosted = true
+        let content = UNMutableNotificationContent()
+        content.title = "Listening paused"
+        content.body = "Another app took the microphone. Tap to resume listening for Hey Lobby."
+        UNUserNotificationCenter.current().add(UNNotificationRequest(identifier: "listener-paused", content: content, trigger: nil))
+        VoiceSessionController.appLog("wake_listener_paused_notice posted")
+    }
+
+    func clearPausedNotice() {
+        guard pausedNoticePosted else { return }
+        pausedNoticePosted = false
+        let center = UNUserNotificationCenter.current()
+        center.removeDeliveredNotifications(withIdentifiers: ["listener-paused"])
+        center.removePendingNotificationRequests(withIdentifiers: ["listener-paused"])
+    }
+
+    /// Error domain, code and, for audio-session errors, the four-character code ("!rec", "!int").
+    static func describe(_ error: Error) -> String {
+        let ns = error as NSError
+        var text = "\(ns.domain):\(ns.code)"
+        let code = UInt32(truncatingIfNeeded: ns.code)
+        let chars = [24, 16, 8, 0].map { Character(UnicodeScalar(UInt8((code >> $0) & 0xFF))) }
+        if chars.allSatisfy({ $0.isASCII && !$0.isWhitespace && ($0.isLetter || $0.isPunctuation || $0.isNumber) }) {
+            text += "('\(String(chars))')"
+        }
+        if let underlying = ns.userInfo[NSUnderlyingErrorKey] as? Error { text += " underlying=\(describe(underlying))" }
+        return text + " " + ns.localizedDescription
+    }
+
+    private func endResumeBackgroundTask() {
+        guard resumeTask != .invalid else { return }
+        UIApplication.shared.endBackgroundTask(resumeTask)
+        resumeTask = .invalid
+    }
+
+    /// Restart with new settings if listening is on (they apply when the microphone starts).
+    func applySettingsChange() {
+        guard enabled else { return }
+        stop(reason: "settings_changed")
+        start()
+    }
 }

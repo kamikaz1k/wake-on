@@ -154,6 +154,13 @@
 			<key>sourceTree</key>
 			<string>&lt;group&gt;</string>
 		</dict>
+		<key>206BA2F968C3FC3C92318888</key>
+		<dict>
+			<key>fileRef</key>
+			<string>BAA884D912E3425D1C2D1458</string>
+			<key>isa</key>
+			<string>PBXBuildFile</string>
+		</dict>
 		<key>20B70E15FDC36C625E57F658</key>
 		<dict>
 			<key>buildSettings</key>
@@ -263,6 +270,13 @@
 			<key>isa</key>
 			<string>PBXBuildFile</string>
 		</dict>
+		<key>40C95F44524CD4C23904F439</key>
+		<dict>
+			<key>fileRef</key>
+			<string>74C3E4252EFD564EB7FA8736</string>
+			<key>isa</key>
+			<string>PBXBuildFile</string>
+		</dict>
 		<key>43916129615D067FEEB4464D</key>
 		<dict>
 			<key>isa</key>
@@ -284,6 +298,13 @@
 			<string>WakeOn/StartRecordingIntent.swift</string>
 			<key>sourceTree</key>
 			<string>&lt;group&gt;</string>
+		</dict>
+		<key>44DA201589CF3D2915F60C94</key>
+		<dict>
+			<key>fileRef</key>
+			<string>7208E077BFADA885CC025FBD</string>
+			<key>isa</key>
+			<string>PBXBuildFile</string>
 		</dict>
 		<key>4CD946F6E32CA2BB00F8B91D</key>
 		<dict>
@@ -468,7 +489,9 @@
 			<integer>2147483647</integer>
 			<key>files</key>
 			<array>
+				<string>FD0F0DB50B6695E5A313F02A</string>
 				<string>F5A8AD6DD1708ECCF94AA2E2</string>
+				<string>44DA201589CF3D2915F60C94</string>
 				<string>D20988A742E8A10B39F7CB23</string>
 			</array>
 			<key>isa</key>
@@ -489,6 +512,28 @@
 			<string>E823720E1997284D87C9BE0D</string>
 			<key>isa</key>
 			<string>PBXBuildFile</string>
+		</dict>
+		<key>7208E077BFADA885CC025FBD</key>
+		<dict>
+			<key>isa</key>
+			<string>PBXFileReference</string>
+			<key>lastKnownFileType</key>
+			<string>sourcecode.swift</string>
+			<key>path</key>
+			<string>Tests/ListenerSettingsTests.swift</string>
+			<key>sourceTree</key>
+			<string>&lt;group&gt;</string>
+		</dict>
+		<key>74C3E4252EFD564EB7FA8736</key>
+		<dict>
+			<key>isa</key>
+			<string>PBXFileReference</string>
+			<key>lastKnownFileType</key>
+			<string>sourcecode.swift</string>
+			<key>path</key>
+			<string>WakeOn/ListenerOptionsView.swift</string>
+			<key>sourceTree</key>
+			<string>&lt;group&gt;</string>
 		</dict>
 		<key>7561BFB015D8F536760CB671</key>
 		<dict>
@@ -664,6 +709,28 @@
 				<string>04D13FD0AA6F0197CF2C9990</string>
 			</array>
 		</dict>
+		<key>9F2F0D7B8211BA8CBE1CF982</key>
+		<dict>
+			<key>isa</key>
+			<string>PBXFileReference</string>
+			<key>lastKnownFileType</key>
+			<string>sourcecode.swift</string>
+			<key>path</key>
+			<string>Tests/EnergyStatsTests.swift</string>
+			<key>sourceTree</key>
+			<string>&lt;group&gt;</string>
+		</dict>
+		<key>9F81E2B6F38D383DBF87C9B7</key>
+		<dict>
+			<key>isa</key>
+			<string>PBXFileReference</string>
+			<key>lastKnownFileType</key>
+			<string>sourcecode.swift</string>
+			<key>path</key>
+			<string>WakeOn/ListenerSettings.swift</string>
+			<key>sourceTree</key>
+			<string>&lt;group&gt;</string>
+		</dict>
 		<key>A52E1E1026008ABCCF27FFB3</key>
 		<dict>
 			<key>isa</key>
@@ -724,6 +791,17 @@
 			<key>sourceTree</key>
 			<string>&lt;group&gt;</string>
 		</dict>
+		<key>BAA884D912E3425D1C2D1458</key>
+		<dict>
+			<key>isa</key>
+			<string>PBXFileReference</string>
+			<key>lastKnownFileType</key>
+			<string>sourcecode.swift</string>
+			<key>path</key>
+			<string>WakeOn/BatteryView.swift</string>
+			<key>sourceTree</key>
+			<string>&lt;group&gt;</string>
+		</dict>
 		<key>BCE16DD0260827ECF338C787</key>
 		<dict>
 			<key>buildActionMask</key>
@@ -731,10 +809,14 @@
 			<key>files</key>
 			<array>
 				<string>1DA5A8F982B7C161E74C041E</string>
+				<string>F29E91B590F34040D4912AA5</string>
+				<string>206BA2F968C3FC3C92318888</string>
 				<string>141FC4B68CEA3CBAC086E734</string>
 				<string>71A29599834994135DF78497</string>
 				<string>190FC281175A458411477DAD</string>
 				<string>D233B84F177F79322304C486</string>
+				<string>40C95F44524CD4C23904F439</string>
+				<string>E4FB3D48505D22D8422194F8</string>
 				<string>89707B9627501A6CC5C878D6</string>
 				<string>C096918F71FEAB2E9FC49F58</string>
 				<string>A735366E67E1349A675D19BE</string>
@@ -852,10 +934,14 @@
 			<key>children</key>
 			<array>
 				<string>B29C300FCD297635482D352B</string>
+				<string>E8B8A81C6CA1C88BC84CAD95</string>
+				<string>BAA884D912E3425D1C2D1458</string>
 				<string>1DC5C0769628AED0F89639D8</string>
 				<string>E823720E1997284D87C9BE0D</string>
 				<string>D51D6D61BE2D40D10969555F</string>
 				<string>3A95F3BBE1057DD42D6E55F8</string>
+				<string>74C3E4252EFD564EB7FA8736</string>
+				<string>9F81E2B6F38D383DBF87C9B7</string>
 				<string>1CB063FB3A6A99A499006954</string>
 				<string>DCE26BF595E449F720C1CEAD</string>
 				<string>44B03283B94CFD4EFE847D7E</string>
@@ -866,7 +952,9 @@
 				<string>5F8D1447DF26309D45C4CBCF</string>
 				<string>F36E746150097572D76CB5C2</string>
 				<string>43916129615D067FEEB4464D</string>
+				<string>9F2F0D7B8211BA8CBE1CF982</string>
 				<string>A52E1E1026008ABCCF27FFB3</string>
+				<string>7208E077BFADA885CC025FBD</string>
 				<string>D9C92472F248312173947DD4</string>
 				<string>8F74F34C7B6E3E70FA09817C</string>
 				<string>62CCEF872899BA435086821E</string>
@@ -918,6 +1006,13 @@
 			<key>isa</key>
 			<string>PBXBuildFile</string>
 		</dict>
+		<key>E4FB3D48505D22D8422194F8</key>
+		<dict>
+			<key>fileRef</key>
+			<string>9F81E2B6F38D383DBF87C9B7</string>
+			<key>isa</key>
+			<string>PBXBuildFile</string>
+		</dict>
 		<key>E6DE6C99132752C914FEF632</key>
 		<dict>
 			<key>buildSettings</key>
@@ -958,6 +1053,17 @@
 			<string>sourcecode.swift</string>
 			<key>path</key>
 			<string>WakeOn/HandoffBuffer.swift</string>
+			<key>sourceTree</key>
+			<string>&lt;group&gt;</string>
+		</dict>
+		<key>E8B8A81C6CA1C88BC84CAD95</key>
+		<dict>
+			<key>isa</key>
+			<string>PBXFileReference</string>
+			<key>lastKnownFileType</key>
+			<string>sourcecode.swift</string>
+			<key>path</key>
+			<string>WakeOn/BatteryMonitor.swift</string>
 			<key>sourceTree</key>
 			<string>&lt;group&gt;</string>
 		</dict>
@@ -1014,6 +1120,13 @@
 			<string>XCBuildConfiguration</string>
 			<key>name</key>
 			<string>Debug</string>
+		</dict>
+		<key>F29E91B590F34040D4912AA5</key>
+		<dict>
+			<key>fileRef</key>
+			<string>E8B8A81C6CA1C88BC84CAD95</string>
+			<key>isa</key>
+			<string>PBXBuildFile</string>
 		</dict>
 		<key>F36E746150097572D76CB5C2</key>
 		<dict>
@@ -1078,6 +1191,13 @@
 			<string>Resources/tokens.txt</string>
 			<key>sourceTree</key>
 			<string>&lt;group&gt;</string>
+		</dict>
+		<key>FD0F0DB50B6695E5A313F02A</key>
+		<dict>
+			<key>fileRef</key>
+			<string>9F2F0D7B8211BA8CBE1CF982</string>
+			<key>isa</key>
+			<string>PBXBuildFile</string>
 		</dict>
 		<key>FE84B97285FF2B40E137CB81</key>
 		<dict>

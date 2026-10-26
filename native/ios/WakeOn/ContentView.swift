@@ -23,6 +23,12 @@ struct ContentView: View {
                         .accessibilityIdentifier("wake-status")
                     Text("Say “Hey Lobby”, then keep speaking. Audio stays on this iPhone.")
                         .foregroundStyle(.secondary)
+                    NavigationLink {
+                        BatteryView(monitor: BatteryMonitor.shared, wake: controller)
+                    } label: {
+                        Label("Battery use", systemImage: "battery.75percent")
+                    }
+                    .accessibilityIdentifier("battery-view")
                     if controller.enabled {
                         Button("Disable listening", role: .destructive) { controller.stop() }
                     } else {
@@ -32,6 +38,7 @@ struct ContentView: View {
                 } header: { Text("Wake listener") } footer: {
                     Text("Enable listening before leaving the app or locking the screen. iOS does not let a wake word open the screen automatically.")
                 }
+                ListenerOptionsView(controller: controller)
 
                 if let capture = controller.handoff {
                     Section("Audio handoff") {

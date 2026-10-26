@@ -11,6 +11,46 @@ rearmed. The microphone remains active until Disable listening or Play captured 
 tapped. Replay uses a normal media-playback session, avoiding the quieter output
 of measurement mode; Listen for another wake restarts microphone capture.
 
+## Background listening options and battery
+
+Four **Listening options** on the main screen, all on by default:
+
+- **Keep listening while other audio plays** (`.mixWithOthers`). Spotify, YouTube and other
+  media apps play alongside the listener instead of interrupting it. The microphone also
+  hears them.
+- **Full sound for other apps.** While sharing, the listener uses iOS's default audio mode
+  instead of measurement mode. Measurement mode switches off system processing for the
+  whole route, so other apps lose their EQ, loudness and spatial effects. With this on,
+  Spotify sounded identical to listening off, and "Hey Lobby" was still detected over
+  music (one detection so far).
+- **Resume after calls, Siri and alarms.** On an interruption, a route change or an audio
+  service reset, the listener stops with the reason recorded. It restarts when iOS
+  reports the interruption ended (retrying for ~30 s in the background), shortly after a
+  route or service change, or when the app is next active. If it is still paused while
+  the app is in the background, a "Listening paused · tap to resume" notification is posted
+  at once and removed when listening is back. A voice call cancels a pending resume and
+  restarts the listener when it ends.
+- **Use iPhone microphone with headphones** (`.allowBluetoothA2DP` and the built-in
+  microphone as preferred input). Bluetooth headphones stay in high-quality playback
+  instead of switching to call quality.
+
+With sharing off, the listener is exclusive: media apps interrupt it, and it cannot restart
+itself from the background. Spotify and YouTube both end their interruption with
+`shouldResume=false`, and iOS refuses to activate an exclusive session from the background
+(`'!int'`, cannot interrupt others). It resumes after the notification is tapped or the
+app is opened. Calls and alarms usually end with `shouldResume=true`; that path is not
+yet tested on the device.
+
+**Battery use** (from the Wake listener section) records each listening session and voice
+call: the app's own power from the kernel's energy counter (`task_power_info_v2`), CPU,
+CPU wake-ups, battery drop while unplugged, wakes detected and why the session ended.
+It also stores Apple's daily MetricKit reports. Sessions are kept in
+`Documents/battery-sessions.json`, and the running one in `battery-current.jsonl`.
+The app's figure excludes the microphone hardware and iOS's audio service; battery drop
+over long unplugged sessions includes them. Measured on an iPhone 17 Pro with the screen
+locked: ~8–11 mW for the app, ~0.24 % of one core, ~27 wake-ups/s, and less than 1 %
+battery in 73 minutes.
+
 ## Important iOS boundary
 
 This is a foreground-started microphone session that continues in the background
@@ -20,11 +60,14 @@ the app forward; the app cannot automatically foreground itself, unlock the
 phone, or relaunch after force-quit/reboot. Notification permission is optional.
 Without it, open Wake On manually to find the handoff.
 
-This spike deliberately stops after audio interruptions, actual microphone or
-input-format changes, or media service resets and asks the user to enable
-listening again. Session-category and output-only notifications leave listening
-active when the input and running audio engine are unchanged. It does not promise
-continuous Siri-like operation or App Store acceptance.
+Audio interruptions, actual microphone or input-format changes, and media service
+resets stop the listener, and the reason is recorded. With **Resume after calls, Siri
+and alarms** on (the default), it restarts by itself afterwards; with it off, you
+enable listening again. Session-category and output-only notifications leave listening
+active when the input and running audio engine are unchanged. iOS may suspend the app
+during a long interruption, such as a phone call; in that case the listener resumes
+when iOS delivers the end of the interruption or the app is next opened. It does not
+promise continuous Siri-like operation or App Store acceptance.
 
 ## Open on your iPhone
 
