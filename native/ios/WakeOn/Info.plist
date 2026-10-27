@@ -35,6 +35,8 @@
 	<true/>
 	<key>NSMicrophoneUsageDescription</key>
 	<string>Listen locally for Hey Lobby, keep a short audio buffer for the wake handoff, and talk with the voice assistant.</string>
+	<key>NSSupportsLiveActivities</key>
+	<true/>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>

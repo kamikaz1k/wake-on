@@ -1,8 +1,10 @@
 #!/usr/bin/env python3
 """Render the app icon: the sky orb visualizer, ported from WakeOn/Visualizer/VoiceOrbShaders.metal.
 
-uv run --with numpy --with pillow python scripts/render-app-icon.py 0 2048 1.45 WakeOn/Assets.xcassets/AppIcon.appiconset/AppIcon.png
+uv run --with numpy --with pillow python scripts/render-app-icon.py 0 2048 1.33 WakeOn/Assets.xcassets/AppIcon.appiconset/AppIcon.png
 Arguments: cloud flow (picks the cloud pattern), render size, zoom, output path.
+Options: --dark (navy background instead of white), --transparent (no background, for the Live Activity orbs), --level=0.15 (voice level:
+brighter clouds and a stronger glow).
 """
 import sys, numpy as np
 from PIL import Image
@@ -56,10 +58,13 @@ def smoothstep(e0, e1, x):
     t = np.clip((x - e0) / (e1 - e0), 0, 1); return t * t * (3 - 2 * t)
 def mix(a, b, t): return a + (b - a) * t
 
+flags = [a for a in sys.argv[1:] if a.startswith('--')]
+sys.argv = [sys.argv[0]] + [a for a in sys.argv[1:] if not a.startswith('--')]
+transparent = '--transparent' in flags
+level = next((float(f.split('=')[1]) for f in flags if f.startswith('--level=')), 0.15)
 N = int(sys.argv[2]) if len(sys.argv) > 2 else 2048
 flow = float(sys.argv[1]) if len(sys.argv) > 1 else 0.0
-scale = float(sys.argv[3]) if len(sys.argv) > 3 else 1.45   # zoom: the orb fills about 87% of the icon
-level = 0.15
+scale = float(sys.argv[3]) if len(sys.argv) > 3 else 1.33   # zoom: the orb is 80% of the icon's width, like Safari's compass
 ys, xs = np.mgrid[0:N, 0:N] + 0.5
 p = np.stack([(xs - N/2) / (N/2), -(ys - N/2) / (N/2)], -1) / scale
 rr = np.linalg.norm(p, axis=-1)
@@ -95,9 +100,15 @@ col = mix(col, np.array([0.78, 0.92, 1.0]), (fres * 0.55)[:, None])
 col += (cl * level * 0.10)[:, None]
 img = np.zeros((N, N, 3))
 img[inside] = col
-bg = np.array([0.02, 0.03, 0.07])   # near-black navy behind the orb, like the call screen
+# White by default (the app icon); --dark for the near-black navy of the call screen.
+bg = np.array([0.02, 0.03, 0.07]) if '--dark' in flags else np.array([1.0, 1.0, 1.0])
 m = mask[..., None]
-out = img * m + haloColor * halo[..., None] + bg * (1 - m) * (1 - halo[..., None]) 
+out = img * m + (haloColor * halo[..., None] + bg * (1 - halo[..., None])) * (1 - m)
 out = np.clip(out, 0, 1)
-im = Image.fromarray((out * 255 + 0.5).astype(np.uint8), 'RGB').resize((1024, 1024), Image.LANCZOS)
+if transparent:
+    alpha = np.clip(mask + halo, 0, 1)
+    rgb = np.clip(img * m + haloColor * halo[..., None], 0, 1) / np.maximum(alpha, 1e-6)[..., None]
+    out = np.concatenate([np.clip(rgb, 0, 1), alpha[..., None]], -1)
+im = Image.fromarray((out * 255 + 0.5).astype(np.uint8), 'RGBA' if transparent else 'RGB')
+im = im.resize((1024, 1024) if not transparent else (N // 2, N // 2), Image.LANCZOS)
 im.save(sys.argv[4] if len(sys.argv) > 4 else f'orb-{flow}.png')

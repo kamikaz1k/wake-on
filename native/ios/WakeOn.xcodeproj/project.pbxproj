@@ -68,6 +68,31 @@
 			<key>isa</key>
 			<string>PBXBuildFile</string>
 		</dict>
+		<key>0BF4170444CD473CD4066C79</key>
+		<dict>
+			<key>buildConfigurationList</key>
+			<string>62836841F0F438067849D484</string>
+			<key>buildPhases</key>
+			<array>
+				<string>E7DFA5D39B5F1A68EFD5167E</string>
+				<string>B8E4B87623732E8BA3BF0D54</string>
+				<string>9FFD0BA0E901E061DB366D39</string>
+			</array>
+			<key>buildRules</key>
+			<array/>
+			<key>dependencies</key>
+			<array/>
+			<key>isa</key>
+			<string>PBXNativeTarget</string>
+			<key>name</key>
+			<string>WakeOnLiveActivity</string>
+			<key>productName</key>
+			<string>WakeOnLiveActivity</string>
+			<key>productReference</key>
+			<string>CF59003455EA5841ED646673</string>
+			<key>productType</key>
+			<string>com.apple.product-type.app-extension</string>
+		</dict>
 		<key>0F3BF8A23D1FDE6611CE4A9A</key>
 		<dict>
 			<key>fileRef</key>
@@ -87,6 +112,8 @@
 				<string>Automatic</string>
 				<key>DEBUG_INFORMATION_FORMAT</key>
 				<string>dwarf</string>
+				<key>DEVELOPMENT_TEAM</key>
+				<string>JDR6VAV2RA</string>
 				<key>ENABLE_TESTABILITY</key>
 				<string>YES</string>
 				<key>GENERATE_INFOPLIST_FILE</key>
@@ -212,6 +239,8 @@
 				<string>Automatic</string>
 				<key>DEBUG_INFORMATION_FORMAT</key>
 				<string>dwarf-with-dsym</string>
+				<key>DEVELOPMENT_TEAM</key>
+				<string>JDR6VAV2RA</string>
 				<key>ENABLE_TESTABILITY</key>
 				<string>NO</string>
 				<key>GENERATE_INFOPLIST_FILE</key>
@@ -275,6 +304,19 @@
 			<key>isa</key>
 			<string>PBXBuildFile</string>
 		</dict>
+		<key>2B965140090DDF71A4732ECA</key>
+		<dict>
+			<key>containerPortal</key>
+			<string>98F54143AB4E86B28C3AFEE0</string>
+			<key>isa</key>
+			<string>PBXContainerItemProxy</string>
+			<key>proxyType</key>
+			<integer>1</integer>
+			<key>remoteGlobalIDString</key>
+			<string>0BF4170444CD473CD4066C79</string>
+			<key>remoteInfo</key>
+			<string>WakeOnLiveActivity</string>
+		</dict>
 		<key>2DA0D1DCE1E3029D27613185</key>
 		<dict>
 			<key>fileRef</key>
@@ -295,6 +337,17 @@
 			<string>3F1E21A7DC27A28E0003C40A</string>
 			<key>isa</key>
 			<string>PBXBuildFile</string>
+		</dict>
+		<key>38534BB08E9D76D11C587E49</key>
+		<dict>
+			<key>isa</key>
+			<string>PBXFileReference</string>
+			<key>lastKnownFileType</key>
+			<string>sourcecode.swift</string>
+			<key>path</key>
+			<string>Shared/ListeningActivity.swift</string>
+			<key>sourceTree</key>
+			<string>&lt;group&gt;</string>
 		</dict>
 		<key>38A007151ABE87CC01A5B6E9</key>
 		<dict>
@@ -320,6 +373,27 @@
 			<key>sourceTree</key>
 			<string>&lt;group&gt;</string>
 		</dict>
+		<key>3B8E250EBF1A2DB5C7F29222</key>
+		<dict>
+			<key>fileRef</key>
+			<string>38534BB08E9D76D11C587E49</string>
+			<key>isa</key>
+			<string>PBXBuildFile</string>
+		</dict>
+		<key>3DE977F28540BB0F79305A88</key>
+		<dict>
+			<key>fileRef</key>
+			<string>CF59003455EA5841ED646673</string>
+			<key>isa</key>
+			<string>PBXBuildFile</string>
+			<key>settings</key>
+			<dict>
+				<key>ATTRIBUTES</key>
+				<array>
+					<string>RemoveHeadersOnCopy</string>
+				</array>
+			</dict>
+		</dict>
 		<key>3ECE466EA18A3C06FE668FD7</key>
 		<dict>
 			<key>fileRef</key>
@@ -344,6 +418,17 @@
 			<string>74C3E4252EFD564EB7FA8736</string>
 			<key>isa</key>
 			<string>PBXBuildFile</string>
+		</dict>
+		<key>427734F696037F60000C4197</key>
+		<dict>
+			<key>isa</key>
+			<string>PBXFileReference</string>
+			<key>lastKnownFileType</key>
+			<string>sourcecode.swift</string>
+			<key>path</key>
+			<string>WakeOn/ListeningActivityController.swift</string>
+			<key>sourceTree</key>
+			<string>&lt;group&gt;</string>
 		</dict>
 		<key>43916129615D067FEEB4464D</key>
 		<dict>
@@ -481,6 +566,8 @@
 				<string>Automatic</string>
 				<key>DEBUG_INFORMATION_FORMAT</key>
 				<string>dwarf-with-dsym</string>
+				<key>DEVELOPMENT_TEAM</key>
+				<string>JDR6VAV2RA</string>
 				<key>ENABLE_TESTABILITY</key>
 				<string>NO</string>
 				<key>ENABLE_USER_SCRIPT_SANDBOXING</key>
@@ -579,6 +666,20 @@
 			<key>isa</key>
 			<string>XCConfigurationList</string>
 		</dict>
+		<key>62836841F0F438067849D484</key>
+		<dict>
+			<key>buildConfigurations</key>
+			<array>
+				<string>7CE2F8E4275350B4A0C2C5C5</string>
+				<string>E9FF134EA025C4524761A2A0</string>
+			</array>
+			<key>defaultConfigurationIsVisible</key>
+			<integer>0</integer>
+			<key>defaultConfigurationName</key>
+			<string>Release</string>
+			<key>isa</key>
+			<string>XCConfigurationList</string>
+		</dict>
 		<key>62CCEF872899BA435086821E</key>
 		<dict>
 			<key>isa</key>
@@ -612,6 +713,13 @@
 		<dict>
 			<key>fileRef</key>
 			<string>DF594260BA11BF317125D44B</string>
+			<key>isa</key>
+			<string>PBXBuildFile</string>
+		</dict>
+		<key>66968D52B5FC93FDB4C50806</key>
+		<dict>
+			<key>fileRef</key>
+			<string>B81F7C4987416DEB2976F4B6</string>
 			<key>isa</key>
 			<string>PBXBuildFile</string>
 		</dict>
@@ -712,6 +820,56 @@
 			<key>isa</key>
 			<string>PBXBuildFile</string>
 		</dict>
+		<key>7CE2F8E4275350B4A0C2C5C5</key>
+		<dict>
+			<key>buildSettings</key>
+			<dict>
+				<key>APPLICATION_EXTENSION_API_ONLY</key>
+				<string>YES</string>
+				<key>CLANG_ENABLE_MODULES</key>
+				<string>YES</string>
+				<key>CODE_SIGN_STYLE</key>
+				<string>Automatic</string>
+				<key>DEBUG_INFORMATION_FORMAT</key>
+				<string>dwarf</string>
+				<key>DEVELOPMENT_TEAM</key>
+				<string>JDR6VAV2RA</string>
+				<key>ENABLE_TESTABILITY</key>
+				<string>YES</string>
+				<key>INFOPLIST_FILE</key>
+				<string>WakeOnLiveActivity/Info.plist</string>
+				<key>IPHONEOS_DEPLOYMENT_TARGET</key>
+				<string>17.0</string>
+				<key>LD_RUNPATH_SEARCH_PATHS</key>
+				<array>
+					<string>$(inherited)</string>
+					<string>@executable_path/Frameworks</string>
+					<string>@executable_path/../../Frameworks</string>
+				</array>
+				<key>PRODUCT_BUNDLE_IDENTIFIER</key>
+				<string>dev.wakeon.ios.LiveActivity</string>
+				<key>PRODUCT_NAME</key>
+				<string>$(TARGET_NAME)</string>
+				<key>SDKROOT</key>
+				<string>iphoneos</string>
+				<key>SKIP_INSTALL</key>
+				<string>YES</string>
+				<key>SUPPORTED_PLATFORMS</key>
+				<string>iphoneos iphonesimulator</string>
+				<key>SWIFT_ACTIVE_COMPILATION_CONDITIONS</key>
+				<string>DEBUG</string>
+				<key>SWIFT_OPTIMIZATION_LEVEL</key>
+				<string>-Onone</string>
+				<key>SWIFT_VERSION</key>
+				<string>5.0</string>
+				<key>TARGETED_DEVICE_FAMILY</key>
+				<string>1,2</string>
+			</dict>
+			<key>isa</key>
+			<string>XCBuildConfiguration</string>
+			<key>name</key>
+			<string>Debug</string>
+		</dict>
 		<key>7D1043473D55BFA90E8530D3</key>
 		<dict>
 			<key>buildConfigurationList</key>
@@ -722,11 +880,14 @@
 				<string>7561BFB015D8F536760CB671</string>
 				<string>0189424A5A60FED329FA868E</string>
 				<string>50AFC405A6062934BEA58612</string>
+				<string>87284A5F642FDDEE9F7229B6</string>
 			</array>
 			<key>buildRules</key>
 			<array/>
 			<key>dependencies</key>
-			<array/>
+			<array>
+				<string>CFB25F5EC91A059549581AC4</string>
+			</array>
 			<key>isa</key>
 			<string>PBXNativeTarget</string>
 			<key>name</key>
@@ -751,6 +912,25 @@
 			<string>Release</string>
 			<key>isa</key>
 			<string>XCConfigurationList</string>
+		</dict>
+		<key>87284A5F642FDDEE9F7229B6</key>
+		<dict>
+			<key>buildActionMask</key>
+			<integer>2147483647</integer>
+			<key>dstPath</key>
+			<string></string>
+			<key>dstSubfolderSpec</key>
+			<integer>13</integer>
+			<key>files</key>
+			<array>
+				<string>3DE977F28540BB0F79305A88</string>
+			</array>
+			<key>isa</key>
+			<string>PBXCopyFilesBuildPhase</string>
+			<key>name</key>
+			<string>Embed Foundation Extensions</string>
+			<key>runOnlyForDeploymentPostprocessing</key>
+			<integer>0</integer>
 		</dict>
 		<key>887985ED78CBDAB42474984B</key>
 		<dict>
@@ -784,6 +964,8 @@
 				<string>Automatic</string>
 				<key>DEBUG_INFORMATION_FORMAT</key>
 				<string>dwarf</string>
+				<key>DEVELOPMENT_TEAM</key>
+				<string>JDR6VAV2RA</string>
 				<key>ENABLE_TESTABILITY</key>
 				<string>YES</string>
 				<key>IPHONEOS_DEPLOYMENT_TARGET</key>
@@ -869,6 +1051,7 @@
 			<array>
 				<string>7D1043473D55BFA90E8530D3</string>
 				<string>04D13FD0AA6F0197CF2C9990</string>
+				<string>0BF4170444CD473CD4066C79</string>
 			</array>
 		</dict>
 		<key>9D9AC9A3CCA5EA10F8A94F12</key>
@@ -903,6 +1086,19 @@
 			<string>WakeOn/ListenerSettings.swift</string>
 			<key>sourceTree</key>
 			<string>&lt;group&gt;</string>
+		</dict>
+		<key>9FFD0BA0E901E061DB366D39</key>
+		<dict>
+			<key>buildActionMask</key>
+			<integer>2147483647</integer>
+			<key>files</key>
+			<array>
+				<string>66968D52B5FC93FDB4C50806</string>
+			</array>
+			<key>isa</key>
+			<string>PBXResourcesBuildPhase</string>
+			<key>runOnlyForDeploymentPostprocessing</key>
+			<integer>0</integer>
 		</dict>
 		<key>A459CE8F90BA65D343EC2072</key>
 		<dict>
@@ -985,6 +1181,28 @@
 			<key>sourceTree</key>
 			<string>BUILT_PRODUCTS_DIR</string>
 		</dict>
+		<key>B81F7C4987416DEB2976F4B6</key>
+		<dict>
+			<key>isa</key>
+			<string>PBXFileReference</string>
+			<key>lastKnownFileType</key>
+			<string>folder.assetcatalog</string>
+			<key>path</key>
+			<string>WakeOnLiveActivity/Assets.xcassets</string>
+			<key>sourceTree</key>
+			<string>&lt;group&gt;</string>
+		</dict>
+		<key>B8E4B87623732E8BA3BF0D54</key>
+		<dict>
+			<key>buildActionMask</key>
+			<integer>2147483647</integer>
+			<key>files</key>
+			<array/>
+			<key>isa</key>
+			<string>PBXFrameworksBuildPhase</string>
+			<key>runOnlyForDeploymentPostprocessing</key>
+			<integer>0</integer>
+		</dict>
 		<key>B97D5DA01D02B855250F3BB8</key>
 		<dict>
 			<key>isa</key>
@@ -1022,6 +1240,7 @@
 				<string>D233B84F177F79322304C486</string>
 				<string>40C95F44524CD4C23904F439</string>
 				<string>E4FB3D48505D22D8422194F8</string>
+				<string>FBC965F89A87825EA3D43EDB</string>
 				<string>89707B9627501A6CC5C878D6</string>
 				<string>C096918F71FEAB2E9FC49F58</string>
 				<string>A735366E67E1349A675D19BE</string>
@@ -1039,6 +1258,7 @@
 				<string>92404B1FF440E3A7B6630303</string>
 				<string>2F254AB562BEFDB66262B1D5</string>
 				<string>7C5A1951B4BEF1420051F995</string>
+				<string>3B8E250EBF1A2DB5C7F29222</string>
 			</array>
 			<key>isa</key>
 			<string>PBXSourcesBuildPhase</string>
@@ -1087,6 +1307,28 @@
 			<string>E6BBB8D808FE964AEF86FDF6</string>
 			<key>isa</key>
 			<string>PBXBuildFile</string>
+		</dict>
+		<key>CF59003455EA5841ED646673</key>
+		<dict>
+			<key>explicitFileType</key>
+			<string>wrapper.app-extension</string>
+			<key>includeInIndex</key>
+			<integer>0</integer>
+			<key>isa</key>
+			<string>PBXFileReference</string>
+			<key>path</key>
+			<string>WakeOnLiveActivity.appex</string>
+			<key>sourceTree</key>
+			<string>BUILT_PRODUCTS_DIR</string>
+		</dict>
+		<key>CFB25F5EC91A059549581AC4</key>
+		<dict>
+			<key>isa</key>
+			<string>PBXTargetDependency</string>
+			<key>target</key>
+			<string>0BF4170444CD473CD4066C79</string>
+			<key>targetProxy</key>
+			<string>2B965140090DDF71A4732ECA</string>
 		</dict>
 		<key>CFBEB6CB84730A0BF5F268E7</key>
 		<dict>
@@ -1186,6 +1428,7 @@
 				<string>3A95F3BBE1057DD42D6E55F8</string>
 				<string>74C3E4252EFD564EB7FA8736</string>
 				<string>9F81E2B6F38D383DBF87C9B7</string>
+				<string>427734F696037F60000C4197</string>
 				<string>1CB063FB3A6A99A499006954</string>
 				<string>DCE26BF595E449F720C1CEAD</string>
 				<string>44B03283B94CFD4EFE847D7E</string>
@@ -1203,6 +1446,9 @@
 				<string>F36E746150097572D76CB5C2</string>
 				<string>43916129615D067FEEB4464D</string>
 				<string>E31B5919A1444094040D0A2C</string>
+				<string>38534BB08E9D76D11C587E49</string>
+				<string>EA887A74159053229BB4FA1B</string>
+				<string>B81F7C4987416DEB2976F4B6</string>
 				<string>9F2F0D7B8211BA8CBE1CF982</string>
 				<string>A52E1E1026008ABCCF27FFB3</string>
 				<string>7208E077BFADA885CC025FBD</string>
@@ -1345,6 +1591,8 @@
 				<string>Automatic</string>
 				<key>DEBUG_INFORMATION_FORMAT</key>
 				<string>dwarf-with-dsym</string>
+				<key>DEVELOPMENT_TEAM</key>
+				<string>JDR6VAV2RA</string>
 				<key>ENABLE_TESTABILITY</key>
 				<string>NO</string>
 				<key>IPHONEOS_DEPLOYMENT_TARGET</key>
@@ -1366,6 +1614,20 @@
 			<string>XCBuildConfiguration</string>
 			<key>name</key>
 			<string>Release</string>
+		</dict>
+		<key>E7DFA5D39B5F1A68EFD5167E</key>
+		<dict>
+			<key>buildActionMask</key>
+			<integer>2147483647</integer>
+			<key>files</key>
+			<array>
+				<string>F44CA5104F181FD84D777C1E</string>
+				<string>3B8E250EBF1A2DB5C7F29222</string>
+			</array>
+			<key>isa</key>
+			<string>PBXSourcesBuildPhase</string>
+			<key>runOnlyForDeploymentPostprocessing</key>
+			<integer>0</integer>
 		</dict>
 		<key>E823720E1997284D87C9BE0D</key>
 		<dict>
@@ -1401,6 +1663,8 @@
 				<string>Automatic</string>
 				<key>DEBUG_INFORMATION_FORMAT</key>
 				<string>dwarf</string>
+				<key>DEVELOPMENT_TEAM</key>
+				<string>JDR6VAV2RA</string>
 				<key>ENABLE_TESTABILITY</key>
 				<string>YES</string>
 				<key>ENABLE_USER_SCRIPT_SANDBOXING</key>
@@ -1445,6 +1709,67 @@
 			<key>name</key>
 			<string>Debug</string>
 		</dict>
+		<key>E9FF134EA025C4524761A2A0</key>
+		<dict>
+			<key>buildSettings</key>
+			<dict>
+				<key>APPLICATION_EXTENSION_API_ONLY</key>
+				<string>YES</string>
+				<key>CLANG_ENABLE_MODULES</key>
+				<string>YES</string>
+				<key>CODE_SIGN_STYLE</key>
+				<string>Automatic</string>
+				<key>DEBUG_INFORMATION_FORMAT</key>
+				<string>dwarf-with-dsym</string>
+				<key>DEVELOPMENT_TEAM</key>
+				<string>JDR6VAV2RA</string>
+				<key>ENABLE_TESTABILITY</key>
+				<string>NO</string>
+				<key>INFOPLIST_FILE</key>
+				<string>WakeOnLiveActivity/Info.plist</string>
+				<key>IPHONEOS_DEPLOYMENT_TARGET</key>
+				<string>17.0</string>
+				<key>LD_RUNPATH_SEARCH_PATHS</key>
+				<array>
+					<string>$(inherited)</string>
+					<string>@executable_path/Frameworks</string>
+					<string>@executable_path/../../Frameworks</string>
+				</array>
+				<key>PRODUCT_BUNDLE_IDENTIFIER</key>
+				<string>dev.wakeon.ios.LiveActivity</string>
+				<key>PRODUCT_NAME</key>
+				<string>$(TARGET_NAME)</string>
+				<key>SDKROOT</key>
+				<string>iphoneos</string>
+				<key>SKIP_INSTALL</key>
+				<string>YES</string>
+				<key>SUPPORTED_PLATFORMS</key>
+				<string>iphoneos iphonesimulator</string>
+				<key>SWIFT_ACTIVE_COMPILATION_CONDITIONS</key>
+				<string></string>
+				<key>SWIFT_OPTIMIZATION_LEVEL</key>
+				<string>-O</string>
+				<key>SWIFT_VERSION</key>
+				<string>5.0</string>
+				<key>TARGETED_DEVICE_FAMILY</key>
+				<string>1,2</string>
+			</dict>
+			<key>isa</key>
+			<string>XCBuildConfiguration</string>
+			<key>name</key>
+			<string>Release</string>
+		</dict>
+		<key>EA887A74159053229BB4FA1B</key>
+		<dict>
+			<key>isa</key>
+			<string>PBXFileReference</string>
+			<key>lastKnownFileType</key>
+			<string>sourcecode.swift</string>
+			<key>path</key>
+			<string>WakeOnLiveActivity/ListeningLiveActivity.swift</string>
+			<key>sourceTree</key>
+			<string>&lt;group&gt;</string>
+		</dict>
 		<key>F29E91B590F34040D4912AA5</key>
 		<dict>
 			<key>fileRef</key>
@@ -1477,6 +1802,13 @@
 			<key>isa</key>
 			<string>XCConfigurationList</string>
 		</dict>
+		<key>F44CA5104F181FD84D777C1E</key>
+		<dict>
+			<key>fileRef</key>
+			<string>EA887A74159053229BB4FA1B</string>
+			<key>isa</key>
+			<string>PBXBuildFile</string>
+		</dict>
 		<key>F5A8AD6DD1708ECCF94AA2E2</key>
 		<dict>
 			<key>fileRef</key>
@@ -1491,12 +1823,20 @@
 			<key>isa</key>
 			<string>PBXBuildFile</string>
 		</dict>
+		<key>FBC965F89A87825EA3D43EDB</key>
+		<dict>
+			<key>fileRef</key>
+			<string>427734F696037F60000C4197</string>
+			<key>isa</key>
+			<string>PBXBuildFile</string>
+		</dict>
 		<key>FBDC4F23F93125BBEEAE800C</key>
 		<dict>
 			<key>children</key>
 			<array>
 				<string>38A007151ABE87CC01A5B6E9</string>
 				<string>B7480EC88B7F22D0A4757273</string>
+				<string>CF59003455EA5841ED646673</string>
 			</array>
 			<key>isa</key>
 			<string>PBXGroup</string>

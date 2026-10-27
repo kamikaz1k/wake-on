@@ -57,7 +57,8 @@ final class VoiceSessionController: ObservableObject {
     /// Trigger → server ready and audio leaving the phone.
     @Published private(set) var reachingMs: Double?
     private var firstAudio = false
-    private var resumeWakeListener = false
+    /// The wake listener was on (or paused) when this call started and comes back after it.
+    private(set) var resumeWakeListener = false
     private var lastInputEndMs: Int?
     private var backendSeen: [String: Set<String>] = [:]
     private var lastSpeaker: String?

@@ -6,7 +6,11 @@ final class AppDelegate: NSObject, UIApplicationDelegate {
     func application(_ application: UIApplication,
                      didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil) -> Bool {
         // Battery sessions follow the wake listener and calls from launch on.
-        Task { @MainActor in BatteryMonitor.shared.activate() }
+        Task { @MainActor in
+            BatteryMonitor.shared.activate()
+            // The orb in the Dynamic Island while listening.
+            ListeningActivityController.shared.activate()
+        }
         if application.applicationState == .background, OpenAILiveVoiceProvider.useHotAudio {
             HotAudioDevice.shared.mayArm = false
             HotAudioDevice.shared.prebuildAsync { result in

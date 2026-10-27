@@ -30,6 +30,10 @@ def configs(name, settings):
 
 sources=[file(str(p.relative_to(root)), 'sourcecode.swift') for p in sorted((root/'WakeOn').rglob('*.swift'))]
 sources+=[file(str(p.relative_to(root)), 'sourcecode.metal') for p in sorted((root/'WakeOn').rglob('*.metal'))]
+# Compiled into both the app and the Live Activity extension.
+shared=[file(str(p.relative_to(root)), 'sourcecode.swift') for p in sorted((root/'Shared').glob('*.swift'))]
+activity_sources=[file(str(p.relative_to(root)), 'sourcecode.swift') for p in sorted((root/'WakeOnLiveActivity').glob('*.swift'))]
+activity_assets=file('WakeOnLiveActivity/Assets.xcassets', 'folder.assetcatalog')
 tests=[file(str(p.relative_to(root)), 'sourcecode.swift') for p in sorted((root/'Tests').glob('*.swift'))]
 resources=[file('Resources/'+n, 'file') for n in ['encoder.onnx','decoder.onnx','joiner.onnx','tokens.txt','hey-lobby.txt','wake-fixture.wav']]
 # Recorded two-voice conversation for the visualizer gallery.
@@ -41,19 +45,27 @@ webrtc=file('Vendor/WebRTC.xcframework', 'wrapper.xcframework')
 frameworks.append(webrtc)
 embed_file=add('embedWebRTC', 'PBXBuildFile', fileRef=webrtc, settings={'ATTRIBUTES': ['CodeSignOnCopy', 'RemoveHeadersOnCopy']})
 embed=add('embedFrameworks', 'PBXCopyFilesBuildPhase', buildActionMask=2147483647, dstPath='', dstSubfolderSpec=10, files=[embed_file], name='Embed Frameworks', runOnlyForDeploymentPostprocessing=0)
+# The Live Activity (orb in the Dynamic Island) is a widget extension embedded in the app.
+appex=add('appexproduct','PBXFileReference',explicitFileType='wrapper.app-extension',path='WakeOnLiveActivity.appex',sourceTree='BUILT_PRODUCTS_DIR',includeInIndex=0)
+embed_appex_file=add('embedAppex', 'PBXBuildFile', fileRef=appex, settings={'ATTRIBUTES': ['RemoveHeadersOnCopy']})
+embed_appex=add('embedAppExtensions', 'PBXCopyFilesBuildPhase', buildActionMask=2147483647, dstPath='', dstSubfolderSpec=13, files=[embed_appex_file], name='Embed Foundation Extensions', runOnlyForDeploymentPostprocessing=0)
 app=add('product','PBXFileReference',explicitFileType='wrapper.application',path='WakeOn.app',sourceTree='BUILT_PRODUCTS_DIR',includeInIndex=0)
 test_product=add('testproduct','PBXFileReference',explicitFileType='wrapper.cfbundle',path='WakeOnTests.xctest',sourceTree='BUILT_PRODUCTS_DIR',includeInIndex=0)
-products=add('products','PBXGroup',children=[app,test_product],name='Products',sourceTree='<group>')
-group=add('root','PBXGroup',children=sources+tests+resources+frameworks+[products],sourceTree='<group>')
-common=dict(SWIFT_VERSION='5.0',IPHONEOS_DEPLOYMENT_TARGET='17.0',SDKROOT='iphoneos',SUPPORTED_PLATFORMS='iphoneos iphonesimulator',TARGETED_DEVICE_FAMILY='1,2',CLANG_ENABLE_MODULES='YES',CODE_SIGN_STYLE='Automatic')
+products=add('products','PBXGroup',children=[app,test_product,appex],name='Products',sourceTree='<group>')
+group=add('root','PBXGroup',children=sources+shared+activity_sources+[activity_assets]+tests+resources+frameworks+[products],sourceTree='<group>')
+common=dict(SWIFT_VERSION='5.0',IPHONEOS_DEPLOYMENT_TARGET='17.0',SDKROOT='iphoneos',SUPPORTED_PLATFORMS='iphoneos iphonesimulator',TARGETED_DEVICE_FAMILY='1,2',CLANG_ENABLE_MODULES='YES',CODE_SIGN_STYLE='Automatic',DEVELOPMENT_TEAM='JDR6VAV2RA')
 appsettings=dict(common,PRODUCT_BUNDLE_IDENTIFIER='dev.wakeon.ios',PRODUCT_NAME='$(TARGET_NAME)',INFOPLIST_FILE='WakeOn/Info.plist',SWIFT_OBJC_BRIDGING_HEADER='WakeOn/Bridge.h',HEADER_SEARCH_PATHS='$(PROJECT_DIR)/Vendor/build-ios-no-tts/sherpa-onnx.xcframework/Headers',OTHER_LDFLAGS=['$(inherited)','-lc++'],LD_RUNPATH_SEARCH_PATHS=['$(inherited)','@executable_path/Frameworks'],ENABLE_USER_SCRIPT_SANDBOXING='YES',ASSETCATALOG_COMPILER_APPICON_NAME='AppIcon')
-app_target=add('app','PBXNativeTarget',name='WakeOn',productName='WakeOn',productReference=app,productType='com.apple.product-type.application',buildConfigurationList=configs('app',appsettings),buildPhases=[phase('sources','PBXSourcesBuildPhase',sources),phase('frameworks','PBXFrameworksBuildPhase',frameworks),phase('resources','PBXResourcesBuildPhase',resources),embed],buildRules=[],dependencies=[])
 project_id=hashlib.sha1(b'project').hexdigest()[:24].upper()
+activity_settings=dict(common,PRODUCT_BUNDLE_IDENTIFIER='dev.wakeon.ios.LiveActivity',PRODUCT_NAME='$(TARGET_NAME)',INFOPLIST_FILE='WakeOnLiveActivity/Info.plist',SKIP_INSTALL='YES',APPLICATION_EXTENSION_API_ONLY='YES',LD_RUNPATH_SEARCH_PATHS=['$(inherited)','@executable_path/Frameworks','@executable_path/../../Frameworks'])
+activity_target=add('activity','PBXNativeTarget',name='WakeOnLiveActivity',productName='WakeOnLiveActivity',productReference=appex,productType='com.apple.product-type.app-extension',buildConfigurationList=configs('activity',activity_settings),buildPhases=[phase('activitySources','PBXSourcesBuildPhase',activity_sources+shared),phase('activityFrameworks','PBXFrameworksBuildPhase',[]),phase('activityResources','PBXResourcesBuildPhase',[activity_assets])],buildRules=[],dependencies=[])
+activity_proxy=add('activityProxy','PBXContainerItemProxy',containerPortal=project_id,proxyType=1,remoteGlobalIDString=activity_target,remoteInfo='WakeOnLiveActivity')
+activity_dep=add('activityDependency','PBXTargetDependency',target=activity_target,targetProxy=activity_proxy)
+app_target=add('app','PBXNativeTarget',name='WakeOn',productName='WakeOn',productReference=app,productType='com.apple.product-type.application',buildConfigurationList=configs('app',appsettings),buildPhases=[phase('sources','PBXSourcesBuildPhase',sources+shared),phase('frameworks','PBXFrameworksBuildPhase',frameworks),phase('resources','PBXResourcesBuildPhase',resources),embed,embed_appex],buildRules=[],dependencies=[activity_dep])
 proxy=add('proxy','PBXContainerItemProxy',containerPortal=project_id,proxyType=1,remoteGlobalIDString=app_target,remoteInfo='WakeOn')
 dep=add('dependency','PBXTargetDependency',target=app_target,targetProxy=proxy)
 test_settings=dict(common,PRODUCT_NAME='$(TARGET_NAME)',PRODUCT_BUNDLE_IDENTIFIER='dev.wakeon.ios.tests',GENERATE_INFOPLIST_FILE='YES',TEST_HOST='$(BUILT_PRODUCTS_DIR)/WakeOn.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/WakeOn',BUNDLE_LOADER='$(TEST_HOST)',SWIFT_OBJC_BRIDGING_HEADER='WakeOn/Bridge.h',HEADER_SEARCH_PATHS=appsettings['HEADER_SEARCH_PATHS'])
 test_target=add('tests','PBXNativeTarget',name='WakeOnTests',productName='WakeOnTests',productReference=test_product,productType='com.apple.product-type.bundle.unit-test',buildConfigurationList=configs('tests',test_settings),buildPhases=[phase('testSources','PBXSourcesBuildPhase',tests),phase('testFrameworks','PBXFrameworksBuildPhase',[])],buildRules=[],dependencies=[dep])
-add('project','PBXProject',attributes={'LastUpgradeCheck':'2600'},buildConfigurationList=configs('project',common),compatibilityVersion='Xcode 14.0',developmentRegion='en',hasScannedForEncodings=0,knownRegions=['en','Base'],mainGroup=group,productRefGroup=products,projectDirPath='',projectRoot='',targets=[app_target,test_target])
+add('project','PBXProject',attributes={'LastUpgradeCheck':'2600'},buildConfigurationList=configs('project',common),compatibilityVersion='Xcode 14.0',developmentRegion='en',hasScannedForEncodings=0,knownRegions=['en','Base'],mainGroup=group,productRefGroup=products,projectDirPath='',projectRoot='',targets=[app_target,test_target,activity_target])
 proj=root/'WakeOn.xcodeproj'
 proj.mkdir(exist_ok=True)
 (proj/'project.pbxproj').write_bytes(plistlib.dumps(dict(archiveVersion='1',classes={},objectVersion='56',objects=objects,rootObject=project_id)))
@@ -69,6 +81,9 @@ def ref(id,name):
 <ProfileAction buildConfiguration="Release"><BuildableProductRunnable runnableDebuggingMode="0">{ref(app_target,'WakeOn.app')}</BuildableProductRunnable></ProfileAction>
 <AnalyzeAction buildConfiguration="Debug"/><ArchiveAction buildConfiguration="Release" revealArchiveInOrganizer="YES"/>
 </Scheme>''')
-info=dict(CFBundleDevelopmentRegion='en',CFBundleExecutable='$(EXECUTABLE_NAME)',CFBundleIdentifier='$(PRODUCT_BUNDLE_IDENTIFIER)',CFBundleInfoDictionaryVersion='6.0',CFBundleName='Wake On',CFBundlePackageType='APPL',CFBundleShortVersionString='0.1.0',CFBundleVersion='2',LSRequiresIPhoneOS=True,NSMicrophoneUsageDescription='Listen locally for Hey Lobby, keep a short audio buffer for the wake handoff, and talk with the voice assistant.',UIBackgroundModes=['audio'],UILaunchScreen={},UISupportedInterfaceOrientations=['UIInterfaceOrientationPortrait','UIInterfaceOrientationLandscapeLeft','UIInterfaceOrientationLandscapeRight'],UIApplicationSceneManifest={'UIApplicationSupportsMultipleScenes':False},ITSAppUsesNonExemptEncryption=False,CFBundleURLTypes=[{'CFBundleURLName':'dev.wakeon.ios','CFBundleURLSchemes':['wakeon']}])
+info=dict(CFBundleDevelopmentRegion='en',CFBundleExecutable='$(EXECUTABLE_NAME)',CFBundleIdentifier='$(PRODUCT_BUNDLE_IDENTIFIER)',CFBundleInfoDictionaryVersion='6.0',CFBundleName='Wake On',CFBundlePackageType='APPL',CFBundleShortVersionString='0.1.0',CFBundleVersion='2',LSRequiresIPhoneOS=True,NSMicrophoneUsageDescription='Listen locally for Hey Lobby, keep a short audio buffer for the wake handoff, and talk with the voice assistant.',UIBackgroundModes=['audio'],NSSupportsLiveActivities=True,UILaunchScreen={},UISupportedInterfaceOrientations=['UIInterfaceOrientationPortrait','UIInterfaceOrientationLandscapeLeft','UIInterfaceOrientationLandscapeRight'],UIApplicationSceneManifest={'UIApplicationSupportsMultipleScenes':False},ITSAppUsesNonExemptEncryption=False,CFBundleURLTypes=[{'CFBundleURLName':'dev.wakeon.ios','CFBundleURLSchemes':['wakeon']}])
 info['UISupportedInterfaceOrientations~ipad'] = info['UISupportedInterfaceOrientations'] + ['UIInterfaceOrientationPortraitUpsideDown']
 (root/'WakeOn/Info.plist').write_bytes(plistlib.dumps(info))
+
+activity_info=dict(CFBundleDevelopmentRegion='en',CFBundleDisplayName='Wake On',CFBundleExecutable='$(EXECUTABLE_NAME)',CFBundleIdentifier='$(PRODUCT_BUNDLE_IDENTIFIER)',CFBundleInfoDictionaryVersion='6.0',CFBundleName='$(PRODUCT_NAME)',CFBundlePackageType='XPC!',CFBundleShortVersionString=info['CFBundleShortVersionString'],CFBundleVersion=info['CFBundleVersion'],NSExtension={'NSExtensionPointIdentifier':'com.apple.widgetkit-extension'})
+(root/'WakeOnLiveActivity/Info.plist').write_bytes(plistlib.dumps(activity_info))
