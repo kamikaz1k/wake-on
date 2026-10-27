@@ -77,6 +77,15 @@ final class VoiceActivityTests: XCTestCase {
         XCTAssertEqual(latencies[0], 0.8, accuracy: 0.001)
     }
 
+    func testGoodbyeDetection() {
+        for text in ["Okay, bye.", "Bye!", "Talk soon. Bye-bye.", "Goodbye.", "okay bye "] {
+            XCTAssertTrue(VoiceSessionController.endsWithBye(text), text)
+        }
+        for text in ["Stand by.", "Anything else?", "Bye, and also", "Maybe", "abye"] {
+            XCTAssertFalse(VoiceSessionController.endsWithBye(text), text)
+        }
+    }
+
     func testSessionRequestMatchesTheLiveAPI() throws {
         let body = LiveVoiceConfig().requestBody(sdp: "v=0")
         let session = try XCTUnwrap(body["session"] as? [String: Any])
@@ -84,7 +93,9 @@ final class VoiceActivityTests: XCTestCase {
         let delegation = try XCTUnwrap(session["delegation"] as? [String: Any])
         XCTAssertEqual(delegation["type"] as? String, "responses")
         let responses = try XCTUnwrap(delegation["responses"] as? [String: Any])
-        XCTAssertEqual((responses["tools"] as? [[String: String]])?.first?["type"], "web_search")
+        let tools = try XCTUnwrap(responses["tools"] as? [[String: Any]])
+        XCTAssertEqual(tools.first?["type"] as? String, "web_search")
+        XCTAssertEqual(tools.count, 1)
         let transport = try XCTUnwrap(body["transport"] as? [String: String])
         XCTAssertEqual(transport, ["type": "webrtc", "sdp": "v=0"])
         XCTAssertNoThrow(try JSONSerialization.data(withJSONObject: body))

@@ -38,7 +38,9 @@ struct FastTalkIntent: AppIntent {
         VoiceSessionController.appLog(String(format: "intent FastTalkIntent entered appAgeMs=%.0f state=%d",
                                              Double(entered - LatencyTrace.processStart) / 1e6,
                                              UIApplication.shared.applicationState.rawValue))
+        let hangingUp = VoiceSessionController.shared.phase != .idle
         VoiceSessionController.shared.start(trigger: "app_intent_fast", origin: entered)
+        if hangingUp { return .result() } // a second press ended the call
         if #available(iOS 26.0, *) {
             try await continueInForeground(nil, alwaysConfirm: false)
             VoiceSessionController.shared.noteForegrounded(at: DispatchTime.now().uptimeNanoseconds)

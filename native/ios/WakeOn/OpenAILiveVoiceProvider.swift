@@ -14,7 +14,12 @@ struct LiveVoiceConfig {
     it briefly. When a question needs \
     current or factual information you are unsure of, delegate it so it can be searched on the web. \
     While it is being looked up, say at most three words such as "One moment", then stop and wait, \
-    so the answer can be spoken as soon as it arrives.
+    so the answer can be spoken as soon as it arrives. \
+    When the user is clearly finished (for example "that's all", "thanks, bye", "okay, I'm done", or \
+    "no" to "Anything else?"), reply with only a brief send-off that ends with the word "Bye", such as \
+    "Okay, bye." The call ends by itself after that. End a reply with "Bye" only when the conversation \
+    is over; never for a pause, a thank-you in the middle of a conversation, or a new question. If you \
+    are told the user has gone quiet, check in with one short question, such as "Anything else?"
     """
     var delegationModel = "gpt-5.6-terra"
     var delegationInstructions = """
@@ -378,6 +383,11 @@ final class OpenAILiveVoiceProvider: NSObject {
 
     /// Asks the server to finish the session; `session.closed` follows on the data channel.
     func requestClose() { send(["type": "session.close"]) }
+
+    /// Gives the Live model something to say to the user now (`session.commentary.append`).
+    func sendCommentary(_ content: String) {
+        send(["type": "session.commentary.append", "delegation_id": NSNull(), "content": content])
+    }
 
     func close(reason: String) {
         guard !closed else { return }

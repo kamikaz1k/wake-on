@@ -223,43 +223,65 @@ final class HotAudioDevice: NSObject, @unchecked Sendable {
     /// Play the chime when the next call's microphone first records (set per call).
     var chimeOnFirstCapture = false
     private static let chimeSeconds = 0.17
+    /// The end chime's length, so a hang-up can wait for it before closing.
+    static let endChimeSeconds = 0.55
     private let chime = UnsafeMutablePointer<Int16>.allocate(capacity: 48_000)
     private var chimeLength = 0
+    private let endChime = UnsafeMutablePointer<Int16>.allocate(capacity: 48_000)
+    private var endChimeLength = 0
     private var chimeStart = false     // set by the microphone thread, consumed by the render thread
+    private var endChimeStart = false  // set by any thread, consumed by the render thread
+    private var playingEndChime = false // render thread
     private var chimePosition = -1     // render thread; -1 = not playing
     private var micMuteRemaining = 0   // microphone thread
     /// Microphone thread: the chime was started.
     var onChime: (() -> Void)?
 
-    /// Two short rising notes with soft edges (not on an audio thread).
+    /// Ready: two short, bright rising notes. End: two lower, quieter falling notes that fade
+    /// out like a soft bell. Built off the audio threads.
     private func makeChime(sampleRate: Double) {
-        let notes: [(frequency: Double, seconds: Double)] = [(1_318.5, 0.07), (1_760, 0.10)]
+        chimeLength = Self.render([(1_318.5, 0.07), (1_760, 0.10)], into: chime, sampleRate: sampleRate,
+                                  level: 0.22, attack: 0.005, decay: nil)
+        endChimeLength = Self.render([(784, 0.20), (587.3, 0.35)], into: endChime, sampleRate: sampleRate,
+                                     level: 0.11, attack: 0.02, decay: 0.12)
+    }
+
+    /// `decay`: time constant of an exponential fade (a ringing note); nil for flat notes.
+    private static func render(_ notes: [(frequency: Double, seconds: Double)], into buffer: UnsafeMutablePointer<Int16>,
+                               sampleRate: Double, level: Double, attack: Double, decay: Double?) -> Int {
         var index = 0
         for note in notes {
             let count = Int(note.seconds * sampleRate)
             for n in 0..<count where index < 48_000 {
                 let t = Double(n) / sampleRate
-                let envelope = min(1, t / 0.005) * min(1, (note.seconds - t) / 0.03)
-                chime[index] = Int16(0.22 * envelope * sin(2 * .pi * note.frequency * t) * 32767)
+                var envelope = min(1, t / attack) * min(1, (note.seconds - t) / 0.03)
+                if let decay { envelope *= exp(-t / decay) }
+                buffer[index] = Int16(level * envelope * sin(2 * .pi * note.frequency * t) * 32767)
                 index += 1
             }
         }
-        chimeLength = index
+        return index
     }
+
+    /// Plays the hang-up chime if the engine is running (any thread).
+    func playEndChime() { endChimeStart = true }
 
     /// Render thread: mixes the chime into `output` (Int16 mono). Returns true while it plays.
     private func mixChime(into output: UnsafeMutablePointer<AudioBufferList>, frames: Int, replace: Bool) -> Bool {
-        if chimeStart { chimeStart = false; chimePosition = 0 }
+        if chimeStart { chimeStart = false; chimePosition = 0; playingEndChime = false }
+        if endChimeStart { endChimeStart = false; chimePosition = 0; playingEndChime = true }
         guard chimePosition >= 0, let data = UnsafeMutableAudioBufferListPointer(output).first?.mData else { return false }
+        let tones = playingEndChime ? endChime : chime
+        let length = playingEndChime ? endChimeLength : chimeLength
         let samples = data.assumingMemoryBound(to: Int16.self)
-        let count = min(frames, chimeLength - chimePosition)
+        let count = min(frames, length - chimePosition)
         for index in 0..<frames {
-            let tone = index < count ? Int32(chime[chimePosition + index]) : 0
+            let tone = index < count ? Int32(tones[chimePosition + index]) : 0
             let mixed = replace ? tone : Int32(samples[index]) + tone
             samples[index] = Int16(max(-32768, min(32767, mixed)))
         }
         chimePosition += count
-        if chimePosition >= chimeLength { chimePosition = -1 }
+        if chimePosition >= length { chimePosition = -1 }
         return true
     }
 

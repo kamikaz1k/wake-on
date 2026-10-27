@@ -69,6 +69,20 @@ final class VoiceSessionController: ObservableObject {
     private var lastStatsPublish: Double = 0
     private var lastLevelLog: Double = 0
     private var serverEventCounts: [String: Int] = [:]
+    /// Silence before hanging up after Lobby says "Bye", or after it asks "Anything else?".
+    static let endSilenceSeconds = 2.0
+    private var goodbyeHeard = false
+    /// Quiet time (no speech, no lookup) before checking in, and again before ending the call.
+    static let idleSecondsKey = "voice.idleSeconds"
+    static var idleSeconds: Double {
+        let value = UserDefaults.standard.object(forKey: idleSecondsKey) as? Double ?? 10
+        return max(0, value)
+    }
+    private var lastActivity: Double?
+    private var nudgedAt: Double?
+    /// Lobby has started speaking its check-in since the nudge.
+    private var checkInSpoken = false
+    private var lookingUpSince: Double?
 
     private init() {}
 
@@ -78,7 +92,9 @@ final class VoiceSessionController: ObservableObject {
     func start(trigger: String, origin: UInt64 = DispatchTime.now().uptimeNanoseconds, probe: Probe? = nil) {
         if phase != .idle {
             WakeController.shared.cancelHandover()
-            if phase == .live, let probe { runProbe(probe) }
+            if phase == .live, let probe { runProbe(probe); return }
+            // A second Action Button press hangs up.
+            if trigger.hasPrefix("app_intent") { stop(reason: "action_button") }
             return
         }
         // Fast path first, before any bookkeeping or UI work: free the microphone, start audio,
@@ -201,6 +217,11 @@ final class VoiceSessionController: ObservableObject {
         backendSeen = [:]
         lastSpeaker = nil
         serverEventCounts = [:]
+        goodbyeHeard = false
+        lastActivity = nil
+        nudgedAt = nil
+        checkInSpoken = false
+        lookingUpSince = nil
         record("start_entered", at: origin + 1)
         if OpenAILiveVoiceProvider.useHotAudio {
             record("listening_shown")
@@ -327,9 +348,18 @@ final class VoiceSessionController: ObservableObject {
         phase = .ending
         status = "Ending…"
         log("stop reason=\(reason)")
-        provider.requestClose()
-        // session.closed normally arrives within a few hundred ms; do not wait on a dead network.
+        var chimeDelay: Duration = .zero
+        if OpenAILiveVoiceProvider.useHotAudio {
+            // Hang-up chime: keep the call's audio running until it has played, and keep the
+            // model from hearing it.
+            provider.setMuted(true)
+            HotAudioDevice.shared.playEndChime()
+            chimeDelay = .milliseconds(Int(HotAudioDevice.endChimeSeconds * 1000) + 100)
+        }
         Task {
+            try? await Task.sleep(for: chimeDelay)
+            provider.requestClose()
+            // session.closed normally arrives within a few hundred ms; do not wait on a dead network.
             try? await Task.sleep(for: .seconds(2))
             if self.provider === provider { provider.close(reason: reason) }
         }
@@ -476,8 +506,11 @@ final class VoiceSessionController: ObservableObject {
             finishSetupIfReady()
             if let probe { runProbe(probe) }
         case "session.input_transcript.delta":
-            appendTranscript("You", json["delta"] as? String ?? "")
+            let heard = json["delta"] as? String ?? ""
+            appendTranscript("You", heard)
             lastInputEndMs = json["end_ms"] as? Int
+            // Words from the user (not just mic noise or echo) answer a check-in.
+            if heard.contains(where: \.isLetter) { nudgedAt = nil; checkInSpoken = false }
         case "session.output_transcript.delta":
             let seconds = uptimeSeconds(time)
             if lastSpeaker != "Lobby" {
@@ -492,12 +525,26 @@ final class VoiceSessionController: ObservableObject {
             }
             tracker.noteAssistantTranscript(at: seconds)
             appendTranscript("Lobby", json["delta"] as? String ?? "")
+            if nudgedAt != nil { checkInSpoken = true }
+            // Follows Lobby's latest line: a reply that goes on after "bye", or a new reply to
+            // something the user said after the goodbye, cancels the hang-up.
+            let bye = transcript.last.map { $0.speaker == "Lobby" && Self.endsWithBye($0.text) } ?? false
+            if bye != goodbyeHeard {
+                goodbyeHeard = bye
+                if bye {
+                    record("goodbye_heard", at: time)
+                    log("goodbye heard: hanging up after \(Int(Self.endSilenceSeconds)) s of silence")
+                } else {
+                    log("goodbye cancelled: Lobby kept talking")
+                }
+            }
         case "session.delegation.created":
             let delegation = json["delegation"] as? [String: Any] ?? [:]
             let fields: [String: Any] = ["target": delegation["target"] as? String ?? "",
                                          "offsetMs": json["offset_ms"] as? Int ?? -1]
             exchanges.forEach { $0.delegationCreated(at: time, fields: fields) }
             log("delegation target=\(fields["target"] ?? "")")
+            lookingUpSince = uptimeSeconds(time)
             status = "Live · looking it up"
         case "response.event":
             let nested = (json["event"] as? [String: Any])?["type"] as? String ?? "unknown"
@@ -508,6 +555,9 @@ final class VoiceSessionController: ObservableObject {
                 // First occurrence of each backend stage: created, web search, first token, completed.
                 exchanges.forEach { $0.backend(nested, at: time) }
                 log("backend \(nested)")
+            }
+            if nested == "response.completed" || nested == "response.failed" || nested == "response.incomplete" {
+                lookingUpSince = nil
             }
             if nested == "response.completed", phase == .live { status = "Live · speak now" }
         case "session.usage.updated":
@@ -557,6 +607,7 @@ final class VoiceSessionController: ObservableObject {
             if let rtt = stats.roundTripMs, rtt != roundTripMs { roundTripMs = rtt }
             if let jitter = stats.jitterBufferMs { jitterBufferMs = (jitter * 10).rounded() / 10 }
         }
+        checkInactivity(at: stats.time)
         let events = tracker.ingest(time: stats.time,
                                     microphoneEnergy: muted ? nil : stats.microphoneEnergy,
                                     microphoneDuration: muted ? nil : stats.microphoneDuration,
@@ -657,13 +708,58 @@ final class VoiceSessionController: ObservableObject {
         if !OpenAILiveVoiceProvider.useHotAudio { markLocalListening(at: DispatchTime.now().uptimeNanoseconds) }
     }
 
-    /// The microphone is capturing: what the user says from now on is kept (and sent once
-    /// connected), so the app can say "Listening" before OpenAI is reachable.
+    /// Ends the call after a goodbye followed by silence; checks in, then ends, when idle.
+    private func checkInactivity(at time: Double) {
+        guard phase == .live, sessionStarted else { return }
+        // A lookup counts as activity, but never for more than 30 s.
+        let lookingUp = lookingUpSince.map { time - $0 < 30 } ?? false
+        if tracker.microphone.active || tracker.assistant.active || lookingUp || lastActivity == nil {
+            // Mic sound only delays the hang-up; it can be echo or noise. Cancelling waits for
+            // words: the transcript (see the transcript events).
+            lastActivity = time
+            return
+        }
+        guard let last = lastActivity else { return }
+        let quiet = time - last
+        if goodbyeHeard, quiet >= Self.endSilenceSeconds {
+            log(String(format: "ending after goodbye quietMs=%.0f", quiet * 1000))
+            stop(reason: "goodbye")
+            return
+        }
+        let idle = Self.idleSeconds
+        guard idle > 0, !goodbyeHeard else { return }
+        if let nudged = nudgedAt {
+            // Checked in and still no answer: end shortly after the question, or after the
+            // full silence time if Lobby never asked it.
+            let answered = checkInSpoken ? quiet >= Self.endSilenceSeconds : time - nudged >= idle && quiet >= idle
+            guard answered else { return }
+            log(String(format: "ending after no answer to check-in quietMs=%.0f", quiet * 1000))
+            stop(reason: "idle")
+        } else {
+            guard quiet >= idle else { return }
+            nudgedAt = time
+            log(String(format: "nudge after quietMs=%.0f", quiet * 1000))
+            record("inactivity_nudge")
+            provider?.sendCommentary("The user has been quiet for \(Int(idle)) seconds. "
+                + "Check in with one short question, such as \"Anything else?\"")
+        }
+    }
+
+    /// True when an assistant line ends with the word "bye" ("Okay, bye.", "Bye-bye!").
+    nonisolated static func endsWithBye(_ text: String) -> Bool {
+        let trimmed = text.lowercased().trimmingCharacters(in: .whitespacesAndNewlines.union(.punctuationCharacters))
+        guard trimmed.hasSuffix("bye") else { return false }
+        let before = trimmed.dropLast(3)
+        return before.isEmpty || before.last.map { !$0.isLetter } ?? true || before.hasSuffix("good")
+    }
+
     /// The wake listener stopped after handing its microphone to this call.
     func listenerHandedOver(reason: String) {
         record("wake_listener_stopped", fields: ["handover": reason])
     }
 
+    /// The microphone is capturing: what the user says from now on is kept (and sent once
+    /// connected), so the app can say "Listening" before OpenAI is reachable.
     private func markLocalListening(at time: UInt64) {
         guard !localListening, phase == .connecting || phase == .live else { return }
         localListening = true

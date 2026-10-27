@@ -6,6 +6,7 @@ struct VoiceSectionView: View {
     @State private var keyDraft = ""
     @AppStorage(VoiceVisualizerSettings.styleKey) private var visualizerStyle: VoiceVisualizerStyle = .skyOrb
     @AppStorage(VoiceVisualizerSettings.paletteKey) private var visualizerPalette = VoicePalette.default.name
+    @AppStorage(VoiceSessionController.idleSecondsKey) private var idleSeconds = 10.0
 
     var body: some View {
         Section {
@@ -47,8 +48,15 @@ struct VoiceSectionView: View {
                 LabeledContent("Visualizer", value: visualizerStyle.title)
             }
             .accessibilityIdentifier("visualizer-gallery")
+            Picker("Check in after silence", selection: $idleSeconds) {
+                Text("Off").tag(0.0)
+                ForEach([5.0, 10, 15, 20, 30], id: \.self) { Text("\(Int($0)) s").tag($0) }
+            }
+            .accessibilityIdentifier("voice-idle-seconds")
         } header: { Text("Voice assistant") } footer: {
-            Text("Assign Talk to Lobby to the Action Button: Settings › Action Button › Shortcut › Wake On.")
+            Text("Assign Talk to Lobby to the Action Button: Settings › Action Button › Shortcut › Wake On. "
+                 + "Press it again to hang up. After the silence time, Lobby asks if there is anything else; "
+                 + "the call ends 2 s after that question with no answer, or 2 s after Lobby says bye.")
         }
 
         if voice.keySource == "missing" {
