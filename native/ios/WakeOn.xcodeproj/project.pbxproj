@@ -22,6 +22,7 @@
 				<string>6DFDA75F1ECB6EFBF3C21E46</string>
 				<string>4CD946F6E32CA2BB00F8B91D</string>
 				<string>E456AFA48DF51D1482D7854E</string>
+				<string>D510BDB133AEB16F89091ED0</string>
 				<string>7C00743840BBDF44C1A235E4</string>
 				<string>ADAA82655AC6C4D45728DDA5</string>
 				<string>D0F09E2D13E3D4E0889AC86C</string>
@@ -472,6 +473,8 @@
 		<dict>
 			<key>buildSettings</key>
 			<dict>
+				<key>ASSETCATALOG_COMPILER_APPICON_NAME</key>
+				<string>AppIcon</string>
 				<key>CLANG_ENABLE_MODULES</key>
 				<string>YES</string>
 				<key>CODE_SIGN_STYLE</key>
@@ -868,6 +871,17 @@
 				<string>04D13FD0AA6F0197CF2C9990</string>
 			</array>
 		</dict>
+		<key>9D9AC9A3CCA5EA10F8A94F12</key>
+		<dict>
+			<key>isa</key>
+			<string>PBXFileReference</string>
+			<key>lastKnownFileType</key>
+			<string>folder.assetcatalog</string>
+			<key>path</key>
+			<string>WakeOn/Assets.xcassets</string>
+			<key>sourceTree</key>
+			<string>&lt;group&gt;</string>
+		</dict>
 		<key>9F2F0D7B8211BA8CBE1CF982</key>
 		<dict>
 			<key>isa</key>
@@ -1106,6 +1120,13 @@
 			<key>isa</key>
 			<string>PBXBuildFile</string>
 		</dict>
+		<key>D510BDB133AEB16F89091ED0</key>
+		<dict>
+			<key>fileRef</key>
+			<string>9D9AC9A3CCA5EA10F8A94F12</string>
+			<key>isa</key>
+			<string>PBXBuildFile</string>
+		</dict>
 		<key>D51D6D61BE2D40D10969555F</key>
 		<dict>
 			<key>isa</key>
@@ -1194,6 +1215,7 @@
 				<string>FC461014C9F4D497078ED35A</string>
 				<string>B97D5DA01D02B855250F3BB8</string>
 				<string>60A3508D9209F6BB16CE4484</string>
+				<string>9D9AC9A3CCA5EA10F8A94F12</string>
 				<string>0FA61C68DF833338CD63C969</string>
 				<string>48D1551B54BA62CF771F6761</string>
 				<string>A501D9A4B3CB8108DC6CD4A7</string>
@@ -1371,6 +1393,8 @@
 		<dict>
 			<key>buildSettings</key>
 			<dict>
+				<key>ASSETCATALOG_COMPILER_APPICON_NAME</key>
+				<string>AppIcon</string>
 				<key>CLANG_ENABLE_MODULES</key>
 				<string>YES</string>
 				<key>CODE_SIGN_STYLE</key>

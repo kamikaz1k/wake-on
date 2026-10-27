@@ -33,6 +33,7 @@ sources+=[file(str(p.relative_to(root)), 'sourcecode.metal') for p in sorted((ro
 tests=[file(str(p.relative_to(root)), 'sourcecode.swift') for p in sorted((root/'Tests').glob('*.swift'))]
 resources=[file('Resources/'+n, 'file') for n in ['encoder.onnx','decoder.onnx','joiner.onnx','tokens.txt','hey-lobby.txt','wake-fixture.wav']]
 # Recorded two-voice conversation for the visualizer gallery.
+resources+=[file('WakeOn/Assets.xcassets', 'folder.assetcatalog')]
 resources+=[file(str(p.relative_to(root)), 'audio.wav') for p in sorted((root/'Resources/VisualizerSamples').glob('*.wav'))]
 frameworks=[file('Vendor/build-ios-no-tts/'+p, 'wrapper.xcframework') for p in ['sherpa-onnx.xcframework','ios-onnxruntime/1.27.0/onnxruntime.xcframework']]
 # WebRTC is a dynamic framework: link it and embed it in the app bundle.
@@ -45,7 +46,7 @@ test_product=add('testproduct','PBXFileReference',explicitFileType='wrapper.cfbu
 products=add('products','PBXGroup',children=[app,test_product],name='Products',sourceTree='<group>')
 group=add('root','PBXGroup',children=sources+tests+resources+frameworks+[products],sourceTree='<group>')
 common=dict(SWIFT_VERSION='5.0',IPHONEOS_DEPLOYMENT_TARGET='17.0',SDKROOT='iphoneos',SUPPORTED_PLATFORMS='iphoneos iphonesimulator',TARGETED_DEVICE_FAMILY='1,2',CLANG_ENABLE_MODULES='YES',CODE_SIGN_STYLE='Automatic')
-appsettings=dict(common,PRODUCT_BUNDLE_IDENTIFIER='dev.wakeon.ios',PRODUCT_NAME='$(TARGET_NAME)',INFOPLIST_FILE='WakeOn/Info.plist',SWIFT_OBJC_BRIDGING_HEADER='WakeOn/Bridge.h',HEADER_SEARCH_PATHS='$(PROJECT_DIR)/Vendor/build-ios-no-tts/sherpa-onnx.xcframework/Headers',OTHER_LDFLAGS=['$(inherited)','-lc++'],LD_RUNPATH_SEARCH_PATHS=['$(inherited)','@executable_path/Frameworks'],ENABLE_USER_SCRIPT_SANDBOXING='YES')
+appsettings=dict(common,PRODUCT_BUNDLE_IDENTIFIER='dev.wakeon.ios',PRODUCT_NAME='$(TARGET_NAME)',INFOPLIST_FILE='WakeOn/Info.plist',SWIFT_OBJC_BRIDGING_HEADER='WakeOn/Bridge.h',HEADER_SEARCH_PATHS='$(PROJECT_DIR)/Vendor/build-ios-no-tts/sherpa-onnx.xcframework/Headers',OTHER_LDFLAGS=['$(inherited)','-lc++'],LD_RUNPATH_SEARCH_PATHS=['$(inherited)','@executable_path/Frameworks'],ENABLE_USER_SCRIPT_SANDBOXING='YES',ASSETCATALOG_COMPILER_APPICON_NAME='AppIcon')
 app_target=add('app','PBXNativeTarget',name='WakeOn',productName='WakeOn',productReference=app,productType='com.apple.product-type.application',buildConfigurationList=configs('app',appsettings),buildPhases=[phase('sources','PBXSourcesBuildPhase',sources),phase('frameworks','PBXFrameworksBuildPhase',frameworks),phase('resources','PBXResourcesBuildPhase',resources),embed],buildRules=[],dependencies=[])
 project_id=hashlib.sha1(b'project').hexdigest()[:24].upper()
 proxy=add('proxy','PBXContainerItemProxy',containerPortal=project_id,proxyType=1,remoteGlobalIDString=app_target,remoteInfo='WakeOn')
