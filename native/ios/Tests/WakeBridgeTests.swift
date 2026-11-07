@@ -53,10 +53,11 @@ final class WakeBridgeTests: XCTestCase {
         let device = HotAudioDevice()
         device.openBridge()
         var result = HotAudioDevice.BridgeFeed.more
-        for index in 0..<60 where result == .more {
+        // 10 s of staging: a wake call waits up to 8 s for the user's pause.
+        for index in 0..<120 where result == .more {
             result = device.feedBridge(chunk(), from: 0, hostTime: at(Double(index) * 100))
         }
         XCTAssertEqual(result, .done)
-        XCTAssertEqual(device.stagedFramesForTesting, 240_000)
+        XCTAssertEqual(device.stagedFramesForTesting, 480_000)
     }
 }

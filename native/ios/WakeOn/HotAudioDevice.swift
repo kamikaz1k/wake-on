@@ -49,8 +49,8 @@ final class HotAudioDevice: NSObject, @unchecked Sendable {
 
     // Local buffering ("listen before connected"). The backlog is touched only on the
     // microphone thread; other threads request a reset through a flag.
-    private let backlogCapacity = 480_000 // 10 s at 48 kHz
-    private let backlog = UnsafeMutablePointer<Int16>.allocate(capacity: 480_000)
+    private let backlogCapacity = 960_000 // 20 s at 48 kHz: the bridge (up to 10 s) goes in front
+    private let backlog = UnsafeMutablePointer<Int16>.allocate(capacity: 960_000)
     private var backlogCount = 0
     private var backlogRead = 0
     private var backlogResetRequested = false
@@ -96,8 +96,9 @@ final class HotAudioDevice: NSObject, @unchecked Sendable {
         lock.initialize(to: os_unfair_lock())
         return lock
     }()
-    private let bridgeCapacity = 240_000 // 5 s at 48 kHz
-    private let bridgeBuffer = UnsafeMutablePointer<Int16>.allocate(capacity: 240_000)
+    // Wake calls stage the listener's audio until the user pauses (PauseDetector, up to 8 s).
+    private let bridgeCapacity = 480_000 // 10 s at 48 kHz
+    private let bridgeBuffer = UnsafeMutablePointer<Int16>.allocate(capacity: 480_000)
     // Guarded by bridgeLock.
     private var bridgeState = BridgeState.idle
     private var bridgeCount = 0

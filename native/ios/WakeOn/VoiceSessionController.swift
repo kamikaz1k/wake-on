@@ -172,7 +172,17 @@ final class VoiceSessionController: ObservableObject {
                 Task { @MainActor in self?.record("ready_chime", at: time) }
             }
             HotAudioDevice.shared.mayArm = !inBackground || backgroundWake
-            if inBackground && !backgroundWake { armWhenActive() } else { armAudio() }
+            if Self.startsAudioAtPause(trigger: trigger), WakeController.shared.handingOver {
+                // The listener records for the call until the user pauses (listenerPaused).
+                HotAudioDevice.shared.mayArm = false
+                audioWaitsForPause = true
+                log("audio_waits_for_pause")
+                let call = callStarted
+                Task {
+                    try? await Task.sleep(for: .seconds(PauseDetector.limitSeconds + 1.5))
+                    if self.callStarted == call { self.listenerPaused(reason: "fallback", afterSeconds: -1) }
+                }
+            } else if inBackground && !backgroundWake { armWhenActive() } else { armAudio() }
         }
         let credentials = OpenAIKeyStore.load()
         let permitted = AVAudioApplication.shared.recordPermission == .granted
@@ -353,6 +363,24 @@ final class VoiceSessionController: ObservableObject {
     /// Guarded by WakeHandoverTests; don't change without re-testing "Hey Lobby, <request>"
     /// with the app on screen and in the background.
     nonisolated static func keepsListenerSession(trigger: String) -> Bool { trigger == "wake_word" }
+
+    /// Whether a call starts its audio engine only at the user's first pause. Starting it mutes
+    /// the iPhone's microphone for ~0.5 s (both the listener's and the call's audio went to
+    /// digital zeros), which ate "come" from "Hey Lobby, can you play come sail away with me".
+    /// The listener keeps recording for the call meanwhile. Cost: OpenAI hears the request
+    /// only once the user pauses. Guarded by WakeHandoverTests and check-wake-handover.py.
+    nonisolated static func startsAudioAtPause(trigger: String) -> Bool { trigger == "wake_word" }
+    private var audioWaitsForPause = false
+
+    /// The wake listener heard the user pause (or gave up waiting): start the call's audio now.
+    func listenerPaused(reason: String, afterSeconds: Double) {
+        guard audioWaitsForPause, phase == .connecting || phase == .live else { return }
+        audioWaitsForPause = false
+        log(String(format: "audio_start_after_pause reason=%@ afterMs=%.0f", reason, afterSeconds * 1000))
+        record("audio_start_after_pause", fields: ["reason": reason])
+        HotAudioDevice.shared.mayArm = true
+        armAudio()
+    }
 
     /// Whether echo cancellation waits for Lobby's first reply instead of switching on at
     /// `session.started`. Switching it on silences the mic for ~0.3 s; ~0.7 s after "Hey Lobby"
@@ -865,6 +893,7 @@ final class VoiceSessionController: ObservableObject {
     }
 
     private func finishCall(reason: String) {
+        audioWaitsForPause = false
         setupTrace?.finish("failed:\(reason)")
         turn?.finish("call_ended")
         probeRun?.finish("call_ended")

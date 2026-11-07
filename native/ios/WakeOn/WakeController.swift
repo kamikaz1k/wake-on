@@ -452,6 +452,8 @@ final class WakeController: NSObject, ObservableObject, UNUserNotificationCenter
                     HotAudioDevice.shared.openBridge()
                     bridging = true
                     bridgeStart16k = offset + block.count
+                    // The user's speaking level, from the wake phrase itself (the kept chunks).
+                    pauseDetector = PauseDetector(peakDb: recentPCM.map { Self.levelDb($0.0) }.max() ?? -120)
                 }
                 let capture = buffer.trigger(phrase)
                 print("WAKE_AUDIO detected phrase=\(phrase) prerollFrames=\(capture.samples.count)")
@@ -524,6 +526,32 @@ final class WakeController: NSObject, ObservableObject, UNUserNotificationCenter
         if bridging { stageBridge(pcm, time, from: min(start, Int(pcm.frameLength))) }
     }
 
+    /// Watches the staged listener audio for the user's first pause (worker queue).
+    private var pauseDetector: PauseDetector?
+
+    /// Worker queue: tells the call when the user pauses, so it starts its audio engine then.
+    /// Starting it mutes the iPhone's microphone for ~0.5 s; mid-sentence that lost words.
+    private func notePause(_ pcm: AVAudioPCMBuffer, from start: Int) {
+        guard var detector = pauseDetector, Int(pcm.frameLength) > start else { return }
+        let frames = Int(pcm.frameLength) - start
+        let reason = detector.add(levelDb: Self.levelDb(pcm, from: start), seconds: Double(frames) / pcm.format.sampleRate)
+        pauseDetector = reason == nil ? detector : nil
+        if let reason {
+            let elapsed = detector.elapsed
+            DispatchQueue.main.async {
+                MainActor.assumeIsolated { VoiceSessionController.shared.listenerPaused(reason: reason, afterSeconds: elapsed) }
+            }
+        }
+    }
+
+    /// A chunk's level in dBFS (channel 0).
+    nonisolated static func levelDb(_ pcm: AVAudioPCMBuffer, from start: Int = 0) -> Double {
+        guard let channel = pcm.floatChannelData?[0], Int(pcm.frameLength) > start else { return -120 }
+        var energy: Float = 0
+        for index in start..<Int(pcm.frameLength) { energy += channel[index] * channel[index] }
+        return 10 * log10(max(Double(energy) / Double(Int(pcm.frameLength) - start), 1e-12))
+    }
+
     /// Which kept chunks (index, first frame) cover the last `needed` frames, oldest first.
     nonisolated static func lookbackSlices(lengths: [Int], needed: Int) -> [(index: Int, from: Int)] {
         var remaining = needed
@@ -537,6 +565,7 @@ final class WakeController: NSObject, ObservableObject, UNUserNotificationCenter
     }
 
     private func stageBridge(_ pcm: AVAudioPCMBuffer, _ time: AVAudioTime, from start: Int) {
+        notePause(pcm, from: start)
         guard time.isHostTimeValid else {
             bridging = false
             DispatchQueue.main.async { self.completeHandover(reason: "no_host_time") }
@@ -565,6 +594,8 @@ final class WakeController: NSObject, ObservableObject, UNUserNotificationCenter
     /// The call's microphone has taken over (or must now): stop listening, keep the session.
     func completeHandover(reason: String) {
         guard handingOver else { return }
+        // The listener stops recording for the call: a call still waiting for a pause starts now.
+        MainActor.assumeIsolated { VoiceSessionController.shared.listenerPaused(reason: "handover_\(reason)", afterSeconds: -1) }
         VoiceSessionController.appLog("wake_handover_done reason=\(reason)")
         HotAudioDevice.shared.finishBridge()
         stop(reason: "voice_call", releaseSession: false)
@@ -965,5 +996,36 @@ extension WakeController {
         guard enabled else { return }
         stop(reason: "settings_changed")
         start()
+    }
+}
+
+/// Finds the user's first pause after "Hey Lobby" from listener chunk levels (dBFS), so a
+/// wake-word call starts its audio engine in a pause instead of mid-sentence. Guarded by
+/// WakeHandoverTests.
+struct PauseDetector {
+    /// Quiet this long counts as a pause. Shorter would fire between words.
+    static let pauseSeconds = 0.6
+    /// Start anyway after this long (continuous speech or loud music).
+    static let limitSeconds = 8.0
+    /// Quiet means this far below the loudest speech so far, starting from the level of the
+    /// wake phrase itself (`peakDb`), or below `silenceDb`. Measured: speech -21…-26 dB,
+    /// gaps between words -32…-42 dB, a quiet room -45 dB.
+    static let dropDb = 15.0
+    static let silenceDb = -50.0
+    private(set) var elapsed = 0.0
+    private var quiet = 0.0
+    private var peak: Double
+
+    init(peakDb: Double = -120) { peak = peakDb }
+
+    /// Adds one chunk; returns why to start now ("pause", "limit"), or nil to keep waiting.
+    mutating func add(levelDb: Double, seconds: Double) -> String? {
+        elapsed += seconds
+        peak = max(peak, levelDb)
+        let isQuiet = levelDb <= Self.silenceDb || levelDb < peak - Self.dropDb
+        quiet = isQuiet ? quiet + seconds : 0
+        if quiet >= Self.pauseSeconds { return "pause" }
+        if elapsed >= Self.limitSeconds - 1e-6 { return "limit" }
+        return nil
     }
 }

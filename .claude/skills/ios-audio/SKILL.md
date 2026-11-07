@@ -91,6 +91,17 @@ the log and run `native/ios/scripts/check-wake-handover.py <log>` (exit 1 = brok
   on at `session.started` (~0.7 s after the wake) silenced the mic ~0.3 s mid-sentence: "can you
   play come sail away with me" arrived as "can you away with me". The handover log looked fine;
   only the transcript showed it. Log: `voice_processing_deferred` then `voice_processing_after reply`.
+- **Starting the call's audio engine mutes the iPhone's mic ~0.5 s** (the listener's audio and
+  the call's both go to exact digital zeros, seen in `Documents/backlog-*.wav`). Mid-sentence that
+  ate "come" from "play come sail away". So wake calls **start the engine at the user's first
+  pause** (`startsAudioAtPause`, `PauseDetector`: 0.6 s at 15 dB under the wake phrase's level or
+  below -50 dB; 8 s limit). Until then `mayArm = false` keeps WebRTC from starting it, and the
+  listener stages everything (bridge 10 s, backlog 20 s). Log: `audio_waits_for_pause` then
+  `audio_start_after_pause reason=pause afterMs=…`. Cost: OpenAI hears the request only after
+  the pause.
+- **To find a mid-sentence gap, pull the call audio:** debug builds save
+  `Documents/backlog-<time>.wav` (48 kHz mono, what was sent). Print 20 ms levels; a run of
+  exact zeros is a muted mic, not a quiet user.
 - **Read the transcript, not just the handover numbers:** a gap in the middle of a sentence means
   the mic went silent mid-call (echo cancellation, session or route change), not a late bridge.
 

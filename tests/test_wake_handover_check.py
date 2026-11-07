@@ -22,6 +22,7 @@ VOICE start trigger=wake_word
 VOICE @1060871ms wake_word_talk appState=2
 VOICE mark device:session_kept 2.2ms detail=session_kept category=AVAudioSessionCategoryPlayAndRecord mode=AVAudioSessionModeDefault options=41 outputs=Speaker
 VOICE mic_live triggerToMicLiveMs=392
+VOICE audio_start_after_pause reason=pause afterMs=1400
 VOICE voice_processing_deferred until_reply
 VOICE voice_processing_after reply
 VOICE mark device:voice_processing_on 1900.0ms detail=voice_processing_on ms=30.0 running=yes
@@ -92,3 +93,9 @@ def test_play_request_without_tool_call_warns():
     [(number, lines)] = list(checker.wake_calls(body))
     _, warnings, _ = checker.check(lines)
     assert any("no tool was called" in reason for reason in warnings)
+
+
+def test_engine_start_before_the_pause_fails():
+    [(number, body)] = list(checker.wake_calls(EARLY_ECHO_CANCELLATION))
+    failures, _, _ = checker.check(body)
+    assert any("before the user paused" in reason for reason in failures)
