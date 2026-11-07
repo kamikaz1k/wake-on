@@ -856,7 +856,14 @@ final class VoiceSessionController: ObservableObject {
         }
         if let spotify = pendingSpotify {
             pendingSpotify = nil
-            SpotifyPlayer.open(spotify)
+            Task {
+                // Leave the screen only once the restarting listener's microphone runs: iOS
+                // won't start it once Spotify has the screen and Wake On is in the background.
+                let wake = WakeController.shared
+                for _ in 0..<60 where wake.busy && !wake.enabled { try? await Task.sleep(for: .milliseconds(50)) }
+                self.log("spotify_after_listener listening=\(wake.enabled)")
+                SpotifyPlayer.open(spotify)
+            }
         }
         #if DEBUG
         // --calls N: repeat the call in the same process to measure the warm path.
