@@ -11,10 +11,10 @@ struct ContentView: View {
     var body: some View {
         TabView(selection: Binding(get: { Self.galleryRequested ? .advanced : tab }, set: { tab = $0 })) {
             AdvancedView(controller: controller)
-                .tabItem { Label("Advanced", systemImage: "slider.horizontal.3") }
+                .tabItem { Text("Advanced") }
                 .tag(Tab.advanced)
             SimpleView(wake: controller)
-                .tabItem { Label("Simple", systemImage: "waveform") }
+                .tabItem { Text("Simple") }
                 .tag(Tab.simple)
         }
     }

@@ -67,11 +67,11 @@ struct SimpleView: View {
                     }
                     .disabled(wake.busy)
                     .accessibilityIdentifier("simple-listen")
-                    Toggle("Talk after “Hey Lobby”", isOn: $talkOnWake)
+                    Toggle("Start a conversation on “Hey Lobby”", isOn: $talkOnWake)
                         .accessibilityIdentifier("simple-talk-on-wake")
                 } header: { Text("Hands-free") } footer: {
                     Text(talkOnWake ? "Say “Hey Lobby” and your request in one go, even with the phone locked."
-                                    : "Turn on “Talk after Hey Lobby” to start a conversation by voice.")
+                                    : "Hearing “Hey Lobby” only shows a notification; no conversation starts.")
                 }
 
                 Section {
