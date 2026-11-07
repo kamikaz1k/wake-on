@@ -79,12 +79,12 @@ struct SimpleView: View {
                                                  wake.stop()
                                              }
                                          })) {
-                        Text(wake.busy ? "Starting…" : "Hey Lobby")
+                        Text(wake.busy ? "Starting…" : "Enable background listening")
                     }
                     .disabled(wake.busy)
                     .accessibilityIdentifier("simple-hands-free")
                 } header: { Text("Hands-free") } footer: {
-                    Text("Listens in the background, even with the phone locked. Say “Hey Lobby” and your request in one go. When off, start a conversation with the button above or the Action Button.")
+                    Text("Listens for “Hey Lobby”, even with the phone locked. Say it and your request in one go. When off, start a conversation with the button above or the Action Button.")
                 }
 
                 Section {
