@@ -68,17 +68,23 @@ struct SimpleView: View {
                 }
 
                 Section {
-                    Toggle(isOn: Binding(get: { wake.enabled || wake.busy },
-                                         set: { $0 ? wake.start() : wake.stop() })) {
-                        Text(wake.enabled ? "Listening for “Hey Lobby”" : (wake.busy ? "Starting…" : "Listen for “Hey Lobby”"))
+                    // One switch: background listening that starts a conversation on "Hey Lobby".
+                    // (Advanced keeps the listener's separate options, including notify-only.)
+                    Toggle(isOn: Binding(get: { (wake.enabled || wake.busy) && talkOnWake },
+                                         set: { on in
+                                             if on {
+                                                 talkOnWake = true
+                                                 if !wake.enabled && !wake.busy { wake.start() }
+                                             } else {
+                                                 wake.stop()
+                                             }
+                                         })) {
+                        Text(wake.busy ? "Starting…" : "Hey Lobby")
                     }
                     .disabled(wake.busy)
-                    .accessibilityIdentifier("simple-listen")
-                    Toggle("Start a conversation on “Hey Lobby”", isOn: $talkOnWake)
-                        .accessibilityIdentifier("simple-talk-on-wake")
+                    .accessibilityIdentifier("simple-hands-free")
                 } header: { Text("Hands-free") } footer: {
-                    Text(talkOnWake ? "Say “Hey Lobby” and your request in one go, even with the phone locked."
-                                    : "Hearing “Hey Lobby” only shows a notification; no conversation starts.")
+                    Text("Listens in the background, even with the phone locked. Say “Hey Lobby” and your request in one go. When off, start a conversation with the button above or the Action Button.")
                 }
 
                 Section {
