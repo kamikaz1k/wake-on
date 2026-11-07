@@ -20,7 +20,7 @@ final class SpotifyPlayerTests: XCTestCase {
     func testNoLinkSearchesInSpotify() {
         let request = SpotifyPlayer.request(spotifyURL: "", query: "lo-fi beats", title: "")
         XCTAssertEqual(request?.appURL.absoluteString, "spotify:search:lo%2Dfi%20beats")
-        XCTAssertNil(request?.webURL)
+        XCTAssertEqual(request?.webURL?.absoluteString, "https://open.spotify.com/search/lo%2Dfi%20beats")
     }
 
     func testOtherSiteFallsBackToSearch() {

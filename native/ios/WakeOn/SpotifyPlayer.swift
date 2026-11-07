@@ -63,7 +63,8 @@ enum SpotifyPlayer {
         guard !words.isEmpty,
               let encoded = words.addingPercentEncoding(withAllowedCharacters: .alphanumerics),
               let app = URL(string: "spotify:search:\(encoded)") else { return nil }
-        return Request(appURL: app, webURL: nil, title: title.isEmpty ? words : title)
+        return Request(appURL: app, webURL: URL(string: "https://open.spotify.com/search/\(encoded)"),
+                       title: title.isEmpty ? words : title)
     }
 
     /// Opens the item in Spotify. A background app can't open other apps, so then it posts a
@@ -83,12 +84,22 @@ enum SpotifyPlayer {
         openNow(app: request.appURL, web: request.webURL)
     }
 
-    /// Spotify's own link first; the open.spotify.com page if Spotify isn't installed.
+    /// The open.spotify.com link first, as a universal link: Spotify opens it directly, while a
+    /// `spotify:` link makes iOS ask "Open in Spotify?". The `spotify:` link is the fallback.
+
     @MainActor
     static func openNow(app: URL, web: URL?) {
+        guard let web else { return openScheme(app) }
+        UIApplication.shared.open(web, options: [.universalLinksOnly: true]) { opened in
+            VoiceSessionController.appLog("spotify_open universal \(web.absoluteString) opened=\(opened)")
+            if !opened { openScheme(app) }
+        }
+    }
+
+    @MainActor
+    private static func openScheme(_ app: URL) {
         UIApplication.shared.open(app) { opened in
             VoiceSessionController.appLog("spotify_open \(app.absoluteString) opened=\(opened)")
-            if !opened, let web { UIApplication.shared.open(web) }
         }
     }
 }
