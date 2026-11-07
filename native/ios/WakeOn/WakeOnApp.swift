@@ -75,6 +75,10 @@ struct WakeOnApp: App {
                     guard !didLaunchTest else { return }
                     didLaunchTest = true
                     let args = ProcessInfo.processInfo.arguments
+                    // --voice <name>: choose Lobby's voice (as the Voice setting does).
+                    if let index = args.firstIndex(of: "--voice"), index + 1 < args.count {
+                        UserDefaults.standard.set(args[index + 1], forKey: LiveVoiceConfig.voiceKey)
+                    }
                     if let index = args.firstIndex(of: "--media"), index + 1 < args.count {
                         // --media pause|play|next|previous: send it without a call (MediaControl).
                         let delay = args.firstIndex(of: "--media-delay").flatMap { $0 + 1 < args.count ? Double(args[$0 + 1]) : nil } ?? 0

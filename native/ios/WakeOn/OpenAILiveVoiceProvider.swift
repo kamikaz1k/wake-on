@@ -7,6 +7,13 @@ struct LiveVoiceConfig {
     var endpoint = URL(string: "https://api.openai.com/v1/live/sessions")!
     var model = "gpt-live-1"
     var voice = "marin"
+    /// Voices offered in settings, checked against gpt-live-1 on the phone (see voiceKey).
+    static let voices = ["marin", "cedar", "alloy", "ash", "ballad", "coral", "echo", "sage", "shimmer", "verse"]
+    static let voiceKey = "voice.name"
+    static var chosenVoice: String {
+        let saved = UserDefaults.standard.string(forKey: voiceKey) ?? "marin"
+        return voices.contains(saved) ? saved : "marin"
+    }
     var instructions = """
     You are Lobby, a voice assistant the user starts from their iPhone. Answer in one or two short \
     spoken sentences unless they ask for more. Start speaking right away. Always reply when the user \
@@ -436,7 +443,10 @@ final class OpenAILiveVoiceProvider: NSObject {
         request.httpMethod = "POST"
         request.setValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        request.httpBody = try JSONSerialization.data(withJSONObject: config.requestBody(sdp: sdp))
+        // The voice is read now, not when the call was prepared, so a change applies at once.
+        var current = config
+        current.voice = LiveVoiceConfig.chosenVoice
+        request.httpBody = try JSONSerialization.data(withJSONObject: current.requestBody(sdp: sdp))
         return request
     }
 

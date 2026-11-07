@@ -10,6 +10,7 @@ struct VoiceSectionView: View {
     @AppStorage(VoiceVisualizerSettings.styleKey) private var visualizerStyle: VoiceVisualizerStyle = .skyOrb
     @AppStorage(VoiceVisualizerSettings.paletteKey) private var visualizerPalette = VoicePalette.default.name
     @AppStorage(VoiceSessionController.idleSecondsKey) private var idleSeconds = 10.0
+    @AppStorage(LiveVoiceConfig.voiceKey) private var voiceName = "marin"
 
     var body: some View {
         switch part {
@@ -52,6 +53,10 @@ struct VoiceSectionView: View {
             if let error = voice.error {
                 Text(error).foregroundStyle(.red).accessibilityIdentifier("voice-error")
             }
+            Picker("Voice", selection: $voiceName) {
+                ForEach(LiveVoiceConfig.voices, id: \.self) { Text($0.capitalized).tag($0) }
+            }
+            .accessibilityIdentifier("voice-name")
             NavigationLink {
                 VoiceVisualizerGallery()
             } label: {
