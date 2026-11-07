@@ -61,7 +61,8 @@ lifecycle, goodbye/idle hang-up), `VoiceActivity.swift` (turn detection),
 - Enabling voice processing (`setVoiceProcessingEnabled`) takes ~120–180 ms; the built
   engine is kept between calls to skip it.
 - Voice processing is **bypassed while only buffering** (nothing is playing, so no echo) and
-  switched on at `session.started`, before Lobby can speak (`voice_processing_on ms=…`).
+  switched on at `session.started` for Action Button calls, or at Lobby's first reply for wake
+  calls (`voice_processing_on ms=…`).
 - Starting echo cancellation **silences the iPhone mic for ~300 ms**. No handover can
   recover that, so wake calls play a short ready chime when the call mic records.
 - Background wake calls stay in the listener's `.default` mode (see `'!int'`), so echo
@@ -85,6 +86,13 @@ the log and run `native/ios/scripts/check-wake-handover.py <log>` (exit 1 = brok
   (`session_configure ... sessionMs≈974`). The listener recorded silence meanwhile
   (`tailDb=-120`), so "come sail away with me" arrived as "away with me". Foreground
   wake calls now get the same weaker echo cancellation as background ones.
+- **Wake calls turn echo cancellation on only when Lobby starts replying**
+  (`defersVoiceProcessing`, first `session.output_transcript.delta`, or a 10 s limit). Turning it
+  on at `session.started` (~0.7 s after the wake) silenced the mic ~0.3 s mid-sentence: "can you
+  play come sail away with me" arrived as "can you away with me". The handover log looked fine;
+  only the transcript showed it. Log: `voice_processing_deferred` then `voice_processing_after reply`.
+- **Read the transcript, not just the handover numbers:** a gap in the middle of a sentence means
+  the mic went silent mid-call (echo cancellation, session or route change), not a late bridge.
 
 - The keyword spotter (sherpa-onnx, `WakeDetector`) fires **~0.25–0.36 s after the phrase
   ends** (measured on `recordings/positive`). The bridge therefore starts

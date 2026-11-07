@@ -166,6 +166,7 @@ final class VoiceSessionController: ObservableObject {
             HotAudioDevice.shared.backgroundStart = Self.keepsListenerSession(trigger: trigger)
             // A wake-word call has no screen to watch: a chime says when the microphone records.
             HotAudioDevice.shared.chimeOnFirstCapture = trigger == "wake_word"
+            voiceProcessingDeferred = Self.defersVoiceProcessing(trigger: trigger)
             HotAudioDevice.shared.onChime = { [weak self] in
                 let time = DispatchTime.now().uptimeNanoseconds
                 Task { @MainActor in self?.record("ready_chime", at: time) }
@@ -353,6 +354,24 @@ final class VoiceSessionController: ObservableObject {
     /// with the app on screen and in the background.
     nonisolated static func keepsListenerSession(trigger: String) -> Bool { trigger == "wake_word" }
 
+    /// Whether echo cancellation waits for Lobby's first reply instead of switching on at
+    /// `session.started`. Switching it on silences the mic for ~0.3 s; ~0.7 s after "Hey Lobby"
+    /// the user is usually mid-sentence ("can you [play come sail] away with me" lost the
+    /// middle). It's only needed once Lobby speaks, and by then the user has stopped.
+    /// Action Button calls keep the early switch: the user waits for the chime there.
+    /// Guarded by WakeHandoverTests and check-wake-handover.py.
+    nonisolated static func defersVoiceProcessing(trigger: String) -> Bool { trigger == "wake_word" }
+    /// Turn it on anyway after this long, in case no reply comes.
+    static let voiceProcessingDeferLimit = 10.0
+    private var voiceProcessingDeferred = false
+
+    private func enableDeferredVoiceProcessing(reason: String) {
+        guard voiceProcessingDeferred else { return }
+        voiceProcessingDeferred = false
+        log("voice_processing_after \(reason)")
+        if OpenAILiveVoiceProvider.useHotAudio { HotAudioDevice.shared.enableVoiceProcessing() }
+    }
+
     func stop(reason: String = "user") {
         guard let provider, phase == .connecting || phase == .live else { return }
         phase = .ending
@@ -509,7 +528,16 @@ final class VoiceSessionController: ObservableObject {
             phase = .live
             if !localListening { status = "Connecting… almost ready" }
             if OpenAILiveVoiceProvider.useHotAudio {
-                HotAudioDevice.shared.enableVoiceProcessing()
+                if voiceProcessingDeferred {
+                    log("voice_processing_deferred until_reply")
+                    let call = callStarted
+                    Task {
+                        try? await Task.sleep(for: .seconds(Self.voiceProcessingDeferLimit))
+                        if self.callStarted == call { self.enableDeferredVoiceProcessing(reason: "timeout") }
+                    }
+                } else {
+                    HotAudioDevice.shared.enableVoiceProcessing()
+                }
                 HotAudioDevice.shared.released = true
             }
             markListening()
@@ -522,6 +550,7 @@ final class VoiceSessionController: ObservableObject {
             // Words from the user (not just mic noise or echo) answer a check-in.
             if heard.contains(where: \.isLetter) { nudgedAt = nil; checkInSpoken = false }
         case "session.output_transcript.delta":
+            enableDeferredVoiceProcessing(reason: "reply")
             let seconds = uptimeSeconds(time)
             if lastSpeaker != "Lobby" {
                 // First reply fragment of this turn: compare the server's own timeline too.

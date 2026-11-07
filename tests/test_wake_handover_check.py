@@ -22,6 +22,9 @@ VOICE start trigger=wake_word
 VOICE @1060871ms wake_word_talk appState=2
 VOICE mark device:session_kept 2.2ms detail=session_kept category=AVAudioSessionCategoryPlayAndRecord mode=AVAudioSessionModeDefault options=41 outputs=Speaker
 VOICE mic_live triggerToMicLiveMs=392
+VOICE voice_processing_deferred until_reply
+VOICE voice_processing_after reply
+VOICE mark device:voice_processing_on 1900.0ms detail=voice_processing_on ms=30.0 running=yes
 VOICE wake bridge merged bridgeMs=736 seamGapMs=0.0 tailDb=-60
 VOICE transcript You:  What's up
 VOICE ended reason=close_requested callMs=13832 usageSeconds=15.0
@@ -63,3 +66,29 @@ def test_only_wake_calls_are_checked(tmp_path):
     assert checker.main([str(log)]) == 0
     log.write_text(ACTION_BUTTON + BROKEN_FOREGROUND)
     assert checker.main([str(log)]) == 1
+
+
+# Same day, after the session fix: echo cancellation at session start ate "play come sail".
+EARLY_ECHO_CANCELLATION = """\
+VOICE start trigger=wake_word
+VOICE @81056ms wake_word_talk appState=0
+VOICE mark device:session_kept 2.9ms detail=session_kept category=AVAudioSessionCategoryPlayAndRecord mode=AVAudioSessionModeDefault options=41 outputs=Speaker
+VOICE mic_live triggerToMicLiveMs=333
+VOICE wake bridge merged bridgeMs=766 seamGapMs=0.0 tailDb=-75
+VOICE mark device:voice_processing_on 762.3ms detail=voice_processing_on ms=32.6 running=yes
+VOICE transcript You:  Can you away with me
+VOICE transcript Lobby:  Sure, I'll start that now.
+"""
+
+
+def test_echo_cancellation_at_session_start_fails():
+    [(number, body)] = list(checker.wake_calls(EARLY_ECHO_CANCELLATION))
+    failures, warnings, _ = checker.check(body)
+    assert any("echo cancellation" in reason for reason in failures)
+
+
+def test_play_request_without_tool_call_warns():
+    body = EARLY_ECHO_CANCELLATION.replace("Can you away with me", "Can you play come sail away with me")
+    [(number, lines)] = list(checker.wake_calls(body))
+    _, warnings, _ = checker.check(lines)
+    assert any("no tool was called" in reason for reason in warnings)

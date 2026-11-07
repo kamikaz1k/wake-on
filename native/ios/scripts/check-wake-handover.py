@@ -12,6 +12,9 @@ Exit status 1 if any wake call FAILs. Per call:
   FAIL  the call switched the audio session (`session_configure`) instead of keeping the
         listener's: the switch took ~1 s and the listener recorded silence meanwhile
   FAIL  no `wake bridge merged`: the listener's audio never reached the call
+  FAIL  echo cancellation switched on at session start instead of waiting for Lobby's reply
+        (no `voice_processing_deferred`): switching silences the mic ~0.3 s, mid-sentence
+  WARN  the user asked to play/pause/stop/skip something but no tool was called
   WARN  microphone live more than 700 ms after the wake (old foreground path: ~1,100 ms)
   WARN  the staged audio ended in near silence (tailDb <= -100); fine if the user paused,
         suspicious if words went missing
@@ -48,6 +51,12 @@ def check(body):
         facts["bridge_ms"] = int(bridge[1])
         if int(bridge[2]) <= -100:
             warnings.append(f"staged audio ended in near silence (tailDb={bridge[2]})")
+    if "voice_processing_on" in joined and "voice_processing_deferred" not in joined:
+        failures.append("echo cancellation switched on at session start, not after Lobby's reply "
+                        "(silences the mic ~0.3 s mid-sentence)")
+    said_text = " ".join(line.split("You:", 1)[1] for line in body if line.startswith("VOICE transcript You:")).lower()
+    if re.search(r"\b(play|pause|stop|skip|resume)\b", said_text) and "function_call" not in joined:
+        warnings.append("asked to play/pause/stop/skip but no tool was called")
     mic = re.search(r"mic_live triggerToMicLiveMs=(\d+)", joined)
     if mic:
         facts["mic_live_ms"] = int(mic[1])

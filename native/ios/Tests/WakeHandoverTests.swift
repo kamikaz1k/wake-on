@@ -3,8 +3,8 @@ import XCTest
 @testable import WakeOn
 
 /// Regression guard: words said straight after "Hey Lobby" must reach the call. This broke
-/// several times (late bridge start, a session switch that recorded silence for ~1 s); each
-/// test pins one cause. Also check a device log with scripts/check-wake-handover.py.
+/// several times (late bridge start, a session switch that recorded silence for ~1 s, echo
+/// cancellation switching on mid-sentence); each test pins one cause. Also check a device log with scripts/check-wake-handover.py.
 final class WakeHandoverTests: XCTestCase {
     /// A wake-word call reuses the listener's session in the foreground too. Switching to
     /// voice-chat mode took ~1 s on an iPhone 17 Pro, and the listener recorded silence meanwhile.
@@ -14,6 +14,16 @@ final class WakeHandoverTests: XCTestCase {
         for trigger in ["app_intent_fast", "app_intent", "in_app", "url", "launch_argument"] {
             XCTAssertFalse(VoiceSessionController.keepsListenerSession(trigger: trigger), trigger)
         }
+    }
+
+    /// Switching echo cancellation on silences the mic for ~0.3 s. In a wake call that happened
+    /// ~0.7 s after "Hey Lobby", mid-sentence; it now waits for Lobby's first reply.
+    func testWakeCallsTurnOnEchoCancellationOnlyWhenLobbyReplies() {
+        XCTAssertTrue(VoiceSessionController.defersVoiceProcessing(trigger: "wake_word"))
+        for trigger in ["app_intent_fast", "app_intent", "in_app", "url", "launch_argument"] {
+            XCTAssertFalse(VoiceSessionController.defersVoiceProcessing(trigger: trigger), trigger)
+        }
+        XCTAssertGreaterThanOrEqual(VoiceSessionController.voiceProcessingDeferLimit, 5)
     }
 
     /// The real model on the recorded "Hey Lobby": the call's audio (detection point minus the

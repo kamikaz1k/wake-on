@@ -15,6 +15,8 @@ struct LiveVoiceConfig {
     current or factual information you are unsure of, delegate it so it can be searched on the web. \
     Delegate requests to play music too; they open in Spotify and the call ends. Also delegate \
     requests to pause, stop, resume or skip whatever is playing; the call ends after that too. \
+    You cannot play, pause or open anything yourself: only a delegated request does it, so always \
+    delegate those requests, and never say you started, played or paused something otherwise. \
     While it is being looked up, say at most three words such as "One moment", then stop and wait, \
     so the answer can be spoken as soon as it arrives. \
     When the user is clearly finished (for example "that's all", "thanks, bye", "okay, I'm done", or \
