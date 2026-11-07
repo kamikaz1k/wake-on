@@ -90,7 +90,10 @@ xcrun devicectl device install app --device 5976CF6D-0FD6-5A57-9711-AA29F94404E7
   **Built (2026-11-07):** the minimal version needs no Spotify account. The backend model
   web-searches the open.spotify.com link and calls `play_spotify`. The app hangs up, then opens
   `spotify:<kind>:<id>` (or `spotify:search:<query>`). From the background it posts a
-  notification to tap instead (`SpotifyPlayer.swift`).
+  notification to tap instead (`SpotifyPlayer.swift`). Verified on the phone with Premium:
+  opening `spotify:track:<id>` starts playback right away. Test without speaking:
+  `devicectl device process launch --terminate-existing dev.wakeon.ios --talk spotify`.
+  The `spotify_open` log line may be missing because the app is suspended as Spotify opens.
 - **GPT-Live phone-side tools:** declare function tools in `session.delegation.responses.tools`.
   The call arrives as `response.event` whose nested `event.type == "response.output_item.done"`
   with `item.type == "function_call"` (`call_id`, `name`, `arguments` JSON string). Reply with
