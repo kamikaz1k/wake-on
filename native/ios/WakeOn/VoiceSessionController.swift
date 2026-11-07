@@ -17,7 +17,7 @@ final class VoiceSessionController: ObservableObject {
     static let shared = VoiceSessionController()
 
     enum Phase: Equatable { case idle, connecting, live, ending }
-    enum Probe: String { case greeting, search, spotify }
+    enum Probe: String { case greeting, search, spotify, pause }
 
     struct TimelineRow: Identifiable { let id = UUID(); let name: String; let ms: Double }
     struct TranscriptLine: Identifiable { let id = UUID(); let speaker: String; var text: String }
@@ -600,6 +600,10 @@ final class VoiceSessionController: ObservableObject {
             pendingSpotify = request
         } else if name == SpotifyPlayer.toolName {
             result = "Nothing to play: no link and no query."
+        } else if name == MediaControl.toolName,
+                  let command = (arguments["action"] as? String).flatMap(MediaControl.Command.init) {
+            result = "Sent \(command.rawValue) to whatever is playing; the call is ending."
+            pendingMedia = command
         }
         // Every call needs an output before the backend can go on (see OpenAI's delegation guide).
         provider?.send(["type": "response.item.create",
@@ -607,10 +611,14 @@ final class VoiceSessionController: ObservableObject {
         provider?.send(["type": "response.create"])
         // Spotify's playback would fight the call for audio: hang up, then open it (finishCall).
         if pendingSpotify != nil { stop(reason: "spotify") }
+        if pendingMedia != nil { stop(reason: "media") }
     }
 
     /// Opened once the call has ended and released the audio session.
     private var pendingSpotify: SpotifyPlayer.Request?
+    /// Sent once the call has ended. An exclusive (foreground) call pauses other apps, which may
+    /// resume by themselves when it ends, so the command waits for that to settle.
+    private var pendingMedia: MediaControl.Command?
 
     private func appendTranscript(_ speaker: String, _ delta: String) {
         guard !delta.isEmpty else { return }
@@ -716,9 +724,12 @@ final class VoiceSessionController: ObservableObject {
         case .greeting:
             provider?.send(["type": "session.commentary.append", "delegation_id": NSNull(),
                             "content": "Greet the user in five words or fewer."])
-        case .search, .spotify:
-            let text = probe == .search ? "Search the web: what is the current weather in Toronto?"
-                                        : "Play Blinding Lights by The Weeknd on Spotify."
+        case .search, .spotify, .pause:
+            let text = switch probe {
+            case .search: "Search the web: what is the current weather in Toronto?"
+            case .spotify: "Play Blinding Lights by The Weeknd on Spotify."
+            default: "Okay, stop the music."
+            }
             provider?.send(["type": "response.item.create",
                             "item": ["type": "message", "role": "user",
                                      "content": [["type": "input_text", "text": text]]]])
@@ -853,6 +864,16 @@ final class VoiceSessionController: ObservableObject {
         if resumeWakeListener {
             resumeWakeListener = false
             WakeController.shared.start()
+        }
+        if let command = pendingMedia {
+            pendingMedia = nil
+            Task {
+                try? await Task.sleep(for: .milliseconds(800))
+                MediaControl.run(command)
+                guard command.repeatable else { return }
+                try? await Task.sleep(for: .milliseconds(1000))
+                MediaControl.run(command)
+            }
         }
         if let spotify = pendingSpotify {
             pendingSpotify = nil

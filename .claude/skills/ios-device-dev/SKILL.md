@@ -97,7 +97,19 @@ xcrun devicectl device install app --device 5976CF6D-0FD6-5A57-9711-AA29F94404E7
   opening `spotify:track:<id>` starts playback right away. Test without speaking:
   `devicectl device process launch --terminate-existing dev.wakeon.ios --talk spotify`.
   The `spotify_open` log line may be missing because the app is suspended as Spotify opens.
-- **GPT-Live phone-side tools:** declare function tools in `session.delegation.responses.tools`.
+- **Controlling other apps' playback (verified 2026-11-07, iOS 26, sideloaded debug build):**
+  the private `MediaRemote.framework` `MRMediaRemoteSendCommand(command, nil)` (play 0, pause 1,
+  toggle 2, stop 3, next 4, previous 5, loaded with `dlopen`/`dlsym`) **works**. It paused and
+  resumed Spotify with Wake On in the foreground, and paused it with the phone locked and Wake On
+  in the background. Reading state (`MRMediaRemoteGetNowPlayingApplicationIsPlaying`) is
+  blocked: it always says false, so don't rely on it. Private API means no App Store; fine for
+  this sideloaded app. Built into Lobby as the `control_media` tool (`MediaControl.swift`); the
+  call hangs up first, then the command is sent (pause/play twice, ~0.8 s and ~1.8 s after, since
+  an exclusive call pauses other apps and they may resume when it ends). Test without a call:
+  `--media pause --media-delay N [--autostart]`; with a call: `--talk pause`. Watch out: launching Wake On in the foreground can itself pause other audio,
+  so test with "play" on paused music (opening an app never resumes others). And `devicectl
+  process launch` silently does nothing while the phone is locked: check it printed
+  "Launched application". declare function tools in `session.delegation.responses.tools`.
   The call arrives as `response.event` whose nested `event.type == "response.output_item.done"`
   with `item.type == "function_call"` (`call_id`, `name`, `arguments` JSON string). Reply with
   `{"type":"response.item.create","item":{"type":"function_call_output","call_id":…,"output":"<string>"}}`

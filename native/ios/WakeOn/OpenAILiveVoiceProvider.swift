@@ -13,7 +13,8 @@ struct LiveVoiceConfig {
     stops talking, even if they only counted, tested the microphone or made a statement: acknowledge \
     it briefly. When a question needs \
     current or factual information you are unsure of, delegate it so it can be searched on the web. \
-    Delegate requests to play music too; they open in Spotify and the call ends. \
+    Delegate requests to play music too; they open in Spotify and the call ends. Also delegate \
+    requests to pause, stop, resume or skip whatever is playing; the call ends after that too. \
     While it is being looked up, say at most three words such as "One moment", then stop and wait, \
     so the answer can be spoken as soon as it arrives. \
     When the user is clearly finished (for example "that's all", "thanks, bye", "okay, I'm done", or \
@@ -32,6 +33,8 @@ struct LiveVoiceConfig {
     var webSearch = true
     /// The play_spotify tool (see SpotifyPlayer).
     var spotify = true
+    /// The control_media tool: pause, resume, skip whatever is playing (see MediaControl).
+    var mediaControl = true
     /// Host candidates are enough: OpenAI's media servers are publicly reachable.
     var iceGatheringTimeout: Duration = .seconds(3)
     /// Send the offer once no new candidate has appeared for this long.
@@ -39,11 +42,14 @@ struct LiveVoiceConfig {
     var statsInterval: Duration = .milliseconds(50)
 
     func requestBody(sdp: String) -> [String: Any] {
-        let backendInstructions = spotify ? delegationInstructions + " " + SpotifyPlayer.delegationInstructions : delegationInstructions
+        var backendInstructions = delegationInstructions
+        if spotify { backendInstructions += " " + SpotifyPlayer.delegationInstructions }
+        if mediaControl { backendInstructions += " " + MediaControl.delegationInstructions }
         var responses: [String: Any] = ["model": delegationModel, "instructions": backendInstructions]
         var tools: [[String: Any]] = []
         if webSearch { tools.append(["type": "web_search"]) }
         if spotify { tools.append(SpotifyPlayer.tool) }
+        if mediaControl { tools.append(MediaControl.tool) }
         if !tools.isEmpty {
             responses["tools"] = tools
             responses["tool_choice"] = "auto"

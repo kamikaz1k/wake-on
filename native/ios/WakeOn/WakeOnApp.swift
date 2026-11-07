@@ -75,7 +75,16 @@ struct WakeOnApp: App {
                     guard !didLaunchTest else { return }
                     didLaunchTest = true
                     let args = ProcessInfo.processInfo.arguments
-                    if let index = args.firstIndex(of: "--talk") {
+                    if let index = args.firstIndex(of: "--media"), index + 1 < args.count {
+                        // --media pause|play|next|previous: send it without a call (MediaControl).
+                        let delay = args.firstIndex(of: "--media-delay").flatMap { $0 + 1 < args.count ? Double(args[$0 + 1]) : nil } ?? 0
+                        // With the listener on, the app keeps running in the background, so the
+                        // command can be tried with the phone locked.
+                        if args.contains("--autostart") { controller.start() }
+                        DispatchQueue.main.asyncAfter(deadline: .now() + delay) {
+                            if let command = MediaControl.Command(rawValue: args[index + 1]) { MediaControl.run(command) }
+                        }
+                    } else if let index = args.firstIndex(of: "--talk") {
                         let next = args.indices.contains(index + 1) ? args[index + 1] : ""
                         VoiceSessionController.shared.start(trigger: "launch_argument",
                                                             probe: VoiceSessionController.Probe(rawValue: next))
