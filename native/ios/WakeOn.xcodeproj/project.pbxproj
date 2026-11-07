@@ -558,6 +558,20 @@
 			<key>sourceTree</key>
 			<string>&lt;group&gt;</string>
 		</dict>
+		<key>53100DED70B6793C84D0EFE9</key>
+		<dict>
+			<key>fileRef</key>
+			<string>89B55F3E600130F57D0DF153</string>
+			<key>isa</key>
+			<string>PBXBuildFile</string>
+		</dict>
+		<key>5373CC8CC3E0F75852F1F863</key>
+		<dict>
+			<key>fileRef</key>
+			<string>BE46A50C7DB40B32F9FB5D05</string>
+			<key>isa</key>
+			<string>PBXBuildFile</string>
+		</dict>
 		<key>548E5C94CE6D3460317BB2D5</key>
 		<dict>
 			<key>isa</key>
@@ -795,6 +809,7 @@
 				<string>604415CC5C8C5E7AD42D4232</string>
 				<string>F5A8AD6DD1708ECCF94AA2E2</string>
 				<string>44DA201589CF3D2915F60C94</string>
+				<string>53100DED70B6793C84D0EFE9</string>
 				<string>8F689865000D2D112E2DF22D</string>
 				<string>D20988A742E8A10B39F7CB23</string>
 				<string>5D951E7614C0C6E073261858</string>
@@ -1012,6 +1027,17 @@
 			<string>1CB063FB3A6A99A499006954</string>
 			<key>isa</key>
 			<string>PBXBuildFile</string>
+		</dict>
+		<key>89B55F3E600130F57D0DF153</key>
+		<dict>
+			<key>isa</key>
+			<string>PBXFileReference</string>
+			<key>lastKnownFileType</key>
+			<string>sourcecode.swift</string>
+			<key>path</key>
+			<string>Tests/ScreenAwakeTests.swift</string>
+			<key>sourceTree</key>
+			<string>&lt;group&gt;</string>
 		</dict>
 		<key>89E1FD6268CC0F221A2BE178</key>
 		<dict>
@@ -1337,6 +1363,7 @@
 				<string>DAFE12478B484E6833DABDF8</string>
 				<string>89707B9627501A6CC5C878D6</string>
 				<string>C096918F71FEAB2E9FC49F58</string>
+				<string>5373CC8CC3E0F75852F1F863</string>
 				<string>FD1C91C3AC027CAB5DF0EF7F</string>
 				<string>D1659F995F92D85D2ED65EAA</string>
 				<string>A735366E67E1349A675D19BE</string>
@@ -1369,6 +1396,17 @@
 			<string>sourcecode.swift</string>
 			<key>path</key>
 			<string>WakeOn/Visualizer/VoiceSignal.swift</string>
+			<key>sourceTree</key>
+			<string>&lt;group&gt;</string>
+		</dict>
+		<key>BE46A50C7DB40B32F9FB5D05</key>
+		<dict>
+			<key>isa</key>
+			<string>PBXFileReference</string>
+			<key>lastKnownFileType</key>
+			<string>sourcecode.swift</string>
+			<key>path</key>
+			<string>WakeOn/ScreenAwake.swift</string>
 			<key>sourceTree</key>
 			<string>&lt;group&gt;</string>
 		</dict>
@@ -1566,6 +1604,7 @@
 				<string>DA19DAC196A1C96922A56FB4</string>
 				<string>1CB063FB3A6A99A499006954</string>
 				<string>DCE26BF595E449F720C1CEAD</string>
+				<string>BE46A50C7DB40B32F9FB5D05</string>
 				<string>F636C0629379102AB42F410B</string>
 				<string>3C25795FAF8E71C5399FC534</string>
 				<string>44B03283B94CFD4EFE847D7E</string>
@@ -1591,6 +1630,7 @@
 				<string>F92C1B086F4CDFB01AAC82C5</string>
 				<string>A52E1E1026008ABCCF27FFB3</string>
 				<string>7208E077BFADA885CC025FBD</string>
+				<string>89B55F3E600130F57D0DF153</string>
 				<string>548E5C94CE6D3460317BB2D5</string>
 				<string>D9C92472F248312173947DD4</string>
 				<string>52D89FA008323E37BA1BDF3D</string>

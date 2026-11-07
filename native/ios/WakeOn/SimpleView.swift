@@ -10,6 +10,7 @@ struct SimpleView: View {
     @AppStorage(VoiceVisualizerSettings.paletteKey) private var visualizerPalette = VoicePalette.default.name
     @AppStorage(LiveVoiceConfig.voiceKey) private var voiceName = "marin"
     @AppStorage(ListenerSettings.Key.talkOnWake) private var talkOnWake = false
+    @AppStorage(ScreenAwake.key) private var awakeWhileCharging = true
     @State private var keyDraft = ""
 
     var body: some View {
@@ -89,6 +90,12 @@ struct SimpleView: View {
                     } label: {
                         Label("Voice", systemImage: "person.wave.2")
                     }
+                    Toggle(isOn: $awakeWhileCharging) {
+                        Label("Keep screen on while charging", systemImage: "sun.max")
+                    }
+                    .accessibilityIdentifier("simple-awake-charging")
+                } footer: {
+                    Text("While charging, the screen stays on as long as Wake On is open, like on a stand.")
                 }
             }
             .navigationTitle("Wake On")

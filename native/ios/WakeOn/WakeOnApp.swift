@@ -10,6 +10,8 @@ final class AppDelegate: NSObject, UIApplicationDelegate {
             BatteryMonitor.shared.activate()
             // The orb in the Dynamic Island while listening.
             ListeningActivityController.shared.activate()
+            // Screen stays on while charging with Wake On open (a phone on a stand).
+            ScreenAwake.shared.activate()
         }
         if application.applicationState == .background, OpenAILiveVoiceProvider.useHotAudio {
             HotAudioDevice.shared.mayArm = false
