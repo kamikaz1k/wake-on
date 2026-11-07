@@ -1,8 +1,28 @@
 import SwiftUI
 
+/// Two tabs: Simple (everyday controls) and Advanced (the full test surface).
+struct ContentView: View {
+    enum Tab: String { case advanced, simple }
+    @ObservedObject var controller: WakeController
+    @AppStorage("ui.tab") private var tab: Tab = .simple
+    /// Debug screenshots of the visualizer gallery (Advanced) open that tab.
+    static let galleryRequested = ProcessInfo.processInfo.arguments.contains("-visualizer-gallery")
+
+    var body: some View {
+        TabView(selection: Binding(get: { Self.galleryRequested ? .advanced : tab }, set: { tab = $0 })) {
+            AdvancedView(controller: controller)
+                .tabItem { Label("Advanced", systemImage: "slider.horizontal.3") }
+                .tag(Tab.advanced)
+            SimpleView(wake: controller)
+                .tabItem { Label("Simple", systemImage: "waveform") }
+                .tag(Tab.simple)
+        }
+    }
+}
+
 // A functional native test surface: call controls, then the wake listener, then call details
 // and the captured handoff.
-struct ContentView: View {
+struct AdvancedView: View {
     @ObservedObject var controller: WakeController
     #if DEBUG
     /// Launch with `-visualizer-gallery` (add `-visualizer-autoplay` to start the sample) for screenshots.

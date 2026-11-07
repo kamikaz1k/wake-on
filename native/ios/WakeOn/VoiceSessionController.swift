@@ -211,6 +211,9 @@ final class VoiceSessionController: ObservableObject {
         pendingTimeline = []
         lastStatsPublish = 0
         transcript = []
+        fullTranscript = []
+        callTrigger = trigger
+        callStartedAt = Date()
         lastResponseMs = nil
         roundTripMs = nil
         jitterBufferMs = nil
@@ -699,12 +702,19 @@ final class VoiceSessionController: ObservableObject {
         #endif
         if lastSpeaker == speaker, !transcript.isEmpty {
             transcript[transcript.count - 1].text += delta
+            if !fullTranscript.isEmpty { fullTranscript[fullTranscript.count - 1].text += delta }
         } else {
             transcript.append(TranscriptLine(speaker: speaker, text: delta))
             if transcript.count > 30 { transcript.removeFirst(transcript.count - 30) }
+            fullTranscript.append(ChatLog.Line(speaker: speaker, text: delta))
         }
         lastSpeaker = speaker
     }
+
+    /// The whole call's transcript for the chat log (`transcript` keeps only the last 30 lines).
+    private var fullTranscript: [ChatLog.Line] = []
+    private var callTrigger = ""
+    private var callStartedAt = Date()
 
     // MARK: - Turn timing
 
@@ -917,6 +927,12 @@ final class VoiceSessionController: ObservableObject {
 
     private func finishCall(reason: String) {
         audioWaitsForPause = false
+        let lines = fullTranscript.compactMap { line -> ChatLog.Line? in
+            let text = line.text.trimmingCharacters(in: .whitespacesAndNewlines)
+            return text.isEmpty ? nil : ChatLog.Line(speaker: line.speaker, text: text)
+        }
+        ChatLogStore.shared.add(ChatLog(started: callStartedAt, ended: Date(), trigger: callTrigger, lines: lines))
+        fullTranscript = []
         setupTrace?.finish("failed:\(reason)")
         turn?.finish("call_ended")
         probeRun?.finish("call_ended")
