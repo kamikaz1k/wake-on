@@ -230,6 +230,8 @@ final class VoiceSessionController: ObservableObject {
         lastSpeaker = nil
         serverEventCounts = [:]
         goodbyeHeard = false
+        lastLobbyActive = nil
+        lastUserWordsAt = nil
         lastActivity = nil
         nudgedAt = nil
         checkInSpoken = false
@@ -576,7 +578,11 @@ final class VoiceSessionController: ObservableObject {
             appendTranscript("You", heard)
             lastInputEndMs = json["end_ms"] as? Int
             // Words from the user (not just mic noise or echo) answer a check-in.
-            if heard.contains(where: \.isLetter) { nudgedAt = nil; checkInSpoken = false }
+            if heard.contains(where: \.isLetter) {
+                nudgedAt = nil
+                checkInSpoken = false
+                lastUserWordsAt = uptimeSeconds(time)
+            }
         case "session.output_transcript.delta":
             enableDeferredVoiceProcessing(reason: "reply")
             let seconds = uptimeSeconds(time)
@@ -825,6 +831,17 @@ final class VoiceSessionController: ObservableObject {
         guard phase == .live, sessionStarted else { return }
         // A lookup counts as activity, but never for more than 30 s.
         let lookingUp = lookingUpSince.map { time - $0 < 30 } ?? false
+        if tracker.assistant.active || lastLobbyActive == nil { lastLobbyActive = time }
+        if goodbyeHeard {
+            // After Lobby's goodbye, room noise must not hold the call open (it took 18 s once):
+            // only Lobby still talking or the user's transcribed words delay the hang-up.
+            if Self.goodbyeHangsUp(now: time, lobbyLastActive: lastLobbyActive ?? time,
+                                   userLastWords: lastUserWordsAt, lookingUp: lookingUp) {
+                log(String(format: "ending after goodbye lobbyQuietMs=%.0f", (time - (lastLobbyActive ?? time)) * 1000))
+                stop(reason: "goodbye")
+            }
+            return
+        }
         if tracker.microphone.active || tracker.assistant.active || lookingUp || lastActivity == nil {
             // Mic sound only delays the hang-up; it can be echo or noise. Cancelling waits for
             // words: the transcript (see the transcript events).
@@ -833,11 +850,6 @@ final class VoiceSessionController: ObservableObject {
         }
         guard let last = lastActivity else { return }
         let quiet = time - last
-        if goodbyeHeard, quiet >= Self.endSilenceSeconds {
-            log(String(format: "ending after goodbye quietMs=%.0f", quiet * 1000))
-            stop(reason: "goodbye")
-            return
-        }
         let idle = Self.idleSeconds
         guard idle > 0, !goodbyeHeard else { return }
         if let nudged = nudgedAt {
@@ -856,6 +868,17 @@ final class VoiceSessionController: ObservableObject {
                 + "Check in with one short question, such as \"Anything else?\"")
         }
     }
+
+    /// After Lobby's goodbye: hang up once Lobby has been quiet and the user has said no words
+    /// for `endSilenceSeconds`. Mic level is ignored; noise and echo held a call open for 18 s.
+    nonisolated static func goodbyeHangsUp(now: Double, lobbyLastActive: Double, userLastWords: Double?,
+                                           lookingUp: Bool) -> Bool {
+        guard !lookingUp, now - lobbyLastActive >= endSilenceSeconds else { return false }
+        if let userLastWords, now - userLastWords < endSilenceSeconds { return false }
+        return true
+    }
+    private var lastLobbyActive: Double?
+    private var lastUserWordsAt: Double?
 
     /// True when an assistant line ends with the word "bye" ("Okay, bye.", "Bye-bye!").
     nonisolated static func endsWithBye(_ text: String) -> Bool {

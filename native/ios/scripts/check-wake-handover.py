@@ -17,7 +17,7 @@ Exit status 1 if any wake call FAILs. Per call:
   FAIL  the call's audio engine started before the user paused (no `audio_start_after_pause`):
         starting it mutes the iPhone's microphone ~0.5 s, mid-sentence
   WARN  the user asked to play/pause/stop/skip something but no tool was called
-  WARN  microphone live more than 700 ms after the wake (old foreground path: ~1,100 ms)
+  WARN  microphone live more than 700 ms after the audio start (the pause, or the wake)
   WARN  the staged audio ended in near silence (tailDb <= -100); fine if the user paused,
         suspicious if words went missing
 """
@@ -67,8 +67,13 @@ def check(body):
     mic = re.search(r"mic_live triggerToMicLiveMs=(\d+)", joined)
     if mic:
         facts["mic_live_ms"] = int(mic[1])
-        if int(mic[1]) > MIC_LIVE_WARN_MS:
-            warnings.append(f"microphone live {mic[1]} ms after the wake (expected under {MIC_LIVE_WARN_MS})")
+        # Measured from the audio start (the user's pause) when the call waited for one.
+        pause_mark = re.search(r"mark audio_start_after_pause ([\d.]+)ms", joined)
+        start_ms = float(pause_mark[1]) if pause_mark else 0
+        late = int(mic[1]) - start_ms
+        if late > MIC_LIVE_WARN_MS:
+            since = "the pause" if pause_mark else "the wake"
+            warnings.append(f"microphone live {late:.0f} ms after {since} (expected under {MIC_LIVE_WARN_MS})")
     said = [line.split("You:", 1)[1].strip() for line in body if line.startswith("VOICE transcript You:")]
     facts["first_words"] = said[0] if said else ""
     return failures, warnings, facts

@@ -122,9 +122,10 @@ the log and run `native/ios/scripts/check-wake-handover.py <log>` (exit 1 = brok
 
 ## Call ending
 
-- Goodbye: once Lobby's latest line ends with "bye", the app hangs up after 2 s of silence.
-  **Known bug:** people talking nearby keep it open (and it keeps transcribing them). It
-  should hang up shortly after Lobby's farewell regardless of room noise.
+- Goodbye: once Lobby's latest line ends with "bye", the app hangs up 2 s after Lobby's voice
+  stops (`goodbyeHangsUp`). Mic level is ignored: waiting for mic silence once took 18 s
+  (room noise kept resetting it) and kept transcribing a side conversation. Only the user's
+  transcribed words delay it; Lobby answering something new cancels it.
 - Idle check-in: after the configured silence Lobby asks "Anything else?", and the call ends
   2 s after that with no answer.
 - A second Action Button press hangs up.

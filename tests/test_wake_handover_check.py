@@ -23,6 +23,7 @@ VOICE @1060871ms wake_word_talk appState=2
 VOICE mark device:session_kept 2.2ms detail=session_kept category=AVAudioSessionCategoryPlayAndRecord mode=AVAudioSessionModeDefault options=41 outputs=Speaker
 VOICE mic_live triggerToMicLiveMs=392
 VOICE audio_start_after_pause reason=pause afterMs=1400
+VOICE mark audio_start_after_pause 200.0ms reason=pause
 VOICE voice_processing_deferred until_reply
 VOICE voice_processing_after reply
 VOICE mark device:voice_processing_on 1900.0ms detail=voice_processing_on ms=30.0 running=yes
