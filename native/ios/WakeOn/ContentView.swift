@@ -1,7 +1,7 @@
 import SwiftUI
 
-/// Simple (everyday controls) or Advanced (the full test surface), switched with a compact
-/// segmented control in the navigation bar. A tab bar reserved icon space even with text only.
+/// Simple (everyday controls) or Advanced (the full test surface), switched with a segmented
+/// control at the top of each screen. A tab bar reserved icon space even with text only.
 struct ContentView: View {
     enum Mode: String { case advanced, simple }
     @ObservedObject var controller: WakeController
@@ -18,8 +18,16 @@ struct ContentView: View {
     }
 }
 
-/// "Advanced | Simple", shown at the top right of both screens.
+/// "Advanced | Simple": a standard segmented control, the first row of both screens.
 struct ModePicker: View {
+    /// As a list row without a card behind it.
+    static var row: some View {
+        ModePicker()
+            .frame(maxWidth: .infinity)
+            .listRowBackground(Color.clear)
+            .listRowInsets(EdgeInsets())
+    }
+
     static let key = "ui.tab"
     @AppStorage(key) private var mode: ContentView.Mode = .simple
     var body: some View {
@@ -28,7 +36,7 @@ struct ModePicker: View {
             Text("Simple").tag(ContentView.Mode.simple)
         }
         .pickerStyle(.segmented)
-        .fixedSize()
+        .labelsHidden()
         .accessibilityIdentifier("mode-picker")
     }
 }
@@ -44,6 +52,7 @@ struct AdvancedView: View {
     var body: some View {
         NavigationStack {
             List {
+                ModePicker.row
                 VoiceSectionView(voice: VoiceSessionController.shared)
                 Section {
                     Label(controller.status, systemImage: controller.enabled ? "mic.fill" : "mic.slash")
@@ -110,7 +119,6 @@ struct AdvancedView: View {
                 }
             }
             .navigationTitle("Wake On")
-            .toolbar { ToolbarItem(placement: .topBarTrailing) { ModePicker() } }
             #if DEBUG
             .navigationDestination(isPresented: $openGallery) {
                 VoiceVisualizerGallery(autoplay: ProcessInfo.processInfo.arguments.contains("-visualizer-autoplay"))

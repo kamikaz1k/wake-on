@@ -16,6 +16,7 @@ struct SimpleView: View {
     var body: some View {
         NavigationStack {
             List {
+                ModePicker.row
                 Section {
                     if voice.phase == .connecting || voice.phase == .live {
                         VoiceVisualizer(style: visualizerStyle, palette: .named(visualizerPalette))
@@ -103,7 +104,6 @@ struct SimpleView: View {
                 }
             }
             .navigationTitle("Wake On")
-            .toolbar { ToolbarItem(placement: .topBarTrailing) { ModePicker() } }
         }
     }
 }
