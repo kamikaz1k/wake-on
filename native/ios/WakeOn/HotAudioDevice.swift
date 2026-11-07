@@ -367,6 +367,18 @@ final class HotAudioDevice: NSObject, @unchecked Sendable {
             // iOS refuses voice-chat (exclusive) configuration from the background ('!int').
             // The listener's shared session is still active: start the engine inside it.
             trace("session_kept category=\(session.category.rawValue) mode=\(session.mode.rawValue) options=\(session.categoryOptions.rawValue)")
+            // Only the mode changes (the options stay mixable), which iOS may allow here. Voice-chat
+            // mode tunes echo cancellation for a speakerphone call; without it Lobby's own voice
+            // can leak back into the microphone and interrupt it. The listener sets its own mode
+            // again when it takes the session back.
+            if session.mode != .voiceChat {
+                do {
+                    try session.setCategory(.playAndRecord, mode: .voiceChat, options: session.categoryOptions)
+                    trace("background_voice_chat ok")
+                } catch {
+                    trace("background_voice_chat failed \(error.localizedDescription)")
+                }
+            }
             sessionReady = true
             return
         }

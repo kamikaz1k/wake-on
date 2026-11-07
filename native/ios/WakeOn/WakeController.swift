@@ -34,6 +34,12 @@ final class WakeController: NSObject, ObservableObject, UNUserNotificationCenter
     private var bridging = false // worker-queue confined
     /// 16 kHz sample offset, in the chunk being ingested, where the bridge starts.
     private var bridgeStart16k: Int? // worker-queue confined
+    /// The detector fires ~0.25–0.35 s after "Hey Lobby" ends (measured on recordings/positive),
+    /// so the call's audio starts this much before the detection point. Otherwise a word said
+    /// straight after the phrase ("Hey Lobby, what's…") is lost.
+    static let bridgeLookback = 0.3
+    /// Recent microphone chunks at the device rate, newest last.
+    private var recentPCM: [(AVAudioPCMBuffer, AVAudioTime)] = [] // worker-queue confined
     /// Main thread: the listener is handing its microphone over to a voice call.
     private(set) var handingOver = false
     private var callbackCount = 0
@@ -307,6 +313,7 @@ final class WakeController: NSObject, ObservableObject, UNUserNotificationCenter
                 self.detector = try WakeDetector()
                 self.workerTrace?.mark("model_end")
                 self.buffer = HandoffBuffer()
+                self.recentPCM = []
                 self.didComplete = false
                 DispatchQueue.main.async {
                     guard self.generation == token else { return }
@@ -386,6 +393,7 @@ final class WakeController: NSObject, ObservableObject, UNUserNotificationCenter
                     self.totalConvertMs += convertMs
                     self.ingest(converted)
                     if self.bridging { self.feedBridge(copy, audioTime) }
+                    self.remember(copy, audioTime)
                 }
                 catch { DispatchQueue.main.async { self.fail(error) } }
             }
@@ -497,21 +505,52 @@ final class WakeController: NSObject, ObservableObject, UNUserNotificationCenter
     /// `reason` is recorded with the battery session and in the debug log.
     /// `releaseSession: false` hands the audio session straight to a voice call: deactivating it
     /// (and notifying other apps) costs ~100+ ms that a call would pay on its critical path.
-    /// Worker queue: stages this chunk for the call, from the wake phrase's end on.
+    /// Worker queue: stages this chunk for the call, from the wake phrase's end on. On the chunk
+    /// where the phrase was detected, it first stages the end of the chunks before it.
     private func feedBridge(_ pcm: AVAudioPCMBuffer, _ time: AVAudioTime) {
-        let start = bridgeStart16k.map { Int((Double($0) * pcm.format.sampleRate / 16_000).rounded()) } ?? 0
-        bridgeStart16k = nil
+        var start = 0
+        if let detected = bridgeStart16k {
+            bridgeStart16k = nil
+            let rate = pcm.format.sampleRate
+            start = Int((Double(detected) * rate / 16_000).rounded()) - Int(Self.bridgeLookback * rate)
+            if start < 0 {
+                var needed = -start
+                var earlier: [(AVAudioPCMBuffer, AVAudioTime, Int)] = []
+                for (old, oldTime) in recentPCM.reversed() where needed > 0 {
+                    let from = max(0, Int(old.frameLength) - needed)
+                    earlier.insert((old, oldTime, from), at: 0)
+                    needed -= Int(old.frameLength) - from
+                }
+                for (old, oldTime, from) in earlier where bridging { stageBridge(old, oldTime, from: from) }
+                start = 0
+            }
+        }
+        if bridging { stageBridge(pcm, time, from: min(start, Int(pcm.frameLength))) }
+    }
+
+    private func stageBridge(_ pcm: AVAudioPCMBuffer, _ time: AVAudioTime, from start: Int) {
         guard time.isHostTimeValid else {
             bridging = false
             DispatchQueue.main.async { self.completeHandover(reason: "no_host_time") }
             return
         }
-        switch HotAudioDevice.shared.feedBridge(pcm, from: min(start, Int(pcm.frameLength)), hostTime: time.hostTime) {
+        switch HotAudioDevice.shared.feedBridge(pcm, from: start, hostTime: time.hostTime) {
         case .more: break
         case .cancelled: bridging = false
         case .done:
             bridging = false
             DispatchQueue.main.async { self.completeHandover(reason: "call_microphone_live") }
+        }
+    }
+
+    /// Worker queue: keeps the last ~0.6 s of microphone chunks for `feedBridge`.
+    private func remember(_ pcm: AVAudioPCMBuffer, _ time: AVAudioTime) {
+        recentPCM.append((pcm, time))
+        let keep = Int(pcm.format.sampleRate * 2 * Self.bridgeLookback)
+        var total = recentPCM.reduce(0) { $0 + Int($1.0.frameLength) }
+        while let first = recentPCM.first, total - Int(first.0.frameLength) >= keep {
+            total -= Int(first.0.frameLength)
+            recentPCM.removeFirst()
         }
     }
 
