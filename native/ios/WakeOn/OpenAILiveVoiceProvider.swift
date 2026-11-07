@@ -10,6 +10,19 @@ struct LiveVoiceConfig {
     /// Voices offered in settings, checked against gpt-live-1 on the phone (see voiceKey).
     static let voices = ["marin", "cedar", "alloy", "ash", "ballad", "coral", "echo", "sage", "shimmer", "verse"]
     static let voiceKey = "voice.name"
+    /// What the assistant calls itself (the wake phrase stays "Hey Lobby").
+    static let nameKey = "assistant.name"
+    static let defaultName = "Lobby"
+    static var assistantName: String {
+        let saved = (UserDefaults.standard.string(forKey: nameKey) ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+        return saved.isEmpty ? defaultName : String(saved.prefix(40))
+    }
+    /// The instructions with the assistant's name swapped in.
+    static func named(_ instructions: String, _ name: String) -> String {
+        name == defaultName ? instructions
+            : instructions.replacingOccurrences(of: "You are \(defaultName),", with: "You are \(name),")
+                + " The user wakes you by saying \"Hey Lobby\"; that is fine, your name is \(name)."
+    }
     static var chosenVoice: String {
         let saved = UserDefaults.standard.string(forKey: voiceKey) ?? "marin"
         return voices.contains(saved) ? saved : "marin"
@@ -446,6 +459,7 @@ final class OpenAILiveVoiceProvider: NSObject {
         // The voice is read now, not when the call was prepared, so a change applies at once.
         var current = config
         current.voice = LiveVoiceConfig.chosenVoice
+        current.instructions = LiveVoiceConfig.named(current.instructions, LiveVoiceConfig.assistantName)
         request.httpBody = try JSONSerialization.data(withJSONObject: current.requestBody(sdp: sdp))
         return request
     }

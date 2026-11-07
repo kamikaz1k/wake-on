@@ -24,3 +24,25 @@ final class VoiceChoiceTests: XCTestCase {
         XCTAssertEqual((audio?["output"] as? [String: Any])?["voice"] as? String, "sage")
     }
 }
+
+final class AssistantNameTests: XCTestCase {
+    override func tearDown() { UserDefaults.standard.removeObject(forKey: LiveVoiceConfig.nameKey) }
+
+    func testDefaultNameLeavesInstructionsAlone() {
+        let original = LiveVoiceConfig().instructions
+        XCTAssertEqual(LiveVoiceConfig.named(original, "Lobby"), original)
+    }
+
+    func testCustomNameReplacesTheIntroduction() {
+        let named = LiveVoiceConfig.named(LiveVoiceConfig().instructions, "Juno")
+        XCTAssertTrue(named.hasPrefix("You are Juno, a voice assistant"))
+        XCTAssertFalse(named.contains("You are Lobby"))
+    }
+
+    func testBlankNameFallsBack() {
+        UserDefaults.standard.set("   ", forKey: LiveVoiceConfig.nameKey)
+        XCTAssertEqual(LiveVoiceConfig.assistantName, "Lobby")
+        UserDefaults.standard.set(" Juno ", forKey: LiveVoiceConfig.nameKey)
+        XCTAssertEqual(LiveVoiceConfig.assistantName, "Juno")
+    }
+}
