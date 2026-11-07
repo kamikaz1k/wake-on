@@ -89,7 +89,10 @@ xcrun devicectl device install app --device 5976CF6D-0FD6-5A57-9711-AA29F94404E7
   Never sign up for accounts on the user's behalf; ask first.
   **Built (2026-11-07):** the minimal version needs no Spotify account. The backend model
   web-searches the open.spotify.com link and calls `play_spotify`. The app hangs up, then opens
-  `spotify:<kind>:<id>` (or `spotify:search:<query>`). From the background it posts a
+  the `https://open.spotify.com/...` link as a universal link (`.universalLinksOnly`), with
+  `spotify:<kind>:<id>` / `spotify:search:<query>` as the fallback. A custom scheme makes iOS
+  ask "Open in Spotify?" every time; the universal link opens Spotify with no prompt and still
+  autoplays (verified 2026-11-07). From the background it posts a
   notification to tap instead (`SpotifyPlayer.swift`). Verified on the phone with Premium:
   opening `spotify:track:<id>` starts playback right away. Test without speaking:
   `devicectl device process launch --terminate-existing dev.wakeon.ios --talk spotify`.
