@@ -28,12 +28,19 @@ struct SimpleView: View {
                         Button {
                             voice.start(trigger: "in_app")
                         } label: {
-                            Label("Talk to Lobby", systemImage: "waveform").font(.title3.weight(.semibold))
+                            Text("Talk to Lobby")
+                                .font(.title3.weight(.semibold))
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, 8)
                         }
+                        .buttonStyle(.borderedProminent)
+                        .buttonBorderShape(.capsule)
+                        .listRowInsets(EdgeInsets())
+                        .listRowBackground(Color.clear)
                         .disabled(voice.keySource == "missing")
                         .accessibilityIdentifier("simple-talk")
                     case .connecting, .live:
-                        Label(voice.status, systemImage: "waveform").foregroundStyle(.secondary)
+                        Text(voice.status).foregroundStyle(.secondary)
                         HStack {
                             Button(voice.muted ? "Unmute" : "Mute", systemImage: voice.muted ? "mic.slash.fill" : "mic.fill") {
                                 voice.toggleMute()
@@ -62,8 +69,7 @@ struct SimpleView: View {
                 Section {
                     Toggle(isOn: Binding(get: { wake.enabled || wake.busy },
                                          set: { $0 ? wake.start() : wake.stop() })) {
-                        Label(wake.enabled ? "Listening for “Hey Lobby”" : (wake.busy ? "Starting…" : "Listen for “Hey Lobby”"),
-                              systemImage: wake.enabled ? "ear.fill" : "ear")
+                        Text(wake.enabled ? "Listening for “Hey Lobby”" : (wake.busy ? "Starting…" : "Listen for “Hey Lobby”"))
                     }
                     .disabled(wake.busy)
                     .accessibilityIdentifier("simple-listen")
@@ -81,24 +87,23 @@ struct SimpleView: View {
                         LabeledContent {
                             Text("\(logs.logs.count)")
                         } label: {
-                            Label("Chat logs", systemImage: "text.bubble")
+                            Text("Chat logs")
                         }
                     }
                     .accessibilityIdentifier("simple-chat-logs")
                     Picker(selection: $voiceName) {
                         ForEach(LiveVoiceConfig.voices, id: \.self) { Text($0.capitalized).tag($0) }
                     } label: {
-                        Label("Voice", systemImage: "person.wave.2")
+                        Text("Voice")
                     }
-                    Toggle(isOn: $awakeWhileCharging) {
-                        Label("Keep screen on while charging", systemImage: "sun.max")
-                    }
+                    Toggle("Keep screen on while charging", isOn: $awakeWhileCharging)
                     .accessibilityIdentifier("simple-awake-charging")
                 } footer: {
                     Text("While charging, the screen stays on as long as Wake On is open, like on a stand.")
                 }
             }
             .navigationTitle("Wake On")
+            .toolbar { ToolbarItem(placement: .topBarTrailing) { ModePicker() } }
         }
     }
 }

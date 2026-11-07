@@ -1,22 +1,35 @@
 import SwiftUI
 
-/// Two tabs: Simple (everyday controls) and Advanced (the full test surface).
+/// Simple (everyday controls) or Advanced (the full test surface), switched with a compact
+/// segmented control in the navigation bar. A tab bar reserved icon space even with text only.
 struct ContentView: View {
-    enum Tab: String { case advanced, simple }
+    enum Mode: String { case advanced, simple }
     @ObservedObject var controller: WakeController
-    @AppStorage("ui.tab") private var tab: Tab = .simple
-    /// Debug screenshots of the visualizer gallery (Advanced) open that tab.
+    @AppStorage(ModePicker.key) private var mode: Mode = .simple
+    /// Debug screenshots of the visualizer gallery (Advanced) open that mode.
     static let galleryRequested = ProcessInfo.processInfo.arguments.contains("-visualizer-gallery")
 
     var body: some View {
-        TabView(selection: Binding(get: { Self.galleryRequested ? .advanced : tab }, set: { tab = $0 })) {
+        if mode == .advanced || Self.galleryRequested {
             AdvancedView(controller: controller)
-                .tabItem { Text("Advanced") }
-                .tag(Tab.advanced)
+        } else {
             SimpleView(wake: controller)
-                .tabItem { Text("Simple") }
-                .tag(Tab.simple)
         }
+    }
+}
+
+/// "Advanced | Simple", shown at the top right of both screens.
+struct ModePicker: View {
+    static let key = "ui.tab"
+    @AppStorage(key) private var mode: ContentView.Mode = .simple
+    var body: some View {
+        Picker("Mode", selection: $mode) {
+            Text("Advanced").tag(ContentView.Mode.advanced)
+            Text("Simple").tag(ContentView.Mode.simple)
+        }
+        .pickerStyle(.segmented)
+        .fixedSize()
+        .accessibilityIdentifier("mode-picker")
     }
 }
 
@@ -97,6 +110,7 @@ struct AdvancedView: View {
                 }
             }
             .navigationTitle("Wake On")
+            .toolbar { ToolbarItem(placement: .topBarTrailing) { ModePicker() } }
             #if DEBUG
             .navigationDestination(isPresented: $openGallery) {
                 VoiceVisualizerGallery(autoplay: ProcessInfo.processInfo.arguments.contains("-visualizer-autoplay"))
