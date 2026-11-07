@@ -34,10 +34,10 @@ final class WakeController: NSObject, ObservableObject, UNUserNotificationCenter
     private var bridging = false // worker-queue confined
     /// 16 kHz sample offset, in the chunk being ingested, where the bridge starts.
     private var bridgeStart16k: Int? // worker-queue confined
-    /// The detector fires ~0.25–0.35 s after "Hey Lobby" ends (measured on recordings/positive),
+    /// The detector fires ~0.25–0.36 s after "Hey Lobby" ends (measured on recordings/positive),
     /// so the call's audio starts this much before the detection point. Otherwise a word said
-    /// straight after the phrase ("Hey Lobby, what's…") is lost.
-    static let bridgeLookback = 0.3
+    /// straight after the phrase ("Hey Lobby, what's…") is lost. Guarded by WakeHandoverTests.
+    static let bridgeLookback = 0.4
     /// Recent microphone chunks at the device rate, newest last.
     private var recentPCM: [(AVAudioPCMBuffer, AVAudioTime)] = [] // worker-queue confined
     /// Main thread: the listener is handing its microphone over to a voice call.
@@ -514,18 +514,26 @@ final class WakeController: NSObject, ObservableObject, UNUserNotificationCenter
             let rate = pcm.format.sampleRate
             start = Int((Double(detected) * rate / 16_000).rounded()) - Int(Self.bridgeLookback * rate)
             if start < 0 {
-                var needed = -start
-                var earlier: [(AVAudioPCMBuffer, AVAudioTime, Int)] = []
-                for (old, oldTime) in recentPCM.reversed() where needed > 0 {
-                    let from = max(0, Int(old.frameLength) - needed)
-                    earlier.insert((old, oldTime, from), at: 0)
-                    needed -= Int(old.frameLength) - from
+                let slices = Self.lookbackSlices(lengths: recentPCM.map { Int($0.0.frameLength) }, needed: -start)
+                for (index, from) in slices where bridging {
+                    stageBridge(recentPCM[index].0, recentPCM[index].1, from: from)
                 }
-                for (old, oldTime, from) in earlier where bridging { stageBridge(old, oldTime, from: from) }
                 start = 0
             }
         }
         if bridging { stageBridge(pcm, time, from: min(start, Int(pcm.frameLength))) }
+    }
+
+    /// Which kept chunks (index, first frame) cover the last `needed` frames, oldest first.
+    nonisolated static func lookbackSlices(lengths: [Int], needed: Int) -> [(index: Int, from: Int)] {
+        var remaining = needed
+        var slices: [(index: Int, from: Int)] = []
+        for index in lengths.indices.reversed() where remaining > 0 {
+            let from = max(0, lengths[index] - remaining)
+            slices.insert((index, from), at: 0)
+            remaining -= lengths[index] - from
+        }
+        return slices
     }
 
     private func stageBridge(_ pcm: AVAudioPCMBuffer, _ time: AVAudioTime, from start: Int) {

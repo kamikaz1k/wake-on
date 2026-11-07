@@ -76,9 +76,19 @@ lifecycle, goodbye/idle hang-up), `VoiceActivity.swift` (turn detection),
 
 ## Hey Lobby → call handover
 
-- The keyword spotter (sherpa-onnx, `WakeDetector`) fires **~0.25–0.35 s after the phrase
+**Regression guard (this broke several times):** run the `WakeHandoverTests` unit tests, then
+test "Hey Lobby, <request>" on the phone **with the app on screen and in the background**, pull
+the log and run `native/ios/scripts/check-wake-handover.py <log>` (exit 1 = broken).
+
+- **Every wake-word call keeps the listener's session** (`keepsListenerSession`), on screen
+  too. With the app on screen it used to switch to voice chat, which took ~1 s
+  (`session_configure ... sessionMs≈974`). The listener recorded silence meanwhile
+  (`tailDb=-120`), so "come sail away with me" arrived as "away with me". Foreground
+  wake calls now get the same weaker echo cancellation as background ones.
+
+- The keyword spotter (sherpa-onnx, `WakeDetector`) fires **~0.25–0.36 s after the phrase
   ends** (measured on `recordings/positive`). The bridge therefore starts
-  `WakeController.bridgeLookback` (0.3 s) before the detection point, using kept chunks
+  `WakeController.bridgeLookback` (0.4 s) before the detection point, using kept chunks
   (`recentPCM`). Before that fix, "Hey Lobby, what's going on" lost "what's".
 - Sherpa keyword timestamps are only meaningful before the first stream reset; after
   `reset()` they drift (seconds off). Don't use them to cut audio.

@@ -160,10 +160,10 @@ final class VoiceSessionController: ObservableObject {
             device.beginBuffering()
         }
         if OpenAILiveVoiceProvider.useHotAudio {
-            // Experiment: a wake word heard in the background tries to start audio right away,
-            // in a shared session, instead of waiting for the app to come forward.
+            // A wake-word call starts its audio inside the listener's running session, on screen
+            // or not (see keepsListenerSession).
             let backgroundWake = inBackground && trigger == "wake_word"
-            HotAudioDevice.shared.backgroundStart = backgroundWake
+            HotAudioDevice.shared.backgroundStart = Self.keepsListenerSession(trigger: trigger)
             // A wake-word call has no screen to watch: a chime says when the microphone records.
             HotAudioDevice.shared.chimeOnFirstCapture = trigger == "wake_word"
             HotAudioDevice.shared.onChime = { [weak self] in
@@ -343,6 +343,15 @@ final class VoiceSessionController: ObservableObject {
             }
         }
     }
+
+    /// Whether a call starts its audio inside the wake listener's running session instead of
+    /// switching to voice-chat mode. Every "Hey Lobby" call must: switching takes ~1 s and the
+    /// listener records silence meanwhile, losing what was said after the wake phrase
+    /// ("Hey Lobby, come sail away with me" arrived as "away with me"). From the background iOS
+    /// refuses the switch anyway. Cost: echo cancellation is weaker outside voice-chat mode.
+    /// Guarded by WakeHandoverTests; don't change without re-testing "Hey Lobby, <request>"
+    /// with the app on screen and in the background.
+    nonisolated static func keepsListenerSession(trigger: String) -> Bool { trigger == "wake_word" }
 
     func stop(reason: String = "user") {
         guard let provider, phase == .connecting || phase == .live else { return }
