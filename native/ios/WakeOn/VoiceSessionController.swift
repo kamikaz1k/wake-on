@@ -550,6 +550,11 @@ final class VoiceSessionController: ObservableObject {
         case "response.event":
             let nested = (json["event"] as? [String: Any])?["type"] as? String ?? "unknown"
             let delegation = json["delegation_id"] as? String ?? "none"
+            if nested == "response.output_item.done",
+               let item = (json["event"] as? [String: Any])?["item"] as? [String: Any],
+               item["type"] as? String == "function_call" {
+                handleFunctionCall(item)
+            }
             var seen = backendSeen[delegation, default: []]
             if seen.insert(nested).inserted {
                 backendSeen[delegation] = seen
@@ -578,6 +583,34 @@ final class VoiceSessionController: ObservableObject {
             break
         }
     }
+
+    /// The backend model called one of the app's tools (only play_spotify so far).
+    private func handleFunctionCall(_ item: [String: Any]) {
+        let name = item["name"] as? String ?? ""
+        let callID = item["call_id"] as? String ?? ""
+        let arguments = (item["arguments"] as? String).flatMap { $0.data(using: .utf8) }
+            .flatMap { try? JSONSerialization.jsonObject(with: $0) as? [String: Any] } ?? [:]
+        log("function_call name=\(name) arguments=\(item["arguments"] as? String ?? "")")
+        var result = "unknown tool"
+        if name == SpotifyPlayer.toolName,
+           let request = SpotifyPlayer.request(spotifyURL: arguments["spotify_url"] as? String ?? "",
+                                               query: arguments["query"] as? String ?? "",
+                                               title: arguments["title"] as? String ?? "") {
+            result = "Opening \(request.title) in Spotify; the call is ending."
+            pendingSpotify = request
+        } else if name == SpotifyPlayer.toolName {
+            result = "Nothing to play: no link and no query."
+        }
+        // Every call needs an output before the backend can go on (see OpenAI's delegation guide).
+        provider?.send(["type": "response.item.create",
+                        "item": ["type": "function_call_output", "call_id": callID, "output": result]])
+        provider?.send(["type": "response.create"])
+        // Spotify's playback would fight the call for audio: hang up, then open it (finishCall).
+        if pendingSpotify != nil { stop(reason: "spotify") }
+    }
+
+    /// Opened once the call has ended and released the audio session.
+    private var pendingSpotify: SpotifyPlayer.Request?
 
     private func appendTranscript(_ speaker: String, _ delta: String) {
         guard !delta.isEmpty else { return }
@@ -819,6 +852,10 @@ final class VoiceSessionController: ObservableObject {
         if resumeWakeListener {
             resumeWakeListener = false
             WakeController.shared.start()
+        }
+        if let spotify = pendingSpotify {
+            pendingSpotify = nil
+            SpotifyPlayer.open(spotify)
         }
         #if DEBUG
         // --calls N: repeat the call in the same process to measure the warm path.

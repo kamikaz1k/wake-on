@@ -87,6 +87,16 @@ xcrun devicectl device install app --device 5976CF6D-0FD6-5A57-9711-AA29F94404E7
   Spotify. Plan: Web API, opening Spotify when no device is active (foreground), with a
   notification tap as the fallback when woken in the background.
   Never sign up for accounts on the user's behalf; ask first.
+  **Built (2026-11-07):** the minimal version needs no Spotify account. The backend model
+  web-searches the open.spotify.com link and calls `play_spotify`. The app hangs up, then opens
+  `spotify:<kind>:<id>` (or `spotify:search:<query>`). From the background it posts a
+  notification to tap instead (`SpotifyPlayer.swift`).
+- **GPT-Live phone-side tools:** declare function tools in `session.delegation.responses.tools`.
+  The call arrives as `response.event` whose nested `event.type == "response.output_item.done"`
+  with `item.type == "function_call"` (`call_id`, `name`, `arguments` JSON string). Reply with
+  `{"type":"response.item.create","item":{"type":"function_call_output","call_id":…,"output":"<string>"}}`
+  and then `{"type":"response.create"}` (the item alone doesn't resume the backend). Docs:
+  developers.openai.com/api/docs/guides/live-delegation.
 
 ## House rules for this repo
 

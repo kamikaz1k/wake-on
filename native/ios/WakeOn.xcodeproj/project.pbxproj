@@ -380,6 +380,17 @@
 			<key>isa</key>
 			<string>PBXBuildFile</string>
 		</dict>
+		<key>3C25795FAF8E71C5399FC534</key>
+		<dict>
+			<key>isa</key>
+			<string>PBXFileReference</string>
+			<key>lastKnownFileType</key>
+			<string>sourcecode.swift</string>
+			<key>path</key>
+			<string>WakeOn/SpotifyPlayer.swift</string>
+			<key>sourceTree</key>
+			<string>&lt;group&gt;</string>
+		</dict>
 		<key>3DE977F28540BB0F79305A88</key>
 		<dict>
 			<key>fileRef</key>
@@ -533,6 +544,17 @@
 			<string>sourcecode.swift</string>
 			<key>path</key>
 			<string>WakeOn/VoiceSessionController.swift</string>
+			<key>sourceTree</key>
+			<string>&lt;group&gt;</string>
+		</dict>
+		<key>548E5C94CE6D3460317BB2D5</key>
+		<dict>
+			<key>isa</key>
+			<string>PBXFileReference</string>
+			<key>lastKnownFileType</key>
+			<string>sourcecode.swift</string>
+			<key>path</key>
+			<string>Tests/SpotifyPlayerTests.swift</string>
 			<key>sourceTree</key>
 			<string>&lt;group&gt;</string>
 		</dict>
@@ -739,6 +761,7 @@
 				<string>FD0F0DB50B6695E5A313F02A</string>
 				<string>F5A8AD6DD1708ECCF94AA2E2</string>
 				<string>44DA201589CF3D2915F60C94</string>
+				<string>8F689865000D2D112E2DF22D</string>
 				<string>D20988A742E8A10B39F7CB23</string>
 				<string>0F3BF8A23D1FDE6611CE4A9A</string>
 				<string>06EC84C75A1861F3AB6AD29C</string>
@@ -999,6 +1022,13 @@
 			<key>sourceTree</key>
 			<string>&lt;group&gt;</string>
 		</dict>
+		<key>8F689865000D2D112E2DF22D</key>
+		<dict>
+			<key>fileRef</key>
+			<string>548E5C94CE6D3460317BB2D5</string>
+			<key>isa</key>
+			<string>PBXBuildFile</string>
+		</dict>
 		<key>8F74F34C7B6E3E70FA09817C</key>
 		<dict>
 			<key>isa</key>
@@ -1243,6 +1273,7 @@
 				<string>FBC965F89A87825EA3D43EDB</string>
 				<string>89707B9627501A6CC5C878D6</string>
 				<string>C096918F71FEAB2E9FC49F58</string>
+				<string>D1659F995F92D85D2ED65EAA</string>
 				<string>A735366E67E1349A675D19BE</string>
 				<string>2A360B901BD7C9951074CD18</string>
 				<string>A459CE8F90BA65D343EC2072</string>
@@ -1348,6 +1379,13 @@
 			<key>isa</key>
 			<string>PBXBuildFile</string>
 		</dict>
+		<key>D1659F995F92D85D2ED65EAA</key>
+		<dict>
+			<key>fileRef</key>
+			<string>3C25795FAF8E71C5399FC534</string>
+			<key>isa</key>
+			<string>PBXBuildFile</string>
+		</dict>
 		<key>D20988A742E8A10B39F7CB23</key>
 		<dict>
 			<key>fileRef</key>
@@ -1431,6 +1469,7 @@
 				<string>427734F696037F60000C4197</string>
 				<string>1CB063FB3A6A99A499006954</string>
 				<string>DCE26BF595E449F720C1CEAD</string>
+				<string>3C25795FAF8E71C5399FC534</string>
 				<string>44B03283B94CFD4EFE847D7E</string>
 				<string>D901E739FA33909C40A270E5</string>
 				<string>47C20025F5E8A35638FCC3FE</string>
@@ -1452,6 +1491,7 @@
 				<string>9F2F0D7B8211BA8CBE1CF982</string>
 				<string>A52E1E1026008ABCCF27FFB3</string>
 				<string>7208E077BFADA885CC025FBD</string>
+				<string>548E5C94CE6D3460317BB2D5</string>
 				<string>D9C92472F248312173947DD4</string>
 				<string>4F39308818B726E435B8F2A1</string>
 				<string>579F4EE51E22157FC1503151</string>

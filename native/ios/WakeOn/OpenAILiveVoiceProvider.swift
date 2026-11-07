@@ -13,6 +13,7 @@ struct LiveVoiceConfig {
     stops talking, even if they only counted, tested the microphone or made a statement: acknowledge \
     it briefly. When a question needs \
     current or factual information you are unsure of, delegate it so it can be searched on the web. \
+    Delegate requests to play music too; they open in Spotify and the call ends. \
     While it is being looked up, say at most three words such as "One moment", then stop and wait, \
     so the answer can be spoken as soon as it arrives. \
     When the user is clearly finished (for example "that's all", "thanks, bye", "okay, I'm done", or \
@@ -29,6 +30,8 @@ struct LiveVoiceConfig {
     var delegationReasoningEffort: String? = "low"
     var delegation = true
     var webSearch = true
+    /// The play_spotify tool (see SpotifyPlayer).
+    var spotify = true
     /// Host candidates are enough: OpenAI's media servers are publicly reachable.
     var iceGatheringTimeout: Duration = .seconds(3)
     /// Send the offer once no new candidate has appeared for this long.
@@ -36,9 +39,13 @@ struct LiveVoiceConfig {
     var statsInterval: Duration = .milliseconds(50)
 
     func requestBody(sdp: String) -> [String: Any] {
-        var responses: [String: Any] = ["model": delegationModel, "instructions": delegationInstructions]
-        if webSearch {
-            responses["tools"] = [["type": "web_search"]]
+        let backendInstructions = spotify ? delegationInstructions + " " + SpotifyPlayer.delegationInstructions : delegationInstructions
+        var responses: [String: Any] = ["model": delegationModel, "instructions": backendInstructions]
+        var tools: [[String: Any]] = []
+        if webSearch { tools.append(["type": "web_search"]) }
+        if spotify { tools.append(SpotifyPlayer.tool) }
+        if !tools.isEmpty {
+            responses["tools"] = tools
             responses["tool_choice"] = "auto"
         }
         if let effort = delegationReasoningEffort { responses["reasoning"] = ["effort": effort] }

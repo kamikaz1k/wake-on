@@ -678,7 +678,13 @@ final class WakeController: NSObject, ObservableObject, UNUserNotificationCenter
     func userNotificationCenter(_ center: UNUserNotificationCenter,
                                 didReceive response: UNNotificationResponse,
                                 withCompletionHandler completionHandler: @escaping () -> Void) {
-        completionHandler() // The OS foregrounds the app after the user's tap; state already holds the handoff.
+        // The OS foregrounds the app after the user's tap; state already holds the handoff.
+        let info = response.notification.request.content.userInfo
+        if let app = (info["spotifyURL"] as? String).flatMap(URL.init(string:)) {
+            let web = (info["spotifyWebURL"] as? String).flatMap(URL.init(string:))
+            DispatchQueue.main.async { MainActor.assumeIsolated { SpotifyPlayer.openNow(app: app, web: web) } }
+        }
+        completionHandler()
     }
 
     func playHandoff() {
