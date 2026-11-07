@@ -1,6 +1,7 @@
 import SwiftUI
 
-// A functional native test surface: listening controls first, then the actual captured handoff.
+// A functional native test surface: call controls, then the wake listener, then call details
+// and the captured handoff.
 struct ContentView: View {
     @ObservedObject var controller: WakeController
     #if DEBUG
@@ -11,16 +12,6 @@ struct ContentView: View {
         NavigationStack {
             List {
                 VoiceSectionView(voice: VoiceSessionController.shared)
-                Section("Record immediately") {
-                    Button("Record now", systemImage: "record.circle") {
-                        Task {
-                            do { try await controller.startDirect(source: "in_app") }
-                            catch { controller.error = error.localizedDescription }
-                        }
-                    }.accessibilityIdentifier("record-now")
-                    Text("Captures five seconds without a wake word. Assign Start recording to your Action button in Settings → Action Button → Shortcut.")
-                        .foregroundStyle(.secondary)
-                }
                 Section {
                     Label(controller.status, systemImage: controller.enabled ? "mic.fill" : "mic.slash")
                         .font(.headline)
@@ -43,6 +34,17 @@ struct ContentView: View {
                     Text("Enable listening before leaving the app or locking the screen. iOS does not let a wake word open the screen automatically.")
                 }
                 ListenerOptionsView(controller: controller)
+                VoiceSectionView(voice: VoiceSessionController.shared, part: .details)
+                Section("Record immediately") {
+                    Button("Record now", systemImage: "record.circle") {
+                        Task {
+                            do { try await controller.startDirect(source: "in_app") }
+                            catch { controller.error = error.localizedDescription }
+                        }
+                    }.accessibilityIdentifier("record-now")
+                    Text("Captures five seconds without a wake word. Assign Start recording to your Action button in Settings → Action Button → Shortcut.")
+                        .foregroundStyle(.secondary)
+                }
 
                 if let capture = controller.handoff {
                     Section("Audio handoff") {

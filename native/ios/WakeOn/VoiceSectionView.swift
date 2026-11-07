@@ -1,14 +1,24 @@
 import SwiftUI
 
 /// Call controls, the live transcript, and the latency numbers for the current call.
+/// `part` splits it so other sections can sit between the controls and the call details.
 struct VoiceSectionView: View {
+    enum Part { case controls, details }
     @ObservedObject var voice: VoiceSessionController
+    var part: Part = .controls
     @State private var keyDraft = ""
     @AppStorage(VoiceVisualizerSettings.styleKey) private var visualizerStyle: VoiceVisualizerStyle = .skyOrb
     @AppStorage(VoiceVisualizerSettings.paletteKey) private var visualizerPalette = VoicePalette.default.name
     @AppStorage(VoiceSessionController.idleSecondsKey) private var idleSeconds = 10.0
 
     var body: some View {
+        switch part {
+        case .controls: controls
+        case .details: details
+        }
+    }
+
+    @ViewBuilder private var controls: some View {
         Section {
             if voice.phase == .connecting || voice.phase == .live {
                 VoiceVisualizer(style: visualizerStyle, palette: .named(visualizerPalette))
@@ -67,6 +77,9 @@ struct VoiceSectionView: View {
             }
         }
 
+    }
+
+    @ViewBuilder private var details: some View {
         if !voice.transcript.isEmpty {
             Section("Transcript") {
                 ForEach(voice.transcript) { line in
