@@ -11,7 +11,6 @@ struct SimpleView: View {
     @AppStorage(LiveVoiceConfig.voiceKey) private var voiceName = "marin"
     @AppStorage(ListenerSettings.Key.talkOnWake) private var talkOnWake = false
     @AppStorage(ScreenAwake.key) private var awakeWhileCharging = true
-    @AppStorage(LiveVoiceConfig.nameKey) private var assistantName = LiveVoiceConfig.defaultName
     @State private var keyDraft = ""
 
     var body: some View {
@@ -99,13 +98,6 @@ struct SimpleView: View {
                         }
                     }
                     .accessibilityIdentifier("simple-chat-logs")
-                    LabeledContent("Assistant name") {
-                        TextField(LiveVoiceConfig.defaultName, text: $assistantName)
-                            .multilineTextAlignment(.trailing)
-                            .textInputAutocapitalization(.words)
-                            .autocorrectionDisabled()
-                            .accessibilityIdentifier("simple-assistant-name")
-                    }
                     Picker(selection: $voiceName) {
                         ForEach(LiveVoiceConfig.voices, id: \.self) { Text($0.capitalized).tag($0) }
                     } label: {
