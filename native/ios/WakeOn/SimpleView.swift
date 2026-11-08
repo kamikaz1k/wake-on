@@ -12,6 +12,8 @@ struct SimpleView: View {
     @AppStorage(ListenerSettings.Key.talkOnWake) private var talkOnWake = false
     @AppStorage(ScreenAwake.key) private var awakeWhileCharging = true
     @State private var keyDraft = ""
+    /// Screenshot/debug launch argument: open straight to the chat logs.
+    @State private var openLogs = ProcessInfo.processInfo.arguments.contains("-chat-logs")
 
     var body: some View {
         NavigationStack {
@@ -103,6 +105,12 @@ struct SimpleView: View {
                     } label: {
                         Text("Voice")
                     }
+                    NavigationLink {
+                        VoiceVisualizerGallery()
+                    } label: {
+                        LabeledContent("Visualizer", value: visualizerStyle.title)
+                    }
+                    .accessibilityIdentifier("simple-visualizer")
                     Toggle("Keep screen on while charging", isOn: $awakeWhileCharging)
                     .accessibilityIdentifier("simple-awake-charging")
                 } footer: {
@@ -110,6 +118,7 @@ struct SimpleView: View {
                 }
             }
             .navigationTitle("Wake On")
+            .navigationDestination(isPresented: $openLogs) { ChatLogsView() }
         }
     }
 }
