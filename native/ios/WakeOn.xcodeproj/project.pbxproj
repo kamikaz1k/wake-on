@@ -68,6 +68,19 @@
 			<key>isa</key>
 			<string>PBXBuildFile</string>
 		</dict>
+		<key>0B4CDEE182E01D65166BE05F</key>
+		<dict>
+			<key>explicitFileType</key>
+			<string>wrapper.application</string>
+			<key>includeInIndex</key>
+			<integer>0</integer>
+			<key>isa</key>
+			<string>PBXFileReference</string>
+			<key>path</key>
+			<string>ChatLab.app</string>
+			<key>sourceTree</key>
+			<string>BUILT_PRODUCTS_DIR</string>
+		</dict>
 		<key>0BF4170444CD473CD4066C79</key>
 		<dict>
 			<key>buildConfigurationList</key>
@@ -183,6 +196,15 @@
 			<string>PBXFrameworksBuildPhase</string>
 			<key>runOnlyForDeploymentPostprocessing</key>
 			<integer>0</integer>
+		</dict>
+		<key>1B93CCDDF5C1EB44EE95A2CA</key>
+		<dict>
+			<key>isa</key>
+			<string>XCSwiftPackageProductDependency</string>
+			<key>package</key>
+			<string>BF4DD63041143B5F9592615B</string>
+			<key>productName</key>
+			<string>MarkdownView</string>
 		</dict>
 		<key>1CB063FB3A6A99A499006954</key>
 		<dict>
@@ -304,6 +326,13 @@
 			<key>isa</key>
 			<string>PBXBuildFile</string>
 		</dict>
+		<key>2AFC7628333F2A13B4B5A860</key>
+		<dict>
+			<key>isa</key>
+			<string>PBXBuildFile</string>
+			<key>productRef</key>
+			<string>9C636EDAE9D9B588A67427F2</string>
+		</dict>
 		<key>2B965140090DDF71A4732ECA</key>
 		<dict>
 			<key>containerPortal</key>
@@ -338,6 +367,22 @@
 			<key>isa</key>
 			<string>PBXBuildFile</string>
 		</dict>
+		<key>32CC02D58D6AE065BECBE99D</key>
+		<dict>
+			<key>fileRef</key>
+			<string>D51DBCE476B3A9F6D9C63988</string>
+			<key>isa</key>
+			<string>PBXBuildFile</string>
+		</dict>
+		<key>338FE27D0A844D5595B3AA30</key>
+		<dict>
+			<key>isa</key>
+			<string>XCSwiftPackageProductDependency</string>
+			<key>package</key>
+			<string>6F9C5CC3230BD566FB1619CB</string>
+			<key>productName</key>
+			<string>ConversationKit</string>
+		</dict>
 		<key>38534BB08E9D76D11C587E49</key>
 		<dict>
 			<key>isa</key>
@@ -361,6 +406,13 @@
 			<string>WakeOn.app</string>
 			<key>sourceTree</key>
 			<string>BUILT_PRODUCTS_DIR</string>
+		</dict>
+		<key>398A4CC88A7AE5BE5F44C2F4</key>
+		<dict>
+			<key>fileRef</key>
+			<string>B5FF211A8E2C834FF319EBF2</string>
+			<key>isa</key>
+			<string>PBXBuildFile</string>
 		</dict>
 		<key>3A95F3BBE1057DD42D6E55F8</key>
 		<dict>
@@ -405,6 +457,17 @@
 				</array>
 			</dict>
 		</dict>
+		<key>3E62A95FED5BE78926020787</key>
+		<dict>
+			<key>isa</key>
+			<string>PBXFileReference</string>
+			<key>lastKnownFileType</key>
+			<string>sourcecode.swift</string>
+			<key>path</key>
+			<string>ChatLab/LabModel.swift</string>
+			<key>sourceTree</key>
+			<string>&lt;group&gt;</string>
+		</dict>
 		<key>3ECE466EA18A3C06FE668FD7</key>
 		<dict>
 			<key>fileRef</key>
@@ -422,6 +485,13 @@
 			<string>WakeOn/Visualizer/VoicePalette.swift</string>
 			<key>sourceTree</key>
 			<string>&lt;group&gt;</string>
+		</dict>
+		<key>3FE5EC2E51880636DEBAAFF8</key>
+		<dict>
+			<key>fileRef</key>
+			<string>3E62A95FED5BE78926020787</string>
+			<key>isa</key>
+			<string>PBXBuildFile</string>
 		</dict>
 		<key>40C95F44524CD4C23904F439</key>
 		<dict>
@@ -452,6 +522,20 @@
 			<key>sourceTree</key>
 			<string>&lt;group&gt;</string>
 		</dict>
+		<key>43CB3CBA4DC90E5CC737B05C</key>
+		<dict>
+			<key>buildConfigurations</key>
+			<array>
+				<string>9110FBD39FF0D78D02E3C2CA</string>
+				<string>5FC6ABF06938EC4B0E292BA0</string>
+			</array>
+			<key>defaultConfigurationIsVisible</key>
+			<integer>0</integer>
+			<key>defaultConfigurationName</key>
+			<string>Release</string>
+			<key>isa</key>
+			<string>XCConfigurationList</string>
+		</dict>
 		<key>44B03283B94CFD4EFE847D7E</key>
 		<dict>
 			<key>isa</key>
@@ -477,6 +561,15 @@
 			<key>isa</key>
 			<string>PBXBuildFile</string>
 		</dict>
+		<key>47790152C955D33B94ED573F</key>
+		<dict>
+			<key>isa</key>
+			<string>XCSwiftPackageProductDependency</string>
+			<key>package</key>
+			<string>4B1B873BCE242380A2E258EF</string>
+			<key>productName</key>
+			<string>ChatClientKit</string>
+		</dict>
 		<key>47C20025F5E8A35638FCC3FE</key>
 		<dict>
 			<key>isa</key>
@@ -498,6 +591,20 @@
 			<string>Resources/VisualizerSamples/viz-a2.wav</string>
 			<key>sourceTree</key>
 			<string>&lt;group&gt;</string>
+		</dict>
+		<key>4B1B873BCE242380A2E258EF</key>
+		<dict>
+			<key>isa</key>
+			<string>XCRemoteSwiftPackageReference</string>
+			<key>repositoryURL</key>
+			<string>https://github.com/Lakr233/LanguageModelChatUI</string>
+			<key>requirement</key>
+			<dict>
+				<key>kind</key>
+				<string>upToNextMinorVersion</string>
+				<key>minimumVersion</key>
+				<string>0.2.0</string>
+			</dict>
 		</dict>
 		<key>4CD946F6E32CA2BB00F8B91D</key>
 		<dict>
@@ -535,6 +642,13 @@
 			<string>Embed Frameworks</string>
 			<key>runOnlyForDeploymentPostprocessing</key>
 			<integer>0</integer>
+		</dict>
+		<key>5241639BBE58748E4A9A4125</key>
+		<dict>
+			<key>fileRef</key>
+			<string>694D8611755A10832F2AF78C</string>
+			<key>isa</key>
+			<string>PBXBuildFile</string>
 		</dict>
 		<key>524F3925915545FFD660FF3F</key>
 		<dict>
@@ -597,6 +711,13 @@
 			<key>isa</key>
 			<string>PBXBuildFile</string>
 		</dict>
+		<key>5725DC6BB6CEDEEEDBE6F411</key>
+		<dict>
+			<key>fileRef</key>
+			<string>C63371EE005F6A3E5E3783C1</string>
+			<key>isa</key>
+			<string>PBXBuildFile</string>
+		</dict>
 		<key>579F4EE51E22157FC1503151</key>
 		<dict>
 			<key>isa</key>
@@ -607,6 +728,28 @@
 			<string>Tests/WakeBridgeTests.swift</string>
 			<key>sourceTree</key>
 			<string>&lt;group&gt;</string>
+		</dict>
+		<key>5A6404DDD8072BAD39E9C571</key>
+		<dict>
+			<key>buildActionMask</key>
+			<integer>2147483647</integer>
+			<key>files</key>
+			<array>
+				<string>68658B7C483A60F3041629D7</string>
+				<string>398A4CC88A7AE5BE5F44C2F4</string>
+				<string>C6C86E0691E168652C4FB7FF</string>
+				<string>D1915CEA3D713F08792671A1</string>
+				<string>3FE5EC2E51880636DEBAAFF8</string>
+				<string>5725DC6BB6CEDEEEDBE6F411</string>
+				<string>7851A7BB2901F6F4155F041B</string>
+				<string>A726A540471ECB89180FC764</string>
+				<string>32CC02D58D6AE065BECBE99D</string>
+				<string>5241639BBE58748E4A9A4125</string>
+			</array>
+			<key>isa</key>
+			<string>PBXSourcesBuildPhase</string>
+			<key>runOnlyForDeploymentPostprocessing</key>
+			<integer>0</integer>
 		</dict>
 		<key>5A8C91857F674E16E2724F47</key>
 		<dict>
@@ -691,6 +834,17 @@
 			<key>isa</key>
 			<string>PBXBuildFile</string>
 		</dict>
+		<key>5E087DF3E4AB61A4C8706F07</key>
+		<dict>
+			<key>isa</key>
+			<string>PBXFileReference</string>
+			<key>lastKnownFileType</key>
+			<string>sourcecode.swift</string>
+			<key>path</key>
+			<string>ChatLab/ChatLabApp.swift</string>
+			<key>sourceTree</key>
+			<string>&lt;group&gt;</string>
+		</dict>
 		<key>5F8D1447DF26309D45C4CBCF</key>
 		<dict>
 			<key>isa</key>
@@ -701,6 +855,53 @@
 			<string>WakeOn/WakeController.swift</string>
 			<key>sourceTree</key>
 			<string>&lt;group&gt;</string>
+		</dict>
+		<key>5FC6ABF06938EC4B0E292BA0</key>
+		<dict>
+			<key>buildSettings</key>
+			<dict>
+				<key>CLANG_ENABLE_MODULES</key>
+				<string>YES</string>
+				<key>CODE_SIGN_STYLE</key>
+				<string>Automatic</string>
+				<key>DEBUG_INFORMATION_FORMAT</key>
+				<string>dwarf-with-dsym</string>
+				<key>DEVELOPMENT_TEAM</key>
+				<string>JDR6VAV2RA</string>
+				<key>ENABLE_TESTABILITY</key>
+				<string>NO</string>
+				<key>INFOPLIST_FILE</key>
+				<string>ChatLab/Info.plist</string>
+				<key>IPHONEOS_DEPLOYMENT_TARGET</key>
+				<string>17.0</string>
+				<key>LD_RUNPATH_SEARCH_PATHS</key>
+				<array>
+					<string>$(inherited)</string>
+					<string>@executable_path/Frameworks</string>
+				</array>
+				<key>ONLY_ACTIVE_ARCH</key>
+				<string>YES</string>
+				<key>PRODUCT_BUNDLE_IDENTIFIER</key>
+				<string>dev.wakeon.chatlab</string>
+				<key>PRODUCT_NAME</key>
+				<string>$(TARGET_NAME)</string>
+				<key>SDKROOT</key>
+				<string>iphoneos</string>
+				<key>SUPPORTED_PLATFORMS</key>
+				<string>iphoneos iphonesimulator</string>
+				<key>SWIFT_ACTIVE_COMPILATION_CONDITIONS</key>
+				<string></string>
+				<key>SWIFT_OPTIMIZATION_LEVEL</key>
+				<string>-O</string>
+				<key>SWIFT_VERSION</key>
+				<string>5.0</string>
+				<key>TARGETED_DEVICE_FAMILY</key>
+				<string>1,2</string>
+			</dict>
+			<key>isa</key>
+			<string>XCBuildConfiguration</string>
+			<key>name</key>
+			<string>Release</string>
 		</dict>
 		<key>604415CC5C8C5E7AD42D4232</key>
 		<dict>
@@ -733,6 +934,17 @@
 			<string>Release</string>
 			<key>isa</key>
 			<string>XCConfigurationList</string>
+		</dict>
+		<key>625431900975CEAB27D072BA</key>
+		<dict>
+			<key>isa</key>
+			<string>PBXFileReference</string>
+			<key>lastKnownFileType</key>
+			<string>sourcecode.swift</string>
+			<key>path</key>
+			<string>ChatLab/ExyteRenderer.swift</string>
+			<key>sourceTree</key>
+			<string>&lt;group&gt;</string>
 		</dict>
 		<key>62836841F0F438067849D484</key>
 		<dict>
@@ -791,6 +1003,24 @@
 			<key>isa</key>
 			<string>PBXBuildFile</string>
 		</dict>
+		<key>68658B7C483A60F3041629D7</key>
+		<dict>
+			<key>fileRef</key>
+			<string>5E087DF3E4AB61A4C8706F07</string>
+			<key>isa</key>
+			<string>PBXBuildFile</string>
+		</dict>
+		<key>694D8611755A10832F2AF78C</key>
+		<dict>
+			<key>isa</key>
+			<string>PBXFileReference</string>
+			<key>lastKnownFileType</key>
+			<string>sourcecode.swift</string>
+			<key>path</key>
+			<string>ChatLab/PlainRenderer.swift</string>
+			<key>sourceTree</key>
+			<string>&lt;group&gt;</string>
+		</dict>
 		<key>6DFDA75F1ECB6EFBF3C21E46</key>
 		<dict>
 			<key>fileRef</key>
@@ -821,6 +1051,20 @@
 			<string>PBXSourcesBuildPhase</string>
 			<key>runOnlyForDeploymentPostprocessing</key>
 			<integer>0</integer>
+		</dict>
+		<key>6F9C5CC3230BD566FB1619CB</key>
+		<dict>
+			<key>isa</key>
+			<string>XCRemoteSwiftPackageReference</string>
+			<key>repositoryURL</key>
+			<string>https://github.com/peterfriese/ConversationKit</string>
+			<key>requirement</key>
+			<dict>
+				<key>kind</key>
+				<string>upToNextMinorVersion</string>
+				<key>minimumVersion</key>
+				<string>0.1.1</string>
+			</dict>
 		</dict>
 		<key>7157DD341D0CEEE8A8D2A222</key>
 		<dict>
@@ -873,6 +1117,35 @@
 			<key>runOnlyForDeploymentPostprocessing</key>
 			<integer>0</integer>
 		</dict>
+		<key>75E34F9BF6DB381C1E742368</key>
+		<dict>
+			<key>isa</key>
+			<string>PBXFileReference</string>
+			<key>lastKnownFileType</key>
+			<string>sourcecode.swift</string>
+			<key>path</key>
+			<string>ChatLab/LabRows.swift</string>
+			<key>sourceTree</key>
+			<string>&lt;group&gt;</string>
+		</dict>
+		<key>760BF1A5DD516B23F29A7716</key>
+		<dict>
+			<key>isa</key>
+			<string>PBXFileReference</string>
+			<key>lastKnownFileType</key>
+			<string>sourcecode.swift</string>
+			<key>path</key>
+			<string>ChatLab/LabLibraries.swift</string>
+			<key>sourceTree</key>
+			<string>&lt;group&gt;</string>
+		</dict>
+		<key>7851A7BB2901F6F4155F041B</key>
+		<dict>
+			<key>fileRef</key>
+			<string>75E34F9BF6DB381C1E742368</string>
+			<key>isa</key>
+			<string>PBXBuildFile</string>
+		</dict>
 		<key>7964352DDE2EB6CBD9B52FFD</key>
 		<dict>
 			<key>fileRef</key>
@@ -886,6 +1159,20 @@
 			<string>0FA61C68DF833338CD63C969</string>
 			<key>isa</key>
 			<string>PBXBuildFile</string>
+		</dict>
+		<key>7C2750621C81879F28540741</key>
+		<dict>
+			<key>isa</key>
+			<string>XCRemoteSwiftPackageReference</string>
+			<key>repositoryURL</key>
+			<string>https://github.com/exyte/Chat.git</string>
+			<key>requirement</key>
+			<dict>
+				<key>kind</key>
+				<string>upToNextMajorVersion</string>
+				<key>minimumVersion</key>
+				<string>3.3.7</string>
+			</dict>
 		</dict>
 		<key>7C5A1951B4BEF1420051F995</key>
 		<dict>
@@ -1109,6 +1396,53 @@
 			<key>sourceTree</key>
 			<string>&lt;group&gt;</string>
 		</dict>
+		<key>9110FBD39FF0D78D02E3C2CA</key>
+		<dict>
+			<key>buildSettings</key>
+			<dict>
+				<key>CLANG_ENABLE_MODULES</key>
+				<string>YES</string>
+				<key>CODE_SIGN_STYLE</key>
+				<string>Automatic</string>
+				<key>DEBUG_INFORMATION_FORMAT</key>
+				<string>dwarf</string>
+				<key>DEVELOPMENT_TEAM</key>
+				<string>JDR6VAV2RA</string>
+				<key>ENABLE_TESTABILITY</key>
+				<string>YES</string>
+				<key>INFOPLIST_FILE</key>
+				<string>ChatLab/Info.plist</string>
+				<key>IPHONEOS_DEPLOYMENT_TARGET</key>
+				<string>17.0</string>
+				<key>LD_RUNPATH_SEARCH_PATHS</key>
+				<array>
+					<string>$(inherited)</string>
+					<string>@executable_path/Frameworks</string>
+				</array>
+				<key>ONLY_ACTIVE_ARCH</key>
+				<string>YES</string>
+				<key>PRODUCT_BUNDLE_IDENTIFIER</key>
+				<string>dev.wakeon.chatlab</string>
+				<key>PRODUCT_NAME</key>
+				<string>$(TARGET_NAME)</string>
+				<key>SDKROOT</key>
+				<string>iphoneos</string>
+				<key>SUPPORTED_PLATFORMS</key>
+				<string>iphoneos iphonesimulator</string>
+				<key>SWIFT_ACTIVE_COMPILATION_CONDITIONS</key>
+				<string>DEBUG</string>
+				<key>SWIFT_OPTIMIZATION_LEVEL</key>
+				<string>-Onone</string>
+				<key>SWIFT_VERSION</key>
+				<string>5.0</string>
+				<key>TARGETED_DEVICE_FAMILY</key>
+				<string>1,2</string>
+			</dict>
+			<key>isa</key>
+			<string>XCBuildConfiguration</string>
+			<key>name</key>
+			<string>Debug</string>
+		</dict>
 		<key>92404B1FF440E3A7B6630303</key>
 		<dict>
 			<key>fileRef</key>
@@ -1151,6 +1485,13 @@
 			</array>
 			<key>mainGroup</key>
 			<string>DC76E9F0C0006E8F919E0C51</string>
+			<key>packageReferences</key>
+			<array>
+				<string>7C2750621C81879F28540741</string>
+				<string>BF4DD63041143B5F9592615B</string>
+				<string>6F9C5CC3230BD566FB1619CB</string>
+				<string>4B1B873BCE242380A2E258EF</string>
+			</array>
 			<key>productRefGroup</key>
 			<string>FBDC4F23F93125BBEEAE800C</string>
 			<key>projectDirPath</key>
@@ -1162,7 +1503,17 @@
 				<string>7D1043473D55BFA90E8530D3</string>
 				<string>04D13FD0AA6F0197CF2C9990</string>
 				<string>0BF4170444CD473CD4066C79</string>
+				<string>C5B168124450AD2BB493BFA4</string>
 			</array>
+		</dict>
+		<key>9C636EDAE9D9B588A67427F2</key>
+		<dict>
+			<key>isa</key>
+			<string>XCSwiftPackageProductDependency</string>
+			<key>package</key>
+			<string>7C2750621C81879F28540741</string>
+			<key>productName</key>
+			<string>ExyteChat</string>
 		</dict>
 		<key>9D9AC9A3CCA5EA10F8A94F12</key>
 		<dict>
@@ -1210,6 +1561,13 @@
 			<key>runOnlyForDeploymentPostprocessing</key>
 			<integer>0</integer>
 		</dict>
+		<key>A20F2D9165915B1692380F98</key>
+		<dict>
+			<key>isa</key>
+			<string>PBXBuildFile</string>
+			<key>productRef</key>
+			<string>338FE27D0A844D5595B3AA30</string>
+		</dict>
 		<key>A459CE8F90BA65D343EC2072</key>
 		<dict>
 			<key>fileRef</key>
@@ -1238,6 +1596,13 @@
 			<string>Tests/HandoffBufferTests.swift</string>
 			<key>sourceTree</key>
 			<string>&lt;group&gt;</string>
+		</dict>
+		<key>A726A540471ECB89180FC764</key>
+		<dict>
+			<key>fileRef</key>
+			<string>D271D76AB5D8BC578109A18A</string>
+			<key>isa</key>
+			<string>PBXBuildFile</string>
 		</dict>
 		<key>A735366E67E1349A675D19BE</key>
 		<dict>
@@ -1277,6 +1642,33 @@
 			<string>WakeOn/AudioConverter.swift</string>
 			<key>sourceTree</key>
 			<string>&lt;group&gt;</string>
+		</dict>
+		<key>B5F49A876DFB272FACBDF1EB</key>
+		<dict>
+			<key>isa</key>
+			<string>XCSwiftPackageProductDependency</string>
+			<key>package</key>
+			<string>4B1B873BCE242380A2E258EF</string>
+			<key>productName</key>
+			<string>LanguageModelChatUI</string>
+		</dict>
+		<key>B5FF211A8E2C834FF319EBF2</key>
+		<dict>
+			<key>isa</key>
+			<string>PBXFileReference</string>
+			<key>lastKnownFileType</key>
+			<string>sourcecode.swift</string>
+			<key>path</key>
+			<string>ChatLab/ConversationKitRenderer.swift</string>
+			<key>sourceTree</key>
+			<string>&lt;group&gt;</string>
+		</dict>
+		<key>B7021324F3204A05BBC4B2FA</key>
+		<dict>
+			<key>isa</key>
+			<string>PBXBuildFile</string>
+			<key>productRef</key>
+			<string>B5F49A876DFB272FACBDF1EB</string>
 		</dict>
 		<key>B7480EC88B7F22D0A4757273</key>
 		<dict>
@@ -1410,6 +1802,20 @@
 			<key>sourceTree</key>
 			<string>&lt;group&gt;</string>
 		</dict>
+		<key>BF4DD63041143B5F9592615B</key>
+		<dict>
+			<key>isa</key>
+			<string>XCRemoteSwiftPackageReference</string>
+			<key>repositoryURL</key>
+			<string>https://github.com/Lakr233/MarkdownView</string>
+			<key>requirement</key>
+			<dict>
+				<key>kind</key>
+				<string>upToNextMajorVersion</string>
+				<key>minimumVersion</key>
+				<string>3.7.0</string>
+			</dict>
+		</dict>
 		<key>C096918F71FEAB2E9FC49F58</key>
 		<dict>
 			<key>fileRef</key>
@@ -1421,6 +1827,56 @@
 		<dict>
 			<key>fileRef</key>
 			<string>524F3925915545FFD660FF3F</string>
+			<key>isa</key>
+			<string>PBXBuildFile</string>
+		</dict>
+		<key>C5B168124450AD2BB493BFA4</key>
+		<dict>
+			<key>buildConfigurationList</key>
+			<string>43CB3CBA4DC90E5CC737B05C</string>
+			<key>buildPhases</key>
+			<array>
+				<string>5A6404DDD8072BAD39E9C571</string>
+				<string>DC46E0EDFBDFAE7278098891</string>
+			</array>
+			<key>buildRules</key>
+			<array/>
+			<key>dependencies</key>
+			<array/>
+			<key>isa</key>
+			<string>PBXNativeTarget</string>
+			<key>name</key>
+			<string>ChatLab</string>
+			<key>packageProductDependencies</key>
+			<array>
+				<string>9C636EDAE9D9B588A67427F2</string>
+				<string>1B93CCDDF5C1EB44EE95A2CA</string>
+				<string>338FE27D0A844D5595B3AA30</string>
+				<string>B5F49A876DFB272FACBDF1EB</string>
+				<string>47790152C955D33B94ED573F</string>
+			</array>
+			<key>productName</key>
+			<string>ChatLab</string>
+			<key>productReference</key>
+			<string>0B4CDEE182E01D65166BE05F</string>
+			<key>productType</key>
+			<string>com.apple.product-type.application</string>
+		</dict>
+		<key>C63371EE005F6A3E5E3783C1</key>
+		<dict>
+			<key>isa</key>
+			<string>PBXFileReference</string>
+			<key>lastKnownFileType</key>
+			<string>sourcecode.swift</string>
+			<key>path</key>
+			<string>ChatLab/LabPlayer.swift</string>
+			<key>sourceTree</key>
+			<string>&lt;group&gt;</string>
+		</dict>
+		<key>C6C86E0691E168652C4FB7FF</key>
+		<dict>
+			<key>fileRef</key>
+			<string>625431900975CEAB27D072BA</string>
 			<key>isa</key>
 			<string>PBXBuildFile</string>
 		</dict>
@@ -1500,6 +1956,13 @@
 			<key>isa</key>
 			<string>PBXBuildFile</string>
 		</dict>
+		<key>D1915CEA3D713F08792671A1</key>
+		<dict>
+			<key>fileRef</key>
+			<string>760BF1A5DD516B23F29A7716</string>
+			<key>isa</key>
+			<string>PBXBuildFile</string>
+		</dict>
 		<key>D20988A742E8A10B39F7CB23</key>
 		<dict>
 			<key>fileRef</key>
@@ -1507,12 +1970,30 @@
 			<key>isa</key>
 			<string>PBXBuildFile</string>
 		</dict>
+		<key>D2262972ACBB3CB0D8C16F8B</key>
+		<dict>
+			<key>isa</key>
+			<string>PBXBuildFile</string>
+			<key>productRef</key>
+			<string>1B93CCDDF5C1EB44EE95A2CA</string>
+		</dict>
 		<key>D233B84F177F79322304C486</key>
 		<dict>
 			<key>fileRef</key>
 			<string>3A95F3BBE1057DD42D6E55F8</string>
 			<key>isa</key>
 			<string>PBXBuildFile</string>
+		</dict>
+		<key>D271D76AB5D8BC578109A18A</key>
+		<dict>
+			<key>isa</key>
+			<string>PBXFileReference</string>
+			<key>lastKnownFileType</key>
+			<string>sourcecode.swift</string>
+			<key>path</key>
+			<string>ChatLab/LabScenarios.swift</string>
+			<key>sourceTree</key>
+			<string>&lt;group&gt;</string>
 		</dict>
 		<key>D510BDB133AEB16F89091ED0</key>
 		<dict>
@@ -1529,6 +2010,17 @@
 			<string>sourcecode.swift</string>
 			<key>path</key>
 			<string>WakeOn/HotAudioDevice.swift</string>
+			<key>sourceTree</key>
+			<string>&lt;group&gt;</string>
+		</dict>
+		<key>D51DBCE476B3A9F6D9C63988</key>
+		<dict>
+			<key>isa</key>
+			<string>PBXFileReference</string>
+			<key>lastKnownFileType</key>
+			<string>sourcecode.swift</string>
+			<key>path</key>
+			<string>ChatLab/LanguageModelChatUIRenderer.swift</string>
 			<key>sourceTree</key>
 			<string>&lt;group&gt;</string>
 		</dict>
@@ -1584,6 +2076,23 @@
 			<string>DA19DAC196A1C96922A56FB4</string>
 			<key>isa</key>
 			<string>PBXBuildFile</string>
+		</dict>
+		<key>DC46E0EDFBDFAE7278098891</key>
+		<dict>
+			<key>buildActionMask</key>
+			<integer>2147483647</integer>
+			<key>files</key>
+			<array>
+				<string>2AFC7628333F2A13B4B5A860</string>
+				<string>D2262972ACBB3CB0D8C16F8B</string>
+				<string>A20F2D9165915B1692380F98</string>
+				<string>B7021324F3204A05BBC4B2FA</string>
+				<string>FFB8A2F719373B2136F690A0</string>
+			</array>
+			<key>isa</key>
+			<string>PBXFrameworksBuildPhase</string>
+			<key>runOnlyForDeploymentPostprocessing</key>
+			<integer>0</integer>
 		</dict>
 		<key>DC76E9F0C0006E8F919E0C51</key>
 		<dict>
@@ -1653,6 +2162,16 @@
 				<string>FE84B97285FF2B40E137CB81</string>
 				<string>23302364766C959F3F1FECD5</string>
 				<string>8D6F34E7725B3AD5A0F6CAF0</string>
+				<string>5E087DF3E4AB61A4C8706F07</string>
+				<string>B5FF211A8E2C834FF319EBF2</string>
+				<string>625431900975CEAB27D072BA</string>
+				<string>760BF1A5DD516B23F29A7716</string>
+				<string>3E62A95FED5BE78926020787</string>
+				<string>C63371EE005F6A3E5E3783C1</string>
+				<string>75E34F9BF6DB381C1E742368</string>
+				<string>D271D76AB5D8BC578109A18A</string>
+				<string>D51DBCE476B3A9F6D9C63988</string>
+				<string>694D8611755A10832F2AF78C</string>
 				<string>FBDC4F23F93125BBEEAE800C</string>
 			</array>
 			<key>isa</key>
@@ -2070,6 +2589,7 @@
 				<string>38A007151ABE87CC01A5B6E9</string>
 				<string>B7480EC88B7F22D0A4757273</string>
 				<string>CF59003455EA5841ED646673</string>
+				<string>0B4CDEE182E01D65166BE05F</string>
 			</array>
 			<key>isa</key>
 			<string>PBXGroup</string>
@@ -2113,6 +2633,13 @@
 			<string>Vendor/build-ios-no-tts/sherpa-onnx.xcframework</string>
 			<key>sourceTree</key>
 			<string>&lt;group&gt;</string>
+		</dict>
+		<key>FFB8A2F719373B2136F690A0</key>
+		<dict>
+			<key>isa</key>
+			<string>PBXBuildFile</string>
+			<key>productRef</key>
+			<string>47790152C955D33B94ED573F</string>
 		</dict>
 	</dict>
 	<key>rootObject</key>

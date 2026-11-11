@@ -51,8 +51,27 @@ embed_appex_file=add('embedAppex', 'PBXBuildFile', fileRef=appex, settings={'ATT
 embed_appex=add('embedAppExtensions', 'PBXCopyFilesBuildPhase', buildActionMask=2147483647, dstPath='', dstSubfolderSpec=13, files=[embed_appex_file], name='Embed Foundation Extensions', runOnlyForDeploymentPostprocessing=0)
 app=add('product','PBXFileReference',explicitFileType='wrapper.application',path='WakeOn.app',sourceTree='BUILT_PRODUCTS_DIR',includeInIndex=0)
 test_product=add('testproduct','PBXFileReference',explicitFileType='wrapper.cfbundle',path='WakeOnTests.xctest',sourceTree='BUILT_PRODUCTS_DIR',includeInIndex=0)
-products=add('products','PBXGroup',children=[app,test_product,appex],name='Products',sourceTree='<group>')
-group=add('root','PBXGroup',children=sources+shared+activity_sources+[activity_assets]+tests+resources+frameworks+[products],sourceTree='<group>')
+# Chat Lab: a separate app for comparing chat UI libraries (docs/research/chat-ui-scenarios.md).
+# Kept out of Wake On so its packages never touch the voice app or its launch time.
+lab_sources=[file(str(p.relative_to(root)), 'sourcecode.swift') for p in sorted((root/'ChatLab').glob('*.swift'))]
+lab_app=add('labproduct','PBXFileReference',explicitFileType='wrapper.application',path='ChatLab.app',sourceTree='BUILT_PRODUCTS_DIR',includeInIndex=0)
+lab_packages=[  # url, requirement, products
+    ('https://github.com/exyte/Chat.git', dict(kind='upToNextMajorVersion', minimumVersion='3.3.7'), ['ExyteChat']),
+    # MarkdownView stays on 3.x: LanguageModelChatUI 0.2 requires it.
+    ('https://github.com/Lakr233/MarkdownView', dict(kind='upToNextMajorVersion', minimumVersion='3.7.0'), ['MarkdownView']),
+    ('https://github.com/peterfriese/ConversationKit', dict(kind='upToNextMinorVersion', minimumVersion='0.1.1'), ['ConversationKit']),
+    ('https://github.com/Lakr233/LanguageModelChatUI', dict(kind='upToNextMinorVersion', minimumVersion='0.2.0'), ['LanguageModelChatUI','ChatClientKit']),
+]
+lab_package_refs=[]
+lab_product_deps=[]
+for url, requirement, names in lab_packages:
+    ref_id=add('pkg'+url,'XCRemoteSwiftPackageReference',repositoryURL=url,requirement=requirement)
+    lab_package_refs.append(ref_id)
+    for name in names:
+        lab_product_deps.append(add('pkgproduct'+name,'XCSwiftPackageProductDependency',package=ref_id,productName=name))
+lab_framework_files=[add('labbuild'+d,'PBXBuildFile',productRef=d) for d in lab_product_deps]
+products=add('products','PBXGroup',children=[app,test_product,appex,lab_app],name='Products',sourceTree='<group>')
+group=add('root','PBXGroup',children=sources+shared+activity_sources+[activity_assets]+tests+resources+frameworks+lab_sources+[products],sourceTree='<group>')
 common=dict(SWIFT_VERSION='5.0',IPHONEOS_DEPLOYMENT_TARGET='17.0',SDKROOT='iphoneos',SUPPORTED_PLATFORMS='iphoneos iphonesimulator',TARGETED_DEVICE_FAMILY='1,2',CLANG_ENABLE_MODULES='YES',CODE_SIGN_STYLE='Automatic',DEVELOPMENT_TEAM='JDR6VAV2RA')
 appsettings=dict(common,PRODUCT_BUNDLE_IDENTIFIER='dev.wakeon.ios',PRODUCT_NAME='$(TARGET_NAME)',INFOPLIST_FILE='WakeOn/Info.plist',SWIFT_OBJC_BRIDGING_HEADER='WakeOn/Bridge.h',HEADER_SEARCH_PATHS='$(PROJECT_DIR)/Vendor/build-ios-no-tts/sherpa-onnx.xcframework/Headers',OTHER_LDFLAGS=['$(inherited)','-lc++'],LD_RUNPATH_SEARCH_PATHS=['$(inherited)','@executable_path/Frameworks'],ENABLE_USER_SCRIPT_SANDBOXING='YES',ASSETCATALOG_COMPILER_APPICON_NAME='AppIcon')
 project_id=hashlib.sha1(b'project').hexdigest()[:24].upper()
@@ -65,7 +84,10 @@ proxy=add('proxy','PBXContainerItemProxy',containerPortal=project_id,proxyType=1
 dep=add('dependency','PBXTargetDependency',target=app_target,targetProxy=proxy)
 test_settings=dict(common,PRODUCT_NAME='$(TARGET_NAME)',PRODUCT_BUNDLE_IDENTIFIER='dev.wakeon.ios.tests',GENERATE_INFOPLIST_FILE='YES',TEST_HOST='$(BUILT_PRODUCTS_DIR)/WakeOn.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/WakeOn',BUNDLE_LOADER='$(TEST_HOST)',SWIFT_OBJC_BRIDGING_HEADER='WakeOn/Bridge.h',HEADER_SEARCH_PATHS=appsettings['HEADER_SEARCH_PATHS'])
 test_target=add('tests','PBXNativeTarget',name='WakeOnTests',productName='WakeOnTests',productReference=test_product,productType='com.apple.product-type.bundle.unit-test',buildConfigurationList=configs('tests',test_settings),buildPhases=[phase('testSources','PBXSourcesBuildPhase',tests),phase('testFrameworks','PBXFrameworksBuildPhase',[])],buildRules=[],dependencies=[dep])
-add('project','PBXProject',attributes={'LastUpgradeCheck':'2600'},buildConfigurationList=configs('project',common),compatibilityVersion='Xcode 14.0',developmentRegion='en',hasScannedForEncodings=0,knownRegions=['en','Base'],mainGroup=group,productRefGroup=products,projectDirPath='',projectRoot='',targets=[app_target,test_target,activity_target])
+lab_settings=dict(common,ONLY_ACTIVE_ARCH='YES',PRODUCT_BUNDLE_IDENTIFIER='dev.wakeon.chatlab',PRODUCT_NAME='$(TARGET_NAME)',INFOPLIST_FILE='ChatLab/Info.plist',LD_RUNPATH_SEARCH_PATHS=['$(inherited)','@executable_path/Frameworks'])
+lab_frameworks=add('labFrameworks','PBXFrameworksBuildPhase',buildActionMask=2147483647,files=lab_framework_files,runOnlyForDeploymentPostprocessing=0)
+lab_target=add('labapp','PBXNativeTarget',name='ChatLab',productName='ChatLab',productReference=lab_app,productType='com.apple.product-type.application',buildConfigurationList=configs('lab',lab_settings),buildPhases=[phase('labSources','PBXSourcesBuildPhase',lab_sources),lab_frameworks],buildRules=[],dependencies=[],packageProductDependencies=lab_product_deps)
+add('project','PBXProject',packageReferences=lab_package_refs,attributes={'LastUpgradeCheck':'2600'},buildConfigurationList=configs('project',common),compatibilityVersion='Xcode 14.0',developmentRegion='en',hasScannedForEncodings=0,knownRegions=['en','Base'],mainGroup=group,productRefGroup=products,projectDirPath='',projectRoot='',targets=[app_target,test_target,activity_target,lab_target])
 proj=root/'WakeOn.xcodeproj'
 proj.mkdir(exist_ok=True)
 (proj/'project.pbxproj').write_bytes(plistlib.dumps(dict(archiveVersion='1',classes={},objectVersion='56',objects=objects,rootObject=project_id)))
@@ -87,3 +109,13 @@ info['UISupportedInterfaceOrientations~ipad'] = info['UISupportedInterfaceOrient
 
 activity_info=dict(CFBundleDevelopmentRegion='en',CFBundleDisplayName='Wake On',CFBundleExecutable='$(EXECUTABLE_NAME)',CFBundleIdentifier='$(PRODUCT_BUNDLE_IDENTIFIER)',CFBundleInfoDictionaryVersion='6.0',CFBundleName='$(PRODUCT_NAME)',CFBundlePackageType='XPC!',CFBundleShortVersionString=info['CFBundleShortVersionString'],CFBundleVersion=info['CFBundleVersion'],NSExtension={'NSExtensionPointIdentifier':'com.apple.widgetkit-extension'})
 (root/'WakeOnLiveActivity/Info.plist').write_bytes(plistlib.dumps(activity_info))
+
+(scheme/'ChatLab.xcscheme').write_text(f'''<?xml version="1.0" encoding="UTF-8"?>
+<Scheme LastUpgradeVersion="2600" version="1.3">
+<BuildAction parallelizeBuildables="YES" buildImplicitDependencies="YES"><BuildActionEntries><BuildActionEntry buildForTesting="YES" buildForRunning="YES" buildForProfiling="YES" buildForArchiving="YES" buildForAnalyzing="YES">{ref(lab_target,'ChatLab.app')}</BuildActionEntry></BuildActionEntries></BuildAction>
+<LaunchAction buildConfiguration="Debug" selectedDebuggerIdentifier="Xcode.DebuggerFoundation.Debugger.LLDB" selectedLauncherIdentifier="Xcode.IDEFoundation.Launcher.LLDB" launchStyle="0" useCustomWorkingDirectory="NO" ignoresPersistentStateOnLaunch="NO" debugDocumentVersioning="YES" allowLocationSimulation="YES"><BuildableProductRunnable runnableDebuggingMode="0">{ref(lab_target,'ChatLab.app')}</BuildableProductRunnable></LaunchAction>
+<ProfileAction buildConfiguration="Release"><BuildableProductRunnable runnableDebuggingMode="0">{ref(lab_target,'ChatLab.app')}</BuildableProductRunnable></ProfileAction>
+<AnalyzeAction buildConfiguration="Debug"/><ArchiveAction buildConfiguration="Release" revealArchiveInOrganizer="YES"/>
+</Scheme>''')
+lab_info=dict(CFBundleDevelopmentRegion='en',CFBundleDisplayName='Chat Lab',CFBundleExecutable='$(EXECUTABLE_NAME)',CFBundleIdentifier='$(PRODUCT_BUNDLE_IDENTIFIER)',CFBundleInfoDictionaryVersion='6.0',CFBundleName='Chat Lab',CFBundlePackageType='APPL',CFBundleShortVersionString='0.1.0',CFBundleVersion='1',LSRequiresIPhoneOS=True,UILaunchScreen={},UISupportedInterfaceOrientations=['UIInterfaceOrientationPortrait'],UIApplicationSceneManifest={'UIApplicationSupportsMultipleScenes':False},ITSAppUsesNonExemptEncryption=False,NSPhotoLibraryUsageDescription='Not used; required by a chat library.',NSCameraUsageDescription='Not used; required by a chat library.',NSMicrophoneUsageDescription='Not used; required by a chat library.',NSSpeechRecognitionUsageDescription='Not used; required by a chat library.',NSLocationWhenInUseUsageDescription='Not used; required by a chat library.')
+(root/'ChatLab/Info.plist').write_bytes(plistlib.dumps(lab_info))
