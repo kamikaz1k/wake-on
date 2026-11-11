@@ -362,7 +362,7 @@ enum LabScenarios {
                     lookFor: "Lists, bold, a table and a code block render as they stream, without flicker or raw ** and | symbols.",
                     script: script { s in
                         s.stream(.user, "Plan my Saturday and show me the pause code.", wordsPerSecond: 3)
-                        s.wait(0.6); s.stream(.lobby, LabText.long + "\n\n" + LabText.code, wordsPerSecond: 6)
+                        s.wait(0.6); s.stream(.lobby, LabText.long + "\n\n" + LabText.code, wordsPerSecond: 25, chunkCharacters: 4)
                     }),
         LabScenario(id: "D5", title: "Custom views in messages",
                     lookFor: "A chart card sits in the transcript like a message: the hook for generated UI later.",
@@ -444,8 +444,8 @@ enum LabScenarios {
                         s.run { $0.call.phase = "Live" }
                         s.stream(.user, "Pause the music.", wordsPerSecond: 2.5)
                         s.stream(.lobby, "Paused.", wordsPerSecond: 4)
-                        s.run { $0.call.muted = true }; s.marker("Muted"); s.wait(2)
-                        s.run { $0.call.muted = false }; s.marker("Unmuted")
+                        s.run { $0.call.muted = true }; s.wait(2.5)
+                        s.run { $0.call.muted = false }
                         s.stream(.user, "Bye.", wordsPerSecond: 2.5)
                         s.stream(.lobby, "Bye!", wordsPerSecond: 4)
                         s.run { $0.call.phase = "Ended" }; s.marker("Call ended · bye")

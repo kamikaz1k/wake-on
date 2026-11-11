@@ -12,7 +12,8 @@ struct LabStep {
 @MainActor
 final class LabPlayer: ObservableObject {
     @Published private(set) var items: [LabItem] = []
-    @Published var call = LabCallState()
+    /// Phase, mute and status changes count as updates too.
+    @Published var call = LabCallState() { didSet { touched() } }
     @Published private(set) var isPlaying = false
     @Published private(set) var progress: Double = 0
     /// Bumped on every change, so renderers that copy data can cheaply detect updates.
@@ -81,7 +82,7 @@ final class LabPlayer: ObservableObject {
 
     func replaceAll(_ newItems: [LabItem]) { items = newItems; touched() }
 
-    func setStatus(_ status: String?) { call.status = status; touched() }
+    func setStatus(_ status: String?) { call.status = status }
 
     private func touched() {
         revision += 1
@@ -139,15 +140,17 @@ struct LabScript {
     /// Lobby's transcript, which runs ahead of its audio.
     @discardableResult
     mutating func stream(_ speaker: LabItem.Speaker, _ text: String, wordsPerSecond: Double = 6,
-                         timing: String? = nil, insertBefore: String? = nil, cutAfterWords: Int? = nil) -> String {
+                         timing: String? = nil, insertBefore: String? = nil, cutAfterWords: Int? = nil,
+                         chunkCharacters: Int? = nil) -> String {
         let id = id(speaker.rawValue)
-        let first = LabItem(id: id, kind: .message(speaker, text: "", state: .streaming))
+        // Built when the step runs, so its time matches the other rows.
         if let before = insertBefore {
-            run { $0.insert(first, before: before) }
+            run { $0.insert(LabItem(id: id, kind: .message(speaker, text: "", state: .streaming)), before: before) }
         } else {
-            run { $0.append(first) }
+            run { $0.append(LabItem(id: id, kind: .message(speaker, text: "", state: .streaming))) }
         }
-        let words = Self.tokens(text)
+        // chunkCharacters splits into small pieces like real API deltas, so markdown is often half-written.
+        let words = chunkCharacters.map { Self.chunks(text, size: $0) } ?? Self.tokens(text)
         var shown = ""
         for (index, word) in words.enumerated() {
             if let cut = cutAfterWords, index >= cut {
@@ -189,6 +192,18 @@ struct LabScript {
             }
         }
         return id
+    }
+
+    /// Splits text into fixed-size pieces, ignoring word boundaries.
+    static func chunks(_ text: String, size: Int) -> [String] {
+        var pieces: [String] = []
+        var current = ""
+        for character in text {
+            current.append(character)
+            if current.count == size { pieces.append(current); current = "" }
+        }
+        if !current.isEmpty { pieces.append(current) }
+        return pieces
     }
 
     /// Splits text into words that keep their trailing spaces and line breaks.

@@ -1,11 +1,142 @@
-import SwiftUI
 import ExyteChat
+import MarkdownView
+import SwiftUI
 
-/// exyte/Chat + MarkdownView renderer. Placeholder until implemented.
+/// exyte/Chat 3.3.7 + MarkdownView 3.9.1. Each LabItem becomes an exyte `Message`:
+/// you are the current user, Lobby is another user, and non-message rows come from a
+/// system user and are drawn by `messageBuilder` with our shared rows. Scrolling, grouping,
+/// date headers and the scroll-to-bottom button are exyte's own; no extra scroll logic.
 struct ExyteRenderer: View {
     @ObservedObject var player: LabPlayer
 
+    private static let you = User(id: "you", name: "You", avatarURL: nil, isCurrentUser: true)
+    private static let lobby = User(id: "lobby", name: "Lobby", avatarURL: nil, isCurrentUser: false)
+    private static let system = User(id: "system", name: "Call", avatarURL: nil, type: .system)
+    static let itemKey = "labItem"
+
     var body: some View {
-        ContentUnavailableView("Not built yet", systemImage: "hammer", description: Text("exyte/Chat + MarkdownView"))
+        VStack(spacing: 0) {
+            // F4: exyte has no chat-level header outside the scrolling list (mainHeaderBuilder
+            // scrolls away with the messages), so call phase and mute sit above the ChatView.
+            LabCallHeader(call: player.call)
+            ChatView<AnyView, EmptyView, DefaultMessageMenuAction>(
+                messages: Self.messages(from: player.items),
+                didSendMessage: { _ in }
+            ) { params in
+                Self.row(params)
+            } inputViewBuilder: { _ in
+                // F1: an empty custom input view replaces exyte's composer entirely.
+                EmptyView()
+            }
+            // B6: the live status line sits between the list and the (empty) input view.
+            .betweenListAndInputViewBuilder {
+                Group {
+                    if let status = player.call.status {
+                        LabStatusLine(text: status)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .padding(.horizontal, 16).padding(.vertical, 6)
+                    }
+                }
+            }
+            .showScrollToBottomButton(true)
+            .showDateHeaders(true)
+            .showMessageMenuOnLongPress(false)
+            .setAvailableInputs([])
+            // exyte's inverted UITableView draws past its top edge under the header otherwise.
+            .clipped()
+        }
+    }
+
+    // MARK: - Mapping
+
+    static func messages(from items: [LabItem]) -> [Message] {
+        items.map { item in
+            let user: User
+            var text = ""
+            switch item.kind {
+            case let .message(speaker, body, state):
+                user = speaker == .user ? you : lobby
+                text = body.isEmpty && state == .streaming ? "…" : body
+            default:
+                user = system
+            }
+            var message = Message(id: item.id, user: user, status: user.isCurrentUser ? .sent : nil,
+                                  createdAt: item.time, text: text,
+                                  customData: [itemKey: item])
+            // exyte reloads a row only when `Message ==` changes. Text is compared, but a
+            // tool's state, a cut-off flag or a timing footer are not, so fold the whole
+            // item into `triggerRedraw`.
+            message.triggerRedraw = redrawToken(item)
+            return message
+        }
+    }
+
+    private static func redrawToken(_ item: LabItem) -> UUID {
+        var hasher = Hasher()
+        hasher.combine(String(describing: item.kind))
+        hasher.combine(item.timing)
+        let value = UInt64(bitPattern: Int64(hasher.finalize()))
+        let hex = String(format: "%016llX", value)
+        let tail = hex.dropFirst(4)
+        return UUID(uuidString: "00000000-0000-0000-\(hex.prefix(4))-\(tail)") ?? UUID()
+    }
+
+    // MARK: - Rows
+
+    @MainActor
+    static func row(_ params: MessageBuilderParameters) -> AnyView {
+        guard let item = params.message.customData[itemKey] as? LabItem else {
+            return AnyView(params.defaultMessageView())
+        }
+        switch item.kind {
+        case let .message(speaker, text, state) where speaker == .lobby:
+            return AnyView(LobbyBubble(item: item, text: text, state: state, params: params))
+        case .message:
+            // Your messages use exyte's own bubble, time and status.
+            return AnyView(params.defaultMessageView())
+        default:
+            return AnyView(
+                LabNonMessageRow(item: item)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.horizontal, 12).padding(.vertical, 4)
+            )
+        }
+    }
+}
+
+/// Lobby's message: MarkdownView inside a bubble styled with exyte's theme colours. exyte's
+/// `messageBuilder` replaces the whole row, so the avatar, name and time view are ours to
+/// redo; only the name (from the group position exyte passes) is shown here.
+private struct LobbyBubble: View {
+    let item: LabItem
+    let text: String
+    let state: LabItem.TextState
+    let params: MessageBuilderParameters
+    @Environment(\.chatTheme) private var theme
+
+    private var isTopOfGroup: Bool {
+        params.positionInGroup == .first || params.positionInGroup == .single
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 3) {
+            if isTopOfGroup {
+                Text(params.message.user.name).font(.caption2.weight(.semibold)).foregroundStyle(.secondary)
+                    .padding(.leading, 12)
+            }
+            Group {
+                if text.isEmpty {
+                    Text("…").foregroundStyle(theme.colors.messageFriendText)
+                } else {
+                    MarkdownView(text)
+                }
+            }
+            .padding(.horizontal, 12).padding(.vertical, 8)
+            .background(theme.colors.messageFriendBG, in: RoundedRectangle(cornerRadius: 20))
+            LabMessageFooter(item: item).padding(.leading, 12)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.leading, 12).padding(.trailing, 40)
+        .padding(.top, isTopOfGroup ? 8 : 2)
     }
 }

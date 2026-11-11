@@ -161,7 +161,7 @@ struct LabMessageFooter: View {
     let item: LabItem
     var body: some View {
         if case let .message(_, _, state) = item.kind, state == .cutOff {
-            Label("Interrupted", systemImage: "scissors").font(.caption2).foregroundStyle(.orange)
+            HStack(spacing: 3) { Image(systemName: "scissors"); Text("Interrupted") }.font(.caption2).foregroundStyle(.orange)
         } else if let timing = item.timing {
             Text(timing).font(.caption2).foregroundStyle(.secondary)
         }

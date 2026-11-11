@@ -117,3 +117,29 @@ Stream's StreamChatAI is excluded: its license only covers Stream customers.
    sides, a tool call, a barge-in, and a late user transcript.
 2. Replay it, at real timing, into a small test screen per candidate in the simulator.
 3. Score each scenario 0/1/2 with screenshots; measure G1 with frame timing during replay.
+
+## First pass (Nov 2026, from simulator screenshots)
+
+Built in the Chat Lab app (`native/ios/ChatLab`, scheme `ChatLab`). These notes come from
+screenshots without touch; scores should come from trying each page on the phone.
+
+- **Plain SwiftUI:** always pinned to the bottom (fails A1, A4–A6), no jump button,
+  inline-only markdown (tables and code show as raw text). Everything else is our rows.
+- **exyte/Chat + MarkdownView:** upside-down `UITableView`; opens and follows at the bottom,
+  built-in scroll-to-bottom button, keeps place on inserts (unverified by touch). No turn
+  anchoring near the top. Input hides cleanly (F1). A custom message view replaces the whole
+  row, so Lobby loses exyte's avatar/name/time. MarkdownView renders tables and code well but
+  measures height late, so the newest bubble briefly clips while streaming. Default user bubble
+  truncates some messages (layout bug). Heavy dependencies (Giphy, Kingfisher, MediaPicker).
+- **ConversationKit:** "push and pin" anchors a new user message at the top (A4/A5 partly), but
+  then keeps it pinned while the reply streams off-screen; no follow mode or jump button; only
+  a drag releases it. Saved logs open at the top. Composer can't be hidden (fails F1) and covers
+  the last rows. MarkdownUI shows half-written tables as raw text until complete.
+- **LanguageModelChatUI:** single "pinned to bottom" flag; every new turn pulls a reader back to
+  the bottom. Best streaming markdown of the four (FlowDown's MarkdownView with its own
+  batching), held 60 fps at 40 updates/s. Built for typed chat: user text can't stream,
+  tool rows can't expand and have a running-state label bug, no custom views (no charts),
+  input bar can't be turned off (pushed off-screen by our container).
+
+None of the libraries anchors a new turn near the top with context and follows the live edge
+only while you're there, which was the core of shadcn's rules.
