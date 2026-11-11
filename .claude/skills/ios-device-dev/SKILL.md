@@ -24,6 +24,15 @@ xcrun devicectl device install app --device 5976CF6D-0FD6-5A57-9711-AA29F94404E7
   -derivedDataPath build CODE_SIGNING_ALLOWED=NO test` (29 tests as of Nov 2026).
 - Device: CoreDevice id `5976CF6D-0FD6-5A57-9711-AA29F94404E7`, bundle `dev.wakeon.ios`,
   Live Activity extension `dev.wakeon.ios.LiveActivity`.
+- Chat Lab (`dev.wakeon.chatlab`, scheme `ChatLab`, derived data `build-lab-device`) is a
+  separate app for comparing chat UI libraries; same commands with its scheme and app path.
+- **Simulator passing doesn't prove the phone build launches.** The simulator loads
+  frameworks from the build folder; the phone only has what's inside the .app. A Swift
+  package product declared `type: .dynamic` (e.g. LanguageModelChatUI) is linked but NOT
+  embedded unless the target has an Embed Frameworks phase for it (generate-project.py adds
+  one). Symptom: crashes at launch on the phone only, and the app doesn't appear under
+  Settings › VPN & Device Management. Check before installing: every `@rpath` entry from
+  `otool -L` on the app's binaries (minus `libswift*`) must exist in `App.app/Frameworks`.
 
 ## Signing (free Personal Team)
 
@@ -36,6 +45,9 @@ xcrun devicectl device install app --device 5976CF6D-0FD6-5A57-9711-AA29F94404E7
   Check both:
   `for p in ~/Library/Developer/Xcode/UserData/Provisioning\ Profiles/*; do security cms -D -i "$p" | plutil -extract ExpirationDate raw -o - -; done`
 - The paid Developer Program gives 1-year profiles (and TestFlight).
+- Nov 11 2026: a CLI build with `-allowProvisioningUpdates` created the new Chat Lab profile
+  itself, expiring Nov 2027. So the team now seems able to make 1-year profiles from the CLI;
+  check a profile's ExpirationDate before assuming the 7-day rule.
 
 ## Wireless installs (Wi-Fi) and why they fail
 

@@ -319,6 +319,21 @@
 			<key>sourceTree</key>
 			<string>&lt;group&gt;</string>
 		</dict>
+		<key>279FE160B0F1DCBE2EC72933</key>
+		<dict>
+			<key>isa</key>
+			<string>PBXBuildFile</string>
+			<key>productRef</key>
+			<string>B5F49A876DFB272FACBDF1EB</string>
+			<key>settings</key>
+			<dict>
+				<key>ATTRIBUTES</key>
+				<array>
+					<string>CodeSignOnCopy</string>
+					<string>RemoveHeadersOnCopy</string>
+				</array>
+			</dict>
+		</dict>
 		<key>2A360B901BD7C9951074CD18</key>
 		<dict>
 			<key>fileRef</key>
@@ -844,6 +859,25 @@
 			<string>ChatLab/ChatLabApp.swift</string>
 			<key>sourceTree</key>
 			<string>&lt;group&gt;</string>
+		</dict>
+		<key>5F7AB0418ABBDC8B7808DE63</key>
+		<dict>
+			<key>buildActionMask</key>
+			<integer>2147483647</integer>
+			<key>dstPath</key>
+			<string></string>
+			<key>dstSubfolderSpec</key>
+			<integer>10</integer>
+			<key>files</key>
+			<array>
+				<string>279FE160B0F1DCBE2EC72933</string>
+			</array>
+			<key>isa</key>
+			<string>PBXCopyFilesBuildPhase</string>
+			<key>name</key>
+			<string>Embed Frameworks</string>
+			<key>runOnlyForDeploymentPostprocessing</key>
+			<integer>0</integer>
 		</dict>
 		<key>5F8D1447DF26309D45C4CBCF</key>
 		<dict>
@@ -1838,6 +1872,7 @@
 			<array>
 				<string>5A6404DDD8072BAD39E9C571</string>
 				<string>DC46E0EDFBDFAE7278098891</string>
+				<string>5F7AB0418ABBDC8B7808DE63</string>
 			</array>
 			<key>buildRules</key>
 			<array/>
