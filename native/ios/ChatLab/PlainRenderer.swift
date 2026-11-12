@@ -328,7 +328,7 @@ private struct PlainRow: View {
                     .textSelection(.enabled)
                 LabMessageFooter(item: item).padding(.horizontal, 12)
                 if state != .streaming, !text.isEmpty {
-                    MessageActions(text: text)
+                    MessageActions(text: text, canExpand: speaker == .lobby && SizedMarkdown.containsTable(text))
                         .padding(.horizontal, 4) // icons have their own padding; text edge lines up
                 }
             }
@@ -349,7 +349,9 @@ private struct PlainRow: View {
 /// go in this row later.
 private struct MessageActions: View {
     let text: String
+    var canExpand = false
     @State private var copied = false
+    @State private var expanded = false
 
     var body: some View {
         HStack(spacing: 2) {
@@ -365,7 +367,17 @@ private struct MessageActions: View {
             }
             .accessibilityLabel(copied ? "Copied" : "Copy")
             .accessibilityIdentifier("message-copy")
+            if canExpand {
+                Button { expanded = true } label: {
+                    Image(systemName: "arrow.up.left.and.arrow.down.right")
+                        .frame(width: 32, height: 28)
+                        .contentShape(Rectangle())
+                }
+                .accessibilityLabel("Expand")
+                .accessibilityIdentifier("message-expand")
+            }
         }
+        .sheet(isPresented: $expanded) { ExpandedMessage(text: text) }
         .buttonStyle(.plain)
         .font(.footnote)
         .foregroundStyle(.secondary)

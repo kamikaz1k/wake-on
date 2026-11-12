@@ -11,4 +11,17 @@ final class ChatLabActionTests: XCTestCase {
         copy.tap()
         XCTAssertTrue(app.buttons["Copied"].waitForExistence(timeout: 2), "confirms the copy")
     }
+
+    func testExpandOpensWideTableInFull() throws {
+        let app = XCUIApplication()
+        app.launchArguments = ["-lab-scenario", "D8", "-lab-library", "plain"]
+        app.launch()
+        let expand = app.buttons["message-expand"]
+        XCTAssertTrue(expand.waitForExistence(timeout: 12), "expand offered for a message with a table")
+        expand.tap()
+        let done = app.buttons["Done"]
+        XCTAssertTrue(done.waitForExistence(timeout: 3), "full view opens")
+        done.tap()
+        XCTAssertTrue(expand.waitForExistence(timeout: 3), "back to the chat")
+    }
 }

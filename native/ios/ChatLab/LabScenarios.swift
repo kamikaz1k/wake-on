@@ -69,6 +69,19 @@ enum LabText {
 
     If it rains, swap the afternoon for the Gulbenkian museum. More at [visitlisboa.com](https://www.visitlisboa.com).
     """
+    static let wideTable = """
+    Here are the five hotels side by side.
+
+    | Hotel | Area | Price/night | Rating | Walk to tram | Breakfast | Cancellation |
+    |-------|------|-------------|--------|--------------|-----------|--------------|
+    | Memmo Alfama | Alfama | €240 | 4.7 | 3 min | Included | Free until 48 h |
+    | Lumiares | Bairro Alto | €210 | 4.6 | 5 min | €18 | Free until 24 h |
+    | Santiago de Alfama | Alfama | €265 | 4.8 | 4 min | Included | Non-refundable |
+    | Casa do Barão | Chiado | €150 | 4.4 | 6 min | €12 | Free until 72 h |
+    | The Lumiares Annex | Príncipe Real | €185 | 4.5 | 8 min | None | Free until 24 h |
+
+    Casa do Barão is the best value; Santiago de Alfama has the best views.
+    """
     static let code = """
     Sure. To pause from a shortcut, call the media command like this:
 
@@ -379,6 +392,12 @@ enum LabScenarios {
                         s.said(.user, "Show me the route.")
                         s.card(.image(systemName: "map", caption: "Toronto → Montreal, 5 h 30"))
                         s.said(.lobby, "That's the fastest route right now.")
+                    }),
+        LabScenario(id: "D8", title: "Wide table",
+                    lookFor: "A seven-column table streams in. It should stay inside the bubble, scroll sideways, and offer a way to see it in full.",
+                    script: script { s in
+                        s.stream(.user, "Compare the hotels for me.", wordsPerSecond: 2.5)
+                        s.wait(0.6); s.stream(.lobby, LabText.wideTable, wordsPerSecond: 20, chunkCharacters: 6)
                     }),
         LabScenario(id: "D7", title: "Scroll-fade",
                     lookFor: "Soft fades at the top and bottom edges hint that there is more to scroll.",
