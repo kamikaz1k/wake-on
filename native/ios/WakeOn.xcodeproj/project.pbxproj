@@ -1131,6 +1131,7 @@
 			<integer>2147483647</integer>
 			<key>files</key>
 			<array>
+				<string>CA96E234578042035BE64B67</string>
 				<string>3FA687701F257A5753BDCC71</string>
 				<string>8CED41873DA1500FA1E3E1C0</string>
 			</array>
@@ -2112,6 +2113,13 @@
 			<key>sourceTree</key>
 			<string>&lt;group&gt;</string>
 		</dict>
+		<key>CA96E234578042035BE64B67</key>
+		<dict>
+			<key>fileRef</key>
+			<string>DC6D1C4550B84D6367C515C7</string>
+			<key>isa</key>
+			<string>PBXBuildFile</string>
+		</dict>
 		<key>CADE20D81BC4978C4F735840</key>
 		<dict>
 			<key>fileRef</key>
@@ -2327,6 +2335,17 @@
 			<key>runOnlyForDeploymentPostprocessing</key>
 			<integer>0</integer>
 		</dict>
+		<key>DC6D1C4550B84D6367C515C7</key>
+		<dict>
+			<key>isa</key>
+			<string>PBXFileReference</string>
+			<key>lastKnownFileType</key>
+			<string>sourcecode.swift</string>
+			<key>path</key>
+			<string>ChatLabUITests/ChatLabActionTests.swift</string>
+			<key>sourceTree</key>
+			<string>&lt;group&gt;</string>
+		</dict>
 		<key>DC76E9F0C0006E8F919E0C51</key>
 		<dict>
 			<key>children</key>
@@ -2406,6 +2425,7 @@
 				<string>D271D76AB5D8BC578109A18A</string>
 				<string>D51DBCE476B3A9F6D9C63988</string>
 				<string>694D8611755A10832F2AF78C</string>
+				<string>DC6D1C4550B84D6367C515C7</string>
 				<string>5F00D4549D966E634711BB43</string>
 				<string>A8851735FAE0A2F73AB0D84E</string>
 				<string>FBDC4F23F93125BBEEAE800C</string>

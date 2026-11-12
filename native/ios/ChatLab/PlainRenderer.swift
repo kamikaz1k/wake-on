@@ -327,6 +327,10 @@ private struct PlainRow: View {
                                 in: RoundedRectangle(cornerRadius: 18))
                     .textSelection(.enabled)
                 LabMessageFooter(item: item).padding(.horizontal, 12)
+                if state != .streaming, !text.isEmpty {
+                    MessageActions(text: text)
+                        .padding(.horizontal, 4) // icons have their own padding; text edge lines up
+                }
             }
             .frame(maxWidth: .infinity, alignment: speaker == .user ? .trailing : .leading)
             .padding(speaker == .user ? .leading : .trailing, 40)
@@ -338,6 +342,34 @@ private struct PlainRow: View {
     static func markdown(_ text: String) -> AttributedString {
         (try? AttributedString(markdown: text, options: .init(interpretedSyntax: .inlineOnlyPreservingWhitespace)))
             ?? AttributedString(text)
+    }
+}
+
+/// Actions under a finished message. Just Copy for now; more (feedback, read aloud, share)
+/// go in this row later.
+private struct MessageActions: View {
+    let text: String
+    @State private var copied = false
+
+    var body: some View {
+        HStack(spacing: 2) {
+            Button {
+                UIPasteboard.general.string = text
+                withAnimation(.snappy) { copied = true }
+                DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) { withAnimation(.snappy) { copied = false } }
+            } label: {
+                Image(systemName: copied ? "checkmark" : "square.on.square")
+                    .contentTransition(.symbolEffect(.replace))
+                    .frame(width: 32, height: 28)
+                    .contentShape(Rectangle())
+            }
+            .accessibilityLabel(copied ? "Copied" : "Copy")
+            .accessibilityIdentifier("message-copy")
+        }
+        .buttonStyle(.plain)
+        .font(.footnote)
+        .foregroundStyle(.secondary)
+        .sensoryFeedback(.success, trigger: copied) { _, now in now }
     }
 }
 
