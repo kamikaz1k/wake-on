@@ -90,6 +90,9 @@ struct WakeOnApp: App {
                         DispatchQueue.main.asyncAfter(deadline: .now() + delay) {
                             if let command = MediaControl.Command(rawValue: args[index + 1]) { MediaControl.run(command) }
                         }
+                    } else if let index = args.firstIndex(of: "--demo-call"), index + 1 < args.count {
+                        // Plays a saved capture into the live call screen, without connecting.
+                        VoiceSessionController.shared.demoCall(capture: URL(fileURLWithPath: args[index + 1]))
                     } else if let index = args.firstIndex(of: "--talk") {
                         let next = args.indices.contains(index + 1) ? args[index + 1] : ""
                         VoiceSessionController.shared.start(trigger: "launch_argument",

@@ -17,6 +17,20 @@ struct SimpleView: View {
 
     var body: some View {
         NavigationStack {
+            Group {
+                if #available(iOS 18.0, *), voice.phase != .idle, let chat = voice.liveChat {
+                    LiveCallScreen(voice: voice, transcript: chat.transcript,
+                                   visualizer: VoiceVisualizer(style: visualizerStyle, palette: .named(visualizerPalette)))
+                } else {
+                    list
+                }
+            }
+            .navigationTitle("Wake On")
+            .navigationDestination(isPresented: $openLogs) { ChatLogsView() }
+        }
+    }
+
+    private var list: some View {
             List {
                 ModePicker.row
                 Section {
@@ -117,8 +131,50 @@ struct SimpleView: View {
                     Text("While charging, the screen stays on as long as Wake On is open, like on a stand.")
                 }
             }
-            .navigationTitle("Wake On")
-            .navigationDestination(isPresented: $openLogs) { ChatLogsView() }
+    }
+}
+
+/// During a call: the orb, the conversation in Lobby's chat view as it happens (the same view
+/// and rows as the chat log afterwards), and the call controls.
+@available(iOS 18.0, *)
+private struct LiveCallScreen: View {
+    @ObservedObject var voice: VoiceSessionController
+    @ObservedObject var transcript: ChatTranscript
+    let visualizer: VoiceVisualizer
+
+    var body: some View {
+        VStack(spacing: 0) {
+            visualizer
+                .frame(height: 180)
+                .frame(maxWidth: .infinity)
+                .background(Color.black, in: RoundedRectangle(cornerRadius: 20))
+                .padding(.horizontal)
+            ChatTranscriptView(items: transcript.items, call: transcript.call, showsHeader: false)
+                .accessibilityIdentifier("live-chat")
+            controls
         }
+        .navigationBarTitleDisplayMode(.inline)
+    }
+
+    private var controls: some View {
+        VStack(spacing: 8) {
+            if let error = voice.error { Text(error).foregroundStyle(.red).font(.footnote) }
+            HStack {
+                Button(voice.muted ? "Unmute" : "Mute", systemImage: voice.muted ? "mic.slash.fill" : "mic.fill") {
+                    voice.toggleMute()
+                }
+                .disabled(voice.phase == .ending)
+                Spacer()
+                Text(voice.phase == .ending ? "Ending…" : voice.status)
+                    .font(.footnote).foregroundStyle(.secondary).lineLimit(1)
+                Spacer()
+                Button("End", systemImage: "phone.down.fill", role: .destructive) { voice.stop() }
+                    .disabled(voice.phase == .ending)
+                    .accessibilityIdentifier("simple-end")
+            }
+            .buttonStyle(.bordered)
+        }
+        .padding(.horizontal).padding(.vertical, 10)
+        .background(.bar)
     }
 }

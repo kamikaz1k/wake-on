@@ -64,8 +64,11 @@ struct CapturedCall: Identifiable {
 ///   the app's own steps after the call: opening Spotify and media commands.
 /// - Backend stages drive the status line; check-ins and the hang-up become markers.
 struct CaptureReplay {
-    private(set) var steps: [ChatStep] = []
+    /// Every step so far, timed from the trigger.
+    var steps: [ChatStep] { script.steps }
     private var script = ChatScript()
+    private let rawEvents: Bool
+    private var taken = 0
 
     private struct Open { var id: String; var speaker: ChatItem.Speaker; var text: String }
     private var current: Open?
@@ -79,15 +82,33 @@ struct CaptureReplay {
     /// Web search rows per delegation, to attach the answer and its sources.
     private var searches: [String: [String]] = [:]
 
-    init(lines: [CapturedCall.Line], rawEvents: Bool) {
+    /// Built up one event at a time, as a live call happens (see `LiveChat`).
+    init(rawEvents: Bool = false) {
+        self.rawEvents = rawEvents
         script.now = 0
-        for line in lines {
-            script.now = line.t
-            if rawEvents { raw(line) }
-            apply(line)
-        }
-        finishMessage()
-        steps = script.steps
+    }
+
+    /// A whole recorded call.
+    init(lines: [CapturedCall.Line], rawEvents: Bool) {
+        self.init(rawEvents: rawEvents)
+        for line in lines { feed(line) }
+        finish()
+    }
+
+    mutating func feed(_ line: CapturedCall.Line) {
+        script.now = line.t
+        if rawEvents { raw(line) }
+        apply(line)
+    }
+
+    /// Marks whatever is still streaming as finished.
+    mutating func finish() { finishMessage() }
+
+    /// The steps added since the last call, to apply right away.
+    mutating func takeNewSteps() -> [ChatStep] {
+        let new = Array(script.steps[taken...])
+        taken = script.steps.count
+        return new
     }
 
     // MARK: - Events
@@ -326,5 +347,18 @@ struct CaptureReplay {
               let data = try? JSONSerialization.data(withJSONObject: object, options: [.prettyPrinted, .sortedKeys, .withoutEscapingSlashes])
         else { return json }
         return String(decoding: data, as: UTF8.self)
+    }
+}
+
+/// A call's chat while it happens: each captured event goes through the same converter as
+/// a saved call's, so the live view and the chat log afterwards look the same.
+@MainActor
+final class LiveChat {
+    let transcript = ChatTranscript()
+    private var replay = CaptureReplay()
+
+    func add(_ line: CapturedCall.Line) {
+        replay.feed(line)
+        for step in replay.takeNewSteps() { step.apply(transcript) }
     }
 }

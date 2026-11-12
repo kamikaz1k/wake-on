@@ -22,6 +22,9 @@ final class CallCapture {
     /// A long call's transcript deltas add up; stop before a capture gets unwieldy.
     static let byteLimit = 8_000_000
 
+    /// Each event as it's recorded, for the live chat view (even past `byteLimit`).
+    var onLine: ((CapturedCall.Line) -> Void)?
+
     init(id: UUID = UUID(), origin: UInt64) {
         self.id = id
         self.origin = origin
@@ -37,9 +40,11 @@ final class CallCapture {
     }
 
     func record(_ source: Source, _ event: [String: Any], at time: UInt64 = DispatchTime.now().uptimeNanoseconds) {
-        guard !truncated else { return }
         let ms = (Double(Int64(bitPattern: time &- origin)) / 1e4).rounded() / 100
-        let line: [String: Any] = ["t_ms": ms, "source": source.rawValue, "event": Self.jsonSafe(event)]
+        let safe = Self.jsonSafe(event)
+        onLine?(CapturedCall.Line(t: ms / 1000, source: source.rawValue, event: safe))
+        guard !truncated else { return }
+        let line: [String: Any] = ["t_ms": ms, "source": source.rawValue, "event": safe]
         guard var data = try? JSONSerialization.data(withJSONObject: line, options: [.withoutEscapingSlashes]) else { return }
         data.append(0x0A)
         if bytes + data.count > Self.byteLimit {

@@ -214,7 +214,9 @@ final class VoiceSessionController: ObservableObject {
         fullTranscript = []
         callTrigger = trigger
         callStartedAt = Date()
-        capture = Self.startCapture(trigger: trigger, origin: origin)
+        let chat = LiveChat()
+        liveChat = chat
+        capture = Self.startCapture(trigger: trigger, origin: origin, chat: chat)
         lastResponseMs = nil
         roundTripMs = nil
         jitterBufferMs = nil
@@ -729,8 +731,35 @@ final class VoiceSessionController: ObservableObject {
     /// Every event of the call, saved with its chat log (see `CallCapture`).
     private var capture: CallCapture?
 
-    private static func startCapture(trigger: String, origin: UInt64) -> CallCapture {
+    /// The current call as Lobby's chat view shows it, built from the same events as the capture.
+    /// Kept after the call ends until the next one starts.
+    @Published private(set) var liveChat: LiveChat?
+
+    #if DEBUG
+    /// Shows a saved capture on the live call screen at its real pace, with no connection,
+    /// microphone or OpenAI usage (`--demo-call <path>`), to check the screen.
+    func demoCall(capture url: URL) {
+        guard phase == .idle, let call = CapturedCall.load(url) else { return log("demo_call unreadable \(url.path)") }
+        let chat = LiveChat()
+        liveChat = chat
+        phase = .live
+        status = "Demo · \(call.title)"
+        Task {
+            let start = ContinuousClock.now
+            for line in call.lines {
+                try? await Task.sleep(until: start + .seconds(line.t), clock: .continuous)
+                chat.add(line)
+                if line.type == "session.closed" { phase = .ending }
+            }
+            try? await Task.sleep(for: .seconds(2))
+            phase = .idle
+        }
+    }
+    #endif
+
+    private static func startCapture(trigger: String, origin: UInt64, chat: LiveChat) -> CallCapture {
         let capture = CallCapture(origin: origin)
+        capture.onLine = { [weak chat] line in chat?.add(line) }
         var config = makeConfig()
         config.voice = LiveVoiceConfig.chosenVoice
         // The session as requested, without the SDP offer (the API key is only in a header).

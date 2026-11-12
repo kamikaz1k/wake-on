@@ -279,6 +279,17 @@
 			<key>productName</key>
 			<string>MarkdownView</string>
 		</dict>
+		<key>1C6E6C00672E94914095F8DB</key>
+		<dict>
+			<key>isa</key>
+			<string>PBXFileReference</string>
+			<key>lastKnownFileType</key>
+			<string>sourcecode.swift</string>
+			<key>path</key>
+			<string>Tests/LiveChatTests.swift</string>
+			<key>sourceTree</key>
+			<string>&lt;group&gt;</string>
+		</dict>
 		<key>1CB063FB3A6A99A499006954</key>
 		<dict>
 			<key>isa</key>
@@ -323,6 +334,13 @@
 		<dict>
 			<key>fileRef</key>
 			<string>63A0F22F27112C50B07F9861</string>
+			<key>isa</key>
+			<string>PBXBuildFile</string>
+		</dict>
+		<key>1FD4FDDD07AD5BF53127D39B</key>
+		<dict>
+			<key>fileRef</key>
+			<string>1C6E6C00672E94914095F8DB</string>
 			<key>isa</key>
 			<string>PBXBuildFile</string>
 		</dict>
@@ -1320,6 +1338,7 @@
 				<string>604415CC5C8C5E7AD42D4232</string>
 				<string>F5A8AD6DD1708ECCF94AA2E2</string>
 				<string>44DA201589CF3D2915F60C94</string>
+				<string>1FD4FDDD07AD5BF53127D39B</string>
 				<string>53100DED70B6793C84D0EFE9</string>
 				<string>8F689865000D2D112E2DF22D</string>
 				<string>D20988A742E8A10B39F7CB23</string>
@@ -2639,6 +2658,7 @@
 				<string>F92C1B086F4CDFB01AAC82C5</string>
 				<string>A52E1E1026008ABCCF27FFB3</string>
 				<string>7208E077BFADA885CC025FBD</string>
+				<string>1C6E6C00672E94914095F8DB</string>
 				<string>89B55F3E600130F57D0DF153</string>
 				<string>548E5C94CE6D3460317BB2D5</string>
 				<string>D9C92472F248312173947DD4</string>
