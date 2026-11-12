@@ -830,6 +830,7 @@
 				<string>398A4CC88A7AE5BE5F44C2F4</string>
 				<string>C6C86E0691E168652C4FB7FF</string>
 				<string>D1915CEA3D713F08792671A1</string>
+				<string>BFBC659459B681A0A4CEA975</string>
 				<string>3FE5EC2E51880636DEBAAFF8</string>
 				<string>5725DC6BB6CEDEEEDBE6F411</string>
 				<string>7851A7BB2901F6F4155F041B</string>
@@ -2027,6 +2028,13 @@
 				<string>3.7.0</string>
 			</dict>
 		</dict>
+		<key>BFBC659459B681A0A4CEA975</key>
+		<dict>
+			<key>fileRef</key>
+			<string>E0760B7ACE794DDF5F8C9D2D</string>
+			<key>isa</key>
+			<string>PBXBuildFile</string>
+		</dict>
 		<key>C096918F71FEAB2E9FC49F58</key>
 		<dict>
 			<key>fileRef</key>
@@ -2391,6 +2399,7 @@
 				<string>B5FF211A8E2C834FF319EBF2</string>
 				<string>625431900975CEAB27D072BA</string>
 				<string>760BF1A5DD516B23F29A7716</string>
+				<string>E0760B7ACE794DDF5F8C9D2D</string>
 				<string>3E62A95FED5BE78926020787</string>
 				<string>C63371EE005F6A3E5E3783C1</string>
 				<string>75E34F9BF6DB381C1E742368</string>
@@ -2514,6 +2523,17 @@
 			<string>audio.wav</string>
 			<key>path</key>
 			<string>Resources/VisualizerSamples/viz-u3.wav</string>
+			<key>sourceTree</key>
+			<string>&lt;group&gt;</string>
+		</dict>
+		<key>E0760B7ACE794DDF5F8C9D2D</key>
+		<dict>
+			<key>isa</key>
+			<string>PBXFileReference</string>
+			<key>lastKnownFileType</key>
+			<string>sourcecode.swift</string>
+			<key>path</key>
+			<string>ChatLab/LabMarkdown.swift</string>
 			<key>sourceTree</key>
 			<string>&lt;group&gt;</string>
 		</dict>

@@ -3,10 +3,50 @@ import SwiftUI
 
 @main
 struct ChatLabApp: App {
+    @AppStorage(LabAppearance.key) private var appearance: LabAppearance = .system
+
     var body: some Scene {
         WindowGroup {
             NavigationStack { ScenarioListView() }
+                .preferredColorScheme(appearance.colorScheme)
         }
+    }
+}
+
+/// Light, dark, or follow the phone. Switchable from the home screen and every scenario.
+enum LabAppearance: String, CaseIterable, Identifiable {
+    case system, light, dark
+    static let key = "chatlab.appearance"
+    var id: String { rawValue }
+    var title: String { rawValue.capitalized }
+    var colorScheme: ColorScheme? {
+        switch self {
+        case .system: nil
+        case .light: .light
+        case .dark: .dark
+        }
+    }
+    var symbol: String {
+        switch self {
+        case .system: "circle.lefthalf.filled"
+        case .light: "sun.max"
+        case .dark: "moon"
+        }
+    }
+}
+
+/// A menu to pick the appearance, for toolbars.
+struct AppearanceMenu: View {
+    @AppStorage(LabAppearance.key) private var appearance: LabAppearance = .system
+    var body: some View {
+        Menu {
+            Picker("Appearance", selection: $appearance) {
+                ForEach(LabAppearance.allCases) { Label($0.title, systemImage: $0.symbol).tag($0) }
+            }
+        } label: {
+            Label("Appearance", systemImage: appearance.symbol)
+        }
+        .accessibilityIdentifier("lab-appearance")
     }
 }
 
@@ -48,6 +88,7 @@ struct ScenarioListView: View {
             }
         }
         .navigationTitle("Chat Lab")
+        .toolbar { AppearanceMenu() }
         .navigationDestination(isPresented: Binding(get: { opened != nil }, set: { if !$0 { opened = nil } })) {
             if let scenario = LabScenarios.all.first(where: { $0.id == opened }) {
                 ScenarioPager(scenario: scenario)
@@ -108,6 +149,7 @@ struct ScenarioPager: View {
         .navigationTitle("\(scenario.id) · \(scenario.title)")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
+            AppearanceMenu()
             Button(showNote ? "Hide note" : "Show note") { withAnimation { showNote.toggle() } }
         }
         .onAppear {

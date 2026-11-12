@@ -19,7 +19,7 @@ import SwiftUI
 ///   when rows are inserted or resized above it.
 /// - A15: VoiceOver announces each finished Lobby reply once, not token by token.
 /// - D1: a "Lobby" label starts each run of Lobby messages. D7: edge fades when scrollable.
-/// Not done here: rich markdown (tables, code) — SwiftUI's built-in markdown is inline-only.
+/// Lobby's text uses MarkdownView (via `SizedMarkdown`) for lists, tables and code.
 struct PlainRenderer: View {
     @ObservedObject var player: LabPlayer
 
@@ -230,14 +230,25 @@ private struct ReaderScroller: View {
         }
     }
 
+    /// shadcn's `scroll-fade`: a linear fade of min(12%, 40 pt) at each edge that grows in
+    /// with scroll. The top fade eases from 0 to full over the first 96 pt scrolled, the bottom
+    /// one eases out over the last 96 pt (CSS `animation-range` with ease-in-out), so it never
+    /// pops on.
     private var edgeFades: some View {
-        VStack(spacing: 0) {
-            LinearGradient(colors: [metrics.fromTop > 1 ? .clear : .black, .black], startPoint: .top, endPoint: .bottom)
-                .frame(height: 24)
+        let size = min(metrics.viewport * 0.12, 40)
+        let top = size * Self.easeInOut(metrics.fromTop / 96)
+        let bottom = size * Self.easeInOut(metrics.fromBottom / 96)
+        return VStack(spacing: 0) {
+            LinearGradient(colors: [.clear, .black], startPoint: .top, endPoint: .bottom).frame(height: top)
             Color.black
-            LinearGradient(colors: [.black, metrics.fromBottom > 1 ? .clear : .black], startPoint: .top, endPoint: .bottom)
-                .frame(height: 24)
+            LinearGradient(colors: [.black, .clear], startPoint: .top, endPoint: .bottom).frame(height: bottom)
         }
+    }
+
+    /// CSS ease-in-out (cubic-bezier 0.42, 0, 0.58, 1), close enough as smoothstep.
+    private static func easeInOut(_ value: CGFloat) -> CGFloat {
+        let t = min(max(value, 0), 1)
+        return t * t * (3 - 2 * t)
     }
 }
 
@@ -299,14 +310,23 @@ private struct PlainRow: View {
     var body: some View {
         if case let .message(speaker, text, state) = item.kind {
             VStack(alignment: speaker == .user ? .trailing : .leading, spacing: 3) {
-                if showName { Text("Lobby").font(.caption.weight(.semibold)).foregroundStyle(.secondary) }
-                Text(Self.markdown(text.isEmpty && state == .streaming ? "…" : text))
+                if showName {
+                    Text("Lobby").font(.caption.weight(.semibold)).foregroundStyle(.secondary)
+                        .padding(.horizontal, 12) // line up with the text inside the bubble
+                }
+                Group {
+                    if speaker == .lobby, !text.isEmpty {
+                        SizedMarkdown(text: text) // full markdown: lists, tables, code (MarkdownView)
+                    } else {
+                        Text(Self.markdown(text.isEmpty && state == .streaming ? "…" : text))
+                    }
+                }
                     .padding(.horizontal, 12).padding(.vertical, 8)
                     .foregroundStyle(speaker == .user ? Color.white : Color.primary)
                     .background(speaker == .user ? Color.accentColor : Color(.secondarySystemBackground),
                                 in: RoundedRectangle(cornerRadius: 18))
                     .textSelection(.enabled)
-                LabMessageFooter(item: item)
+                LabMessageFooter(item: item).padding(.horizontal, 12)
             }
             .frame(maxWidth: .infinity, alignment: speaker == .user ? .trailing : .leading)
             .padding(speaker == .user ? .leading : .trailing, 40)

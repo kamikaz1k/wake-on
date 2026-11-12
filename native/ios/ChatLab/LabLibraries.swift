@@ -28,7 +28,7 @@ enum LabLibrary: String, CaseIterable, Identifiable {
     var facts: String {
         switch self {
         case .plain:
-            "Ours · SwiftUI ScrollView + scrollPosition, implements shadcn's scroll rules · iOS 18 · no dependencies · inline markdown only"
+            "Ours · SwiftUI ScrollView + scrollPosition, implements shadcn's scroll rules · iOS 18 · MarkdownView for Lobby's text"
         case .exyte:
             "exyte/Chat 3.3.7 (SwiftUI over UITableView, MIT, iOS 17, pulls in Giphy, Kingfisher, MediaPicker) + MarkdownView 3.9.1 (MIT)"
         case .conversationKit:
