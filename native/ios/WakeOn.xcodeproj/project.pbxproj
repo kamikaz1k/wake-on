@@ -531,6 +531,13 @@
 			<key>sourceTree</key>
 			<string>&lt;group&gt;</string>
 		</dict>
+		<key>3FA687701F257A5753BDCC71</key>
+		<dict>
+			<key>fileRef</key>
+			<string>5F00D4549D966E634711BB43</string>
+			<key>isa</key>
+			<string>PBXBuildFile</string>
+		</dict>
 		<key>3FE5EC2E51880636DEBAAFF8</key>
 		<dict>
 			<key>fileRef</key>
@@ -929,6 +936,17 @@
 			<key>sourceTree</key>
 			<string>&lt;group&gt;</string>
 		</dict>
+		<key>5F00D4549D966E634711BB43</key>
+		<dict>
+			<key>isa</key>
+			<string>PBXFileReference</string>
+			<key>lastKnownFileType</key>
+			<string>sourcecode.swift</string>
+			<key>path</key>
+			<string>ChatLabUITests/ChatLabPagingTests.swift</string>
+			<key>sourceTree</key>
+			<string>&lt;group&gt;</string>
+		</dict>
 		<key>5F7AB0418ABBDC8B7808DE63</key>
 		<dict>
 			<key>buildActionMask</key>
@@ -1112,6 +1130,7 @@
 			<integer>2147483647</integer>
 			<key>files</key>
 			<array>
+				<string>3FA687701F257A5753BDCC71</string>
 				<string>8CED41873DA1500FA1E3E1C0</string>
 			</array>
 			<key>isa</key>
@@ -2378,6 +2397,7 @@
 				<string>D271D76AB5D8BC578109A18A</string>
 				<string>D51DBCE476B3A9F6D9C63988</string>
 				<string>694D8611755A10832F2AF78C</string>
+				<string>5F00D4549D966E634711BB43</string>
 				<string>A8851735FAE0A2F73AB0D84E</string>
 				<string>FBDC4F23F93125BBEEAE800C</string>
 			</array>

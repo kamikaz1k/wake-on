@@ -133,7 +133,9 @@ screenshots without touch; scores should come from trying each page on the phone
   row, so Lobby loses exyte's avatar/name/time. MarkdownView renders tables and code well, but its
   SwiftUI wrapper measures height after layout: in exyte's recycled cells that changed the list
   height near the top and caused a bounce loop on the phone. Fixed in the lab with our own
-  wrapper that sizes during layout (`SizedMarkdown`); a swipe UI test (ChatLabUITests) confirmed it. Default user bubble
+  wrapper that sizes during layout (`SizedMarkdown`); a swipe UI test (ChatLabUITests) confirmed it.
+  On the phone, a new message stops a fling mid-scroll: exyte inserts with `reloadData` and then
+  restores the offset with `setContentOffset`, which cancels deceleration (hurts A1, A7). Default user bubble
   truncates some messages (layout bug). Heavy dependencies (Giphy, Kingfisher, MediaPicker).
 - **ConversationKit:** "push and pin" anchors a new user message at the top (A4/A5 partly), but
   then keeps it pinned while the reply streams off-screen; no follow mode or jump button; only

@@ -141,6 +141,12 @@ private struct ReaderScroller: View {
             .presentationDetents([.medium, .large])
         }
         .onChange(of: items.count) { old, new in itemsCountChanged(from: old, to: new, turns: turns) }
+        // The pager can recreate this page with messages already there; its state starts
+        // fresh (hidden), and no count change will arrive to reveal it. Position and show now.
+        .onAppear {
+            guard !ready, !items.isEmpty else { return }
+            itemsCountChanged(from: 0, to: items.count, turns: turns)
+        }
         .onChange(of: turns.last?.id) { _, _ in
             // A new turn: anchor it near the top, but only if the reader is following (A4, A7).
             guard ready, turns.last?.isAnchored == true else { return }
