@@ -13,6 +13,9 @@ When a check is redone, add a new row rather than editing the old one.
 
 | Date | SHA | Check | How | Where | Result | Files |
 | --- | --- | --- | --- | --- | --- | --- |
+| 2026-11-12 | 3652571 | Live call screen on the Simple tab: orb, chat view updating as the call happens, Mute/End | `--demo-call` with your real market/weather capture, screenshots at 17 s and 39 s | sim | Web search row running with "Searching the web…", then done; answer streams in and the view follows it | `native/ios/WakeOn/SimpleView.swift`, `native/ios/ChatUI`, `native/ios/WakeOn/VoiceSessionController.swift` |
+| 2026-11-12 | 3652571 | Live chat shows the same rows as the saved log for a call | unit test `LiveChatTests` | sim | Pass | `native/ios/ChatUI/CaptureReplay.swift`, `native/ios/WakeOn/CallCapture.swift` |
+| 2026-11-12 | 3652571 | Wake On unit tests (67) and Chat Lab UI tests (5) | unit and UI tests | sim | All pass | `native/ios/WakeOn`, `native/ios/Tests`, `native/ios/ChatUI`, `native/ios/ChatLab`, `native/ios/ChatLabUITests` |
 | 2026-11-12 | 7317e33 | Chat log page shows a call in Lobby's chat view (capture tool rows, older calls as lines) | phone, by you: opened your chat history | phone | Works | `native/ios/WakeOn/ChatLogsView.swift`, `native/ios/ChatUI` |
 | 2026-11-12 | 7317e33 | Chat log page shows a call in Lobby's chat view | simulator screenshot with the phone's real logs; unit tests `ChatLogTranscriptTests` | sim | Opens at your last message; markers, timings, tool rows; tests pass | `native/ios/WakeOn/ChatLogsView.swift`, `native/ios/ChatUI` |
 | 2026-11-12 | 7317e33 | Cold launch not slower after adding MarkdownView to Wake On | Instruments App Launch, 4 runs vs 3 on the build from b4feb51 | phone | 525–655 ms to first frame vs 538–679 ms before; static runtime init +1 ms | `native/ios/scripts/generate-project.py`, `native/ios/ChatUI`, `native/ios/WakeOn/WakeOnApp.swift` |
@@ -28,4 +31,5 @@ When a check is redone, add a new row rather than editing the old one.
 
 | Since | What | Why not |
 | --- | --- | --- |
-| 2026-11-12 | Lobby's chat view during a live call | Not built yet |
+| 2026-11-12 | Live call screen in a real call on the phone (Action Button, Hey Lobby, Spotify hand-off) | Needs you to make calls; installed at 3652571 |
+| 2026-11-12 | Action Button time to listening with the call screen (first frame after trigger) | Needs real calls; then compare `first_frame_after_trigger` in latency.jsonl with earlier calls |
