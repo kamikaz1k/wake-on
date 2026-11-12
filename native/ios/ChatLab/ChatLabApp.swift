@@ -120,6 +120,14 @@ struct ScenarioPager: View {
             HStack {
                 Button(player.isPlaying ? "Replaying…" : "Replay", systemImage: "arrow.counterclockwise") { player.restart() }
                     .accessibilityIdentifier("lab-replay")
+                Menu {
+                    Picker("Speed", selection: $player.speed) {
+                        ForEach(LabPlayer.speeds, id: \.self) { Text("\(Int($0))×").tag($0) }
+                    }
+                } label: {
+                    Label("\(Int(player.speed))×", systemImage: "gauge.with.dots.needle.67percent")
+                }
+                .accessibilityIdentifier("lab-speed")
                 Spacer()
                 // Library switcher. Swiping works too, but some libraries' views swallow the
                 // sideways swipe (ConversationKit), so taps always work.

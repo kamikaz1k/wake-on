@@ -21,8 +21,20 @@ final class LabPlayer: ObservableObject {
     /// Updates applied in the last second (shown for G1).
     @Published private(set) var updatesPerSecond = 0
 
+    /// Replay speed (1 = real time). Remembered across launches; changing it mid-replay
+    /// carries on from the current step at the new rate.
+    @Published var speed: Double = UserDefaults.standard.object(forKey: LabPlayer.speedKey) as? Double ?? 2 {
+        didSet {
+            UserDefaults.standard.set(speed, forKey: Self.speedKey)
+            if isPlaying { play(from: nextStep) }
+        }
+    }
+    static let speedKey = "chatlab.speed"
+    static let speeds: [Double] = [1, 2, 4, 8]
+
     private var steps: [LabStep] = []
     private var task: Task<Void, Never>?
+    private var nextStep = 0
     private var recentUpdates: [Date] = []
     var duration: TimeInterval { steps.last?.at ?? 0 }
 
@@ -37,21 +49,26 @@ final class LabPlayer: ObservableObject {
         call = LabCallState()
         progress = 0
         revision += 1
-        play()
+        play(from: 0)
     }
 
-    func play() {
+    func play(from index: Int = 0) {
         task?.cancel()
         isPlaying = true
+        nextStep = index
         let start = Date()
         let steps = steps
+        let base = index < steps.count ? (index > 0 ? steps[index - 1].at : 0) : 0
+        let rate = max(speed, 0.1)
         let total = max(duration, 0.01)
         task = Task { @MainActor [weak self] in
-            for step in steps {
-                let wait = step.at - Date().timeIntervalSince(start)
+            for position in index..<steps.count {
+                let step = steps[position]
+                let wait = (step.at - base) / rate - Date().timeIntervalSince(start)
                 if wait > 0 { try? await Task.sleep(for: .seconds(wait)) }
                 guard let self, !Task.isCancelled else { return }
                 step.apply(self)
+                self.nextStep = position + 1
                 self.progress = min(1, step.at / total)
             }
             self?.isPlaying = false
