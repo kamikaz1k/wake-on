@@ -13,6 +13,8 @@ When a check is redone, add a new row rather than editing the old one.
 
 | Date | SHA | Check | How | Where | Result | Files |
 | --- | --- | --- | --- | --- | --- | --- |
+| 2026-11-12 | 3652571 | Real call with the live screen: Action Button, two web searches, Spotify; captured and shown right in the chat log | phone, by you (1 call); capture pulled and its chat log opened in the simulator | phone, sim | Capture complete (searches, play_spotify, hang-up, Spotify opened by link); chat log shows every row | `native/ios/WakeOn/SimpleView.swift`, `native/ios/ChatUI`, `native/ios/WakeOn/VoiceSessionController.swift` |
+| 2026-11-12 | 3652571 | Action Button cold start not slower with the live screen | latency.jsonl: 1 cold start vs 18 earlier cold starts | phone | First frame 140 ms (earlier median 266); mic live 543 ms (earlier 248–530, already rising since Nov 5); the wait was iOS foregrounding plus an audio engine restart, not drawing. One sample: not conclusive | `native/ios/WakeOn/SimpleView.swift`, `native/ios/WakeOn/VoiceSessionController.swift`, `native/ios/WakeOn/HotAudioDevice.swift` |
 | 2026-11-12 | 3652571 | Live call screen on the Simple tab: orb, chat view updating as the call happens, Mute/End | `--demo-call` with your real market/weather capture, screenshots at 17 s and 39 s | sim | Web search row running with "Searching the web…", then done; answer streams in and the view follows it | `native/ios/WakeOn/SimpleView.swift`, `native/ios/ChatUI`, `native/ios/WakeOn/VoiceSessionController.swift` |
 | 2026-11-12 | 3652571 | Live chat shows the same rows as the saved log for a call | unit test `LiveChatTests` | sim | Pass | `native/ios/ChatUI/CaptureReplay.swift`, `native/ios/WakeOn/CallCapture.swift` |
 | 2026-11-12 | 3652571 | Wake On unit tests (67) and Chat Lab UI tests (5) | unit and UI tests | sim | All pass | `native/ios/WakeOn`, `native/ios/Tests`, `native/ios/ChatUI`, `native/ios/ChatLab`, `native/ios/ChatLabUITests` |
@@ -31,5 +33,5 @@ When a check is redone, add a new row rather than editing the old one.
 
 | Since | What | Why not |
 | --- | --- | --- |
-| 2026-11-12 | Live call screen in a real call on the phone (Action Button, Hey Lobby, Spotify hand-off) | Needs you to make calls; installed at 3652571 |
-| 2026-11-12 | Action Button time to listening with the call screen (first frame after trigger) | Needs real calls; then compare `first_frame_after_trigger` in latency.jsonl with earlier calls |
+| 2026-11-12 | How the live call screen looks and scrolls in a real call; a Hey Lobby call | Waiting on your verdict; only an Action Button call so far |
+| 2026-11-12 | Action Button time to mic live, with more samples | One cold start so far (543 ms, at the top of the earlier range); warm starts not measured yet |
