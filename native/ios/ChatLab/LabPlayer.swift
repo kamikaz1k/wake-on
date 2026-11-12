@@ -45,6 +45,8 @@ final class LabPlayer: ObservableObject {
 
     func restart() {
         task?.cancel()
+        extraTasks.forEach { $0.cancel() }
+        extraTasks = []
         items = []
         call = LabCallState()
         progress = 0
@@ -78,7 +80,39 @@ final class LabPlayer: ObservableObject {
 
     func stop() {
         task?.cancel()
+        extraTasks.forEach { $0.cancel() }
+        extraTasks = []
         isPlaying = false
+    }
+
+    private var extraTasks: [Task<Void, Never>] = []
+    private var turnCount = 0
+
+    /// Adds a spoken turn from you plus a streamed Lobby reply right now, on top of whatever
+    /// is playing, so you can position the view first and then see how a library reacts.
+    func newTurn() {
+        turnCount += 1
+        let index = turnCount
+        var script = LabScript()
+        script.namespace = "turn\(index)-"
+        script.now = 0
+        let question = LabText.questions[index % LabText.questions.count]
+        script.stream(.user, question, wordsPerSecond: 2.5)
+        script.wait(0.7)
+        // Alternate short and long replies, so both "fits on screen" and "streams past" happen.
+        let reply = index % 2 == 0 ? LabText.answers[index % LabText.answers.count] : LabText.long
+        script.stream(.lobby, reply, wordsPerSecond: 6, timing: "Reply in 0.7 s")
+        let steps = script.steps
+        let start = Date()
+        let rate = max(speed, 0.1)
+        extraTasks.append(Task { @MainActor [weak self] in
+            for step in steps {
+                let wait = step.at / rate - Date().timeIntervalSince(start)
+                if wait > 0 { try? await Task.sleep(for: .seconds(wait)) }
+                guard let self, !Task.isCancelled else { return }
+                step.apply(self)
+            }
+        })
     }
 
     // MARK: - Mutations used by scripts
@@ -118,7 +152,10 @@ struct LabScript {
     var now: TimeInterval = 0.3
     private var counter = 0
 
-    mutating func id(_ prefix: String) -> String { counter += 1; return "\(prefix)-\(counter)" }
+    /// Keeps ids from on-demand turns apart from the scenario script's ids.
+    var namespace = ""
+
+    mutating func id(_ prefix: String) -> String { counter += 1; return "\(namespace)\(prefix)-\(counter)" }
 
     mutating func wait(_ seconds: TimeInterval) { now += seconds }
 

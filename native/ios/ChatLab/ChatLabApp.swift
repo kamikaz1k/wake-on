@@ -110,7 +110,15 @@ struct ScenarioPager: View {
         .toolbar {
             Button(showNote ? "Hide note" : "Show note") { withAnimation { showNote.toggle() } }
         }
-        .onAppear { player.load(scenario.script()) }
+        .onAppear {
+            player.load(scenario.script())
+            // "-lab-new-turn-after 6" taps New turn after 6 s (for screenshots without touch).
+            let args = ProcessInfo.processInfo.arguments
+            if let index = args.firstIndex(of: "-lab-new-turn-after"), index + 1 < args.count,
+               let seconds = Double(args[index + 1]) {
+                DispatchQueue.main.asyncAfter(deadline: .now() + seconds) { player.newTurn() }
+            }
+        }
         .onDisappear { player.stop() }
     }
 
@@ -118,7 +126,7 @@ struct ScenarioPager: View {
         VStack(spacing: 6) {
             ProgressView(value: player.progress)
             HStack {
-                Button(player.isPlaying ? "Replaying…" : "Replay", systemImage: "arrow.counterclockwise") { player.restart() }
+                Button("Replay", systemImage: "arrow.counterclockwise") { player.restart() }
                     .accessibilityIdentifier("lab-replay")
                 Menu {
                     Picker("Speed", selection: $player.speed) {
@@ -128,6 +136,8 @@ struct ScenarioPager: View {
                     Label("\(Int(player.speed))×", systemImage: "gauge.with.dots.needle.67percent")
                 }
                 .accessibilityIdentifier("lab-speed")
+                Button("New turn", systemImage: "waveform") { player.newTurn() }
+                    .accessibilityIdentifier("lab-new-turn")
                 Spacer()
                 // Library switcher. Swiping works too, but some libraries' views swallow the
                 // sideways swipe (ConversationKit), so taps always work.
