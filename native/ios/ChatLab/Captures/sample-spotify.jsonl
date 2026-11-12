@@ -1,0 +1,35 @@
+{"t_ms": 0, "source": "app", "event": {"type": "app.call_started", "trigger": "wake_word", "started": "2026-11-10T18:30:00Z", "session": {"model": "gpt-live-1", "note": "made-up sample in the CallCapture format"}}}
+{"t_ms": 910, "source": "server", "event": {"type": "session.started"}}
+{"t_ms": 1600, "source": "server", "event": {"type": "session.input_transcript.delta", "delta": " Play"}}
+{"t_ms": 1930, "source": "server", "event": {"type": "session.input_transcript.delta", "delta": " Come"}}
+{"t_ms": 2260, "source": "server", "event": {"type": "session.input_transcript.delta", "delta": " Sail"}}
+{"t_ms": 2590, "source": "server", "event": {"type": "session.input_transcript.delta", "delta": " Away"}}
+{"t_ms": 2920, "source": "server", "event": {"type": "session.input_transcript.delta", "delta": " by"}}
+{"t_ms": 3250, "source": "server", "event": {"type": "session.input_transcript.delta", "delta": " Styx"}}
+{"t_ms": 3580, "source": "server", "event": {"type": "session.input_transcript.delta", "delta": "."}}
+{"t_ms": 4100, "source": "server", "event": {"type": "session.delegation.created", "delegation": {"id": "item_sample1", "target": "responses"}}}
+{"t_ms": 4110, "source": "server", "event": {"type": "response.event", "delegation_id": "item_sample1", "event": {"type": "response.created"}}}
+{"t_ms": 4500, "source": "server", "event": {"type": "session.output_transcript.delta", "delta": " One"}}
+{"t_ms": 4750, "source": "server", "event": {"type": "session.output_transcript.delta", "delta": " moment."}}
+{"t_ms": 4700, "source": "server", "event": {"type": "response.event", "delegation_id": "item_sample1", "event": {"type": "response.output_item.added", "item": {"type": "reasoning", "id": "rs_1"}}}}
+{"t_ms": 5100, "source": "server", "event": {"type": "response.event", "delegation_id": "item_sample1", "event": {"type": "response.output_item.done", "item": {"type": "reasoning", "id": "rs_1", "encrypted_content": "(omitted)"}}}}
+{"t_ms": 5110, "source": "server", "event": {"type": "response.event", "delegation_id": "item_sample1", "event": {"type": "response.output_item.added", "item": {"type": "web_search_call", "id": "ws_1"}}}}
+{"t_ms": 5300, "source": "server", "event": {"type": "response.event", "delegation_id": "item_sample1", "event": {"type": "response.web_search_call.searching", "item_id": "ws_1"}}}
+{"t_ms": 6900, "source": "server", "event": {"type": "response.event", "delegation_id": "item_sample1", "event": {"type": "response.web_search_call.completed", "item_id": "ws_1"}}}
+{"t_ms": 6910, "source": "server", "event": {"type": "response.event", "delegation_id": "item_sample1", "event": {"type": "response.output_item.done", "item": {"type": "web_search_call", "id": "ws_1", "status": "completed", "action": {"type": "search", "query": "site:open.spotify.com/track Come Sail Away Styx", "queries": ["site:open.spotify.com/track Come Sail Away Styx"]}}}}}
+{"t_ms": 6920, "source": "server", "event": {"type": "response.event", "delegation_id": "item_sample1", "event": {"type": "response.output_item.added", "item": {"type": "function_call", "id": "fc_1", "name": "play_spotify", "call_id": "call_1"}}}}
+{"t_ms": 7000, "source": "server", "event": {"type": "response.event", "delegation_id": "item_sample1", "event": {"type": "response.function_call_arguments.delta", "item_id": "fc_1", "delta": "{\"title\":\"Come Sail Away"}}}
+{"t_ms": 7192, "source": "server", "event": {"type": "response.event", "delegation_id": "item_sample1", "event": {"type": "response.function_call_arguments.delta", "item_id": "fc_1", "delta": " by Styx\",\"spotify_url\":"}}}
+{"t_ms": 7384, "source": "server", "event": {"type": "response.event", "delegation_id": "item_sample1", "event": {"type": "response.function_call_arguments.delta", "item_id": "fc_1", "delta": "\"https://open.spotify.co"}}}
+{"t_ms": 7576, "source": "server", "event": {"type": "response.event", "delegation_id": "item_sample1", "event": {"type": "response.function_call_arguments.delta", "item_id": "fc_1", "delta": "m/track/sample\",\"query\":"}}}
+{"t_ms": 7768, "source": "server", "event": {"type": "response.event", "delegation_id": "item_sample1", "event": {"type": "response.function_call_arguments.delta", "item_id": "fc_1", "delta": "\"Come Sail Away Styx\"}"}}}
+{"t_ms": 7900, "source": "server", "event": {"type": "response.event", "delegation_id": "item_sample1", "event": {"type": "response.output_item.done", "item": {"type": "function_call", "id": "fc_1", "name": "play_spotify", "call_id": "call_1", "arguments": "{\"title\":\"Come Sail Away by Styx\",\"spotify_url\":\"https://open.spotify.com/track/sample\",\"query\":\"Come Sail Away Styx\"}", "status": "completed"}}}}
+{"t_ms": 7901, "source": "app", "event": {"type": "app.tool_call", "name": "play_spotify", "call_id": "call_1", "arguments": {"title": "Come Sail Away by Styx", "spotify_url": "https://open.spotify.com/track/sample", "query": "Come Sail Away Styx"}, "output": "Opening Come Sail Away by Styx in Spotify; the call is ending.", "action": {"kind": "spotify", "title": "Come Sail Away by Styx", "app_url": "spotify:track:sample", "web_url": "https://open.spotify.com/track/sample"}}}
+{"t_ms": 7902, "source": "client", "event": {"type": "response.item.create", "item": {"type": "function_call_output", "call_id": "call_1", "output": "Opening Come Sail Away by Styx in Spotify; the call is ending."}}}
+{"t_ms": 7903, "source": "client", "event": {"type": "response.create"}}
+{"t_ms": 8100, "source": "server", "event": {"type": "response.event", "delegation_id": "item_sample1", "event": {"type": "response.completed"}}}
+{"t_ms": 8500, "source": "client", "event": {"type": "session.close"}}
+{"t_ms": 9200, "source": "server", "event": {"type": "session.closed", "usage": {"seconds": 9}}}
+{"t_ms": 9300, "source": "app", "event": {"type": "app.call_ended", "reason": "close_requested", "usage_seconds": 9, "spotify_pending": true, "media_pending": null}}
+{"t_ms": 9900, "source": "app", "event": {"type": "app.spotify_open", "title": "Come Sail Away by Styx", "app_url": "spotify:track:sample", "web_url": "https://open.spotify.com/track/sample"}}
+{"t_ms": 10000, "source": "app", "event": {"type": "app.spotify_opened", "outcome": "universal_link"}}

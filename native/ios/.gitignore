@@ -10,4 +10,4 @@ xcuserdata/
 __pycache__/
 build-lab*/
 # Real conversations pulled from the phone (scripts/pull-call-captures.sh)
-captures/
+/captures/
