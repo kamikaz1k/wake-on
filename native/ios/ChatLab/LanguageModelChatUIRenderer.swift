@@ -42,7 +42,7 @@ struct LanguageModelChatUIRenderer: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            LabCallHeader(call: player.call)
+            ChatCallHeader(call: player.call)
             Group {
                 if let controller = driver.controller {
                     LMChatHost(controller: controller).id(driver.generation)
@@ -52,7 +52,7 @@ struct LanguageModelChatUIRenderer: View {
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             if let status = player.call.status {
-                LabStatusLine(text: status)
+                ChatStatusLine(text: status)
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(.horizontal).padding(.vertical, 6)
             }
@@ -125,7 +125,7 @@ final class LMChatDriver: ObservableObject {
     private var pumpScheduled = false
 
     private static let hintRole = MessageRole(rawValue: "labHint")
-    private var items: [LabItem] { player?.items ?? [] }
+    private var items: [ChatItem] { player?.items ?? [] }
 
     func playerChanged(_ player: LabPlayer) {
         self.player = player
@@ -160,7 +160,7 @@ final class LMChatDriver: ObservableObject {
     }
 
     /// Builds the session from the transcript so far, so history doesn't replay turn by turn.
-    private func boot(_ items: [LabItem]) {
+    private func boot(_ items: [ChatItem]) {
         firstItemID = items.first?.id
         let conversationID = "chatlab-lmcui-\(UUID().uuidString)"
         storage.conversationID = conversationID
@@ -215,7 +215,7 @@ final class LMChatDriver: ObservableObject {
 
     // MARK: Mapping LabItems to ConversationMessages
 
-    private func isTrigger(_ item: LabItem) -> Bool {
+    private func isTrigger(_ item: ChatItem) -> Bool {
         switch item.kind {
         case let .message(.lobby, _, state): state == .streaming
         case let .tool(tool): tool.state == .requested || tool.state == .running
@@ -223,7 +223,7 @@ final class LMChatDriver: ObservableObject {
         }
     }
 
-    private func mapUntilTrigger(_ items: [LabItem]) -> ([ConversationMessage], LabItem?) {
+    private func mapUntilTrigger(_ items: [ChatItem]) -> ([ConversationMessage], ChatItem?) {
         var list: [ConversationMessage] = []
         for item in items {
             if !represented.contains(item.id), isTrigger(item) { return (list, item) }
@@ -261,7 +261,7 @@ final class LMChatDriver: ObservableObject {
         return message
     }
 
-    private static func toolParts(_ id: String, _ tool: LabItem.Tool) -> [ContentPart] {
+    private static func toolParts(_ id: String, _ tool: ChatItem.Tool) -> [ContentPart] {
         let state: ToolCallState = switch tool.state {
         case .requested, .running: .running
         case .done: .succeeded

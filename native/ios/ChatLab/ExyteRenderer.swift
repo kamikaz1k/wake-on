@@ -2,7 +2,7 @@ import ExyteChat
 import MarkdownView
 import SwiftUI
 
-/// exyte/Chat 3.3.7 + MarkdownView 3.9.1. Each LabItem becomes an exyte `Message`:
+/// exyte/Chat 3.3.7 + MarkdownView 3.9.1. Each ChatItem becomes an exyte `Message`:
 /// you are the current user, Lobby is another user, and non-message rows come from a
 /// system user and are drawn by `messageBuilder` with our shared rows. Scrolling, grouping,
 /// date headers and the scroll-to-bottom button are exyte's own; no extra scroll logic.
@@ -21,7 +21,7 @@ struct ExyteRenderer: View {
         VStack(spacing: 0) {
             // F4: exyte has no chat-level header outside the scrolling list (mainHeaderBuilder
             // scrolls away with the messages), so call phase and mute sit above the ChatView.
-            LabCallHeader(call: player.call)
+            ChatCallHeader(call: player.call)
             ChatView<AnyView, EmptyView, DefaultMessageMenuAction>(
                 messages: Self.messages(from: player.items),
                 didSendMessage: { _ in }
@@ -35,7 +35,7 @@ struct ExyteRenderer: View {
             .betweenListAndInputViewBuilder {
                 Group {
                     if let status = player.call.status {
-                        LabStatusLine(text: status)
+                        ChatStatusLine(text: status)
                             .frame(maxWidth: .infinity, alignment: .leading)
                             .padding(.horizontal, 16).padding(.vertical, 6)
                     }
@@ -60,7 +60,7 @@ struct ExyteRenderer: View {
 
     // MARK: - Mapping
 
-    static func messages(from items: [LabItem]) -> [Message] {
+    static func messages(from items: [ChatItem]) -> [Message] {
         items.map { item in
             let user: User
             var text = ""
@@ -82,7 +82,7 @@ struct ExyteRenderer: View {
         }
     }
 
-    private static func redrawToken(_ item: LabItem) -> UUID {
+    private static func redrawToken(_ item: ChatItem) -> UUID {
         var hasher = Hasher()
         hasher.combine(String(describing: item.kind))
         hasher.combine(item.timing)
@@ -96,7 +96,7 @@ struct ExyteRenderer: View {
 
     @MainActor
     static func row(_ params: MessageBuilderParameters) -> AnyView {
-        guard let item = params.message.customData[itemKey] as? LabItem else {
+        guard let item = params.message.customData[itemKey] as? ChatItem else {
             return AnyView(params.defaultMessageView())
         }
         switch item.kind {
@@ -107,7 +107,7 @@ struct ExyteRenderer: View {
             return AnyView(params.defaultMessageView())
         default:
             return AnyView(
-                LabNonMessageRow(item: item)
+                ChatNonMessageRow(item: item)
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(.horizontal, 12).padding(.vertical, 4)
             )
@@ -119,9 +119,9 @@ struct ExyteRenderer: View {
 /// `messageBuilder` replaces the whole row, so the avatar, name and time view are ours to
 /// redo; only the name (from the group position exyte passes) is shown here.
 private struct LobbyBubble: View {
-    let item: LabItem
+    let item: ChatItem
     let text: String
-    let state: LabItem.TextState
+    let state: ChatItem.TextState
     let params: MessageBuilderParameters
     @Environment(\.chatTheme) private var theme
 
@@ -144,7 +144,7 @@ private struct LobbyBubble: View {
             }
             .padding(.horizontal, 12).padding(.vertical, 8)
             .background(theme.colors.messageFriendBG, in: RoundedRectangle(cornerRadius: 20))
-            LabMessageFooter(item: item).padding(.leading, 12)
+            ChatMessageFooter(item: item).padding(.leading, 12)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.leading, 12).padding(.trailing, 40)

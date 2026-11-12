@@ -10,6 +10,8 @@ struct ChatLogsView: View {
     @State private var editMode: EditMode =
         ProcessInfo.processInfo.arguments.contains("-chat-logs-editing") ? .active : .inactive
     @State private var pendingDelete: BulkDelete?
+    /// "-chat-log-newest" opens the newest log, for screenshots.
+    @State private var openNewest = ProcessInfo.processInfo.arguments.contains("-chat-log-newest")
 
     enum BulkDelete: Identifiable {
         case selected, older
@@ -37,6 +39,9 @@ struct ChatLogsView: View {
             }
         }
         .navigationTitle("Chat logs")
+        .navigationDestination(isPresented: $openNewest) {
+            if let newest = store.logs.first { ChatLogDetailView(log: newest) }
+        }
         .toolbar {
             if !store.logs.isEmpty {
                 ToolbarItem(placement: .primaryAction) {
@@ -110,18 +115,11 @@ struct ChatLogDetailView: View {
     @State private var confirmDelete = false
 
     var body: some View {
-        List {
-            Section {
-                ForEach(Array(log.lines.enumerated()), id: \.offset) { _, line in
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text(line.speaker).font(.caption.bold())
-                            .foregroundStyle(line.speaker == "You" ? Color.accentColor : .secondary)
-                        Text(line.text).textSelection(.enabled)
-                    }
-                }
-            } footer: {
-                let seconds = Int(log.ended.timeIntervalSince(log.started).rounded())
-                Text("\(log.source) · \(seconds / 60):\(String(format: "%02d", seconds % 60)) long")
+        Group {
+            if #available(iOS 18.0, *) {
+                ChatLogTranscript(log: log, capture: store.captureURL(for: log.id))
+            } else {
+                lineList
             }
         }
         .navigationTitle(log.started.formatted(date: .abbreviated, time: .shortened))
@@ -147,5 +145,52 @@ struct ChatLogDetailView: View {
         } message: {
             Text("This can't be undone.")
         }
+    }
+
+    /// iOS 17: the plain list of what was said.
+    private var lineList: some View {
+        List {
+            Section {
+                ForEach(Array(log.lines.enumerated()), id: \.offset) { _, line in
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(line.speaker).font(.caption.bold())
+                            .foregroundStyle(line.speaker == "You" ? Color.accentColor : .secondary)
+                        Text(line.text).textSelection(.enabled)
+                    }
+                }
+            } footer: {
+                Text("\(log.source) · \(log.length) long")
+            }
+        }
+    }
+}
+
+/// A saved call in Lobby's chat view (ChatUI). With a capture it shows everything that
+/// happened: tool rows for web searches and Spotify, check-ins, how the call ended. Calls from
+/// before captures show just what was said.
+@available(iOS 18.0, *)
+struct ChatLogTranscript: View {
+    @StateObject private var transcript: ChatTranscript
+
+    init(log: ChatLog, capture: URL?) {
+        _transcript = StateObject(wrappedValue: Self.transcript(for: log, capture: capture))
+    }
+
+    var body: some View {
+        ChatTranscriptView(items: transcript.items, call: transcript.call, showsHeader: false)
+    }
+
+    static func transcript(for log: ChatLog, capture: URL?) -> ChatTranscript {
+        if let capture, let call = CapturedCall.load(capture) {
+            return ChatTranscript(steps: CaptureReplay(lines: call.lines, rawEvents: false).steps, startedAt: log.started)
+        }
+        let transcript = ChatTranscript()
+        var items = [ChatItem(id: "source", kind: .marker("\(log.source) · \(log.length)", .system), time: log.started)]
+        for (index, line) in log.lines.enumerated() {
+            let speaker: ChatItem.Speaker = line.speaker == "You" ? .user : .lobby
+            items.append(ChatItem(id: "line-\(index)", kind: .message(speaker, text: line.text, state: .done), time: log.started))
+        }
+        transcript.replaceAll(items)
+        return transcript
     }
 }

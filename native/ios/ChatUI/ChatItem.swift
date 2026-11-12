@@ -2,7 +2,7 @@ import Foundation
 
 /// One row in a call transcript, independent of any chat library. Every renderer maps these
 /// rows onto its own message type, so all libraries show the same replay.
-struct LabItem: Identifiable, Equatable {
+struct ChatItem: Identifiable, Equatable {
     enum Speaker: String { case user = "You", lobby = "Lobby" }
     enum TextState: Equatable { case streaming, done, cutOff }
     enum ToolState: String, Equatable { case requested, running, done, failed }
@@ -69,7 +69,7 @@ struct LabItem: Identifiable, Equatable {
 }
 
 /// Call-level state a chat view may show around the transcript (B6, F4).
-struct LabCallState: Equatable {
+struct ChatCallState: Equatable {
     var status: String?       // live shimmer line, e.g. "Thinking…"
     var phase = "Live"        // Connecting, Live, Ended
     var muted = false

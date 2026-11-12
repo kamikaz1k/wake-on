@@ -5,8 +5,8 @@ import SwiftUI
 /// cards, live status). Each renderer places these wherever its library accepts a custom
 /// view, so differences between pages come from the libraries, not from our styling.
 
-struct LabToolRow: View {
-    let tool: LabItem.Tool
+struct ChatToolRow: View {
+    let tool: ChatItem.Tool
     @State private var expanded = false
 
     var body: some View {
@@ -75,9 +75,9 @@ struct LabToolRow: View {
     }
 }
 
-struct LabMarkerRow: View {
+struct ChatMarkerRow: View {
     let text: String
-    let style: LabItem.MarkerStyle
+    let style: ChatItem.MarkerStyle
 
     var body: some View {
         switch style {
@@ -96,8 +96,8 @@ struct LabMarkerRow: View {
     }
 }
 
-struct LabEventRow: View {
-    let event: LabItem.RawEvent
+struct ChatEventRow: View {
+    let event: ChatItem.RawEvent
     @State private var expanded = false
 
     var body: some View {
@@ -124,8 +124,8 @@ struct LabEventRow: View {
     }
 }
 
-struct LabCardView: View {
-    let card: LabItem.Card
+struct ChatCardView: View {
+    let card: ChatItem.Card
 
     var body: some View {
         switch card {
@@ -157,8 +157,8 @@ struct LabCardView: View {
 }
 
 /// Small grey footer under a Lobby reply, for turn timing (E2) and the cut-off state (B3).
-struct LabMessageFooter: View {
-    let item: LabItem
+struct ChatMessageFooter: View {
+    let item: ChatItem
     var body: some View {
         if case let .message(_, _, state) = item.kind, state == .cutOff {
             HStack(spacing: 3) { Image(systemName: "scissors"); Text("Interrupted") }.font(.caption2).foregroundStyle(.orange)
@@ -169,7 +169,7 @@ struct LabMessageFooter: View {
 }
 
 /// The live status line ("Thinking…") with a moving shimmer, like shadcn's shimmer utility.
-struct LabStatusLine: View {
+struct ChatStatusLine: View {
     let text: String
     var body: some View {
         Text(text).font(.footnote).foregroundStyle(.secondary).shimmering(true)
@@ -207,15 +207,15 @@ private struct Shimmer: ViewModifier {
 }
 
 /// Shared rendering for non-message rows, so each renderer only has to place it.
-struct LabNonMessageRow: View {
-    let item: LabItem
+struct ChatNonMessageRow: View {
+    let item: ChatItem
     var body: some View {
         switch item.kind {
         case .message: EmptyView()
-        case let .tool(tool): LabToolRow(tool: tool)
-        case let .marker(text, style): LabMarkerRow(text: text, style: style)
-        case let .event(event): LabEventRow(event: event)
-        case let .card(card): LabCardView(card: card)
+        case let .tool(tool): ChatToolRow(tool: tool)
+        case let .marker(text, style): ChatMarkerRow(text: text, style: style)
+        case let .event(event): ChatEventRow(event: event)
+        case let .card(card): ChatCardView(card: card)
         }
     }
 }

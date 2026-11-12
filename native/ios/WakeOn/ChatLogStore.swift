@@ -19,6 +19,12 @@ struct ChatLog: Codable, Identifiable, Equatable {
         return first.flatMap { $0.isEmpty ? nil : $0 } ?? "Lobby only"
     }
 
+    /// "1:12"
+    var length: String {
+        let seconds = Int(ended.timeIntervalSince(started).rounded())
+        return "\(seconds / 60):\(String(format: "%02d", seconds % 60))"
+    }
+
     var source: String {
         switch trigger {
         case "wake_word": "Hey Lobby"

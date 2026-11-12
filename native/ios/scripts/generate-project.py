@@ -13,10 +13,11 @@ def add(key_name, isa, **fields):
 
 def file(path, kind):
     return add(path, 'PBXFileReference', lastKnownFileType=kind, path=path, sourceTree='<group>')
-def build(ref):
-    return add('build'+ref, 'PBXBuildFile', fileRef=ref)
-def phase(name, isa, refs):
-    return add(name, isa, buildActionMask=2147483647, files=[build(r) for r in refs], runOnlyForDeploymentPostprocessing=0)
+def build(ref, prefix='build'):
+    return add(prefix+ref, 'PBXBuildFile', fileRef=ref)
+def phase(name, isa, refs, prefix='build'):
+    # A file compiled into two targets needs a build file per target: give the second a prefix.
+    return add(name, isa, buildActionMask=2147483647, files=[build(r, prefix) for r in refs], runOnlyForDeploymentPostprocessing=0)
 def configs(name, settings):
     ids=[]
     for mode in ['Debug','Release']:
@@ -54,6 +55,8 @@ test_product=add('testproduct','PBXFileReference',explicitFileType='wrapper.cfbu
 # Chat Lab: a separate app for comparing chat UI libraries (docs/research/chat-ui-scenarios.md).
 # Kept out of Wake On so its packages never touch the voice app or its launch time.
 lab_sources=[file(str(p.relative_to(root)), 'sourcecode.swift') for p in sorted((root/'ChatLab').glob('*.swift'))]
+# Lobby's chat view, compiled into both Wake On (chat logs) and Chat Lab.
+chat_ui=[file(str(p.relative_to(root)), 'sourcecode.swift') for p in sorted((root/'ChatUI').glob('*.swift'))]
 # A made-up sample call in Wake On's capture format; real captures stay off git (captures/).
 lab_resources=[file(str(p.relative_to(root)), 'text') for p in sorted((root/'ChatLab/Captures').glob('*.jsonl'))]
 lab_app=add('labproduct','PBXFileReference',explicitFileType='wrapper.application',path='ChatLab.app',sourceTree='BUILT_PRODUCTS_DIR',includeInIndex=0)
@@ -74,19 +77,22 @@ for url, requirement, names in lab_packages:
     for name in names:
         lab_product_deps.append(add('pkgproduct'+name,'XCSwiftPackageProductDependency',package=ref_id,productName=name))
 lab_framework_files=[add('labbuild'+d,'PBXBuildFile',productRef=d) for d in lab_product_deps]
+# Wake On uses only MarkdownView, for the chat view's Lobby text.
+app_product_deps=[k for k in lab_product_deps if objects[k]['productName'] in ('MarkdownView','MarkdownParser')]
+app_framework_files=[add('appbuild'+d,'PBXBuildFile',productRef=d) for d in app_product_deps]
 products=add('products','PBXGroup',children=[app,test_product,appex,lab_app,lab_ui_product],name='Products',sourceTree='<group>')
-group=add('root','PBXGroup',children=sources+shared+activity_sources+[activity_assets]+tests+resources+frameworks+lab_sources+lab_ui_sources+[products],sourceTree='<group>')
+group=add('root','PBXGroup',children=sources+shared+activity_sources+[activity_assets]+tests+resources+frameworks+chat_ui+lab_sources+lab_resources+lab_ui_sources+[products],sourceTree='<group>')
 common=dict(SWIFT_VERSION='5.0',IPHONEOS_DEPLOYMENT_TARGET='17.0',SDKROOT='iphoneos',SUPPORTED_PLATFORMS='iphoneos iphonesimulator',TARGETED_DEVICE_FAMILY='1,2',CLANG_ENABLE_MODULES='YES',CODE_SIGN_STYLE='Automatic',DEVELOPMENT_TEAM='JDR6VAV2RA')
-appsettings=dict(common,PRODUCT_BUNDLE_IDENTIFIER='dev.wakeon.ios',PRODUCT_NAME='$(TARGET_NAME)',INFOPLIST_FILE='WakeOn/Info.plist',SWIFT_OBJC_BRIDGING_HEADER='WakeOn/Bridge.h',HEADER_SEARCH_PATHS='$(PROJECT_DIR)/Vendor/build-ios-no-tts/sherpa-onnx.xcframework/Headers',OTHER_LDFLAGS=['$(inherited)','-lc++'],LD_RUNPATH_SEARCH_PATHS=['$(inherited)','@executable_path/Frameworks'],ENABLE_USER_SCRIPT_SANDBOXING='YES',ASSETCATALOG_COMPILER_APPICON_NAME='AppIcon')
+appsettings=dict(common,ONLY_ACTIVE_ARCH='YES',PRODUCT_BUNDLE_IDENTIFIER='dev.wakeon.ios',PRODUCT_NAME='$(TARGET_NAME)',INFOPLIST_FILE='WakeOn/Info.plist',SWIFT_OBJC_BRIDGING_HEADER='WakeOn/Bridge.h',HEADER_SEARCH_PATHS='$(PROJECT_DIR)/Vendor/build-ios-no-tts/sherpa-onnx.xcframework/Headers',OTHER_LDFLAGS=['$(inherited)','-lc++'],LD_RUNPATH_SEARCH_PATHS=['$(inherited)','@executable_path/Frameworks'],ENABLE_USER_SCRIPT_SANDBOXING='YES',ASSETCATALOG_COMPILER_APPICON_NAME='AppIcon')
 project_id=hashlib.sha1(b'project').hexdigest()[:24].upper()
 activity_settings=dict(common,PRODUCT_BUNDLE_IDENTIFIER='dev.wakeon.ios.LiveActivity',PRODUCT_NAME='$(TARGET_NAME)',INFOPLIST_FILE='WakeOnLiveActivity/Info.plist',SKIP_INSTALL='YES',APPLICATION_EXTENSION_API_ONLY='YES',LD_RUNPATH_SEARCH_PATHS=['$(inherited)','@executable_path/Frameworks','@executable_path/../../Frameworks'])
 activity_target=add('activity','PBXNativeTarget',name='WakeOnLiveActivity',productName='WakeOnLiveActivity',productReference=appex,productType='com.apple.product-type.app-extension',buildConfigurationList=configs('activity',activity_settings),buildPhases=[phase('activitySources','PBXSourcesBuildPhase',activity_sources+shared),phase('activityFrameworks','PBXFrameworksBuildPhase',[]),phase('activityResources','PBXResourcesBuildPhase',[activity_assets])],buildRules=[],dependencies=[])
 activity_proxy=add('activityProxy','PBXContainerItemProxy',containerPortal=project_id,proxyType=1,remoteGlobalIDString=activity_target,remoteInfo='WakeOnLiveActivity')
 activity_dep=add('activityDependency','PBXTargetDependency',target=activity_target,targetProxy=activity_proxy)
-app_target=add('app','PBXNativeTarget',name='WakeOn',productName='WakeOn',productReference=app,productType='com.apple.product-type.application',buildConfigurationList=configs('app',appsettings),buildPhases=[phase('sources','PBXSourcesBuildPhase',sources+shared),phase('frameworks','PBXFrameworksBuildPhase',frameworks),phase('resources','PBXResourcesBuildPhase',resources),embed,embed_appex],buildRules=[],dependencies=[activity_dep])
+app_target=add('app','PBXNativeTarget',name='WakeOn',productName='WakeOn',productReference=app,productType='com.apple.product-type.application',buildConfigurationList=configs('app',appsettings),buildPhases=[phase('sources','PBXSourcesBuildPhase',sources+shared+chat_ui),add('frameworks','PBXFrameworksBuildPhase',buildActionMask=2147483647,files=[build(r) for r in frameworks]+app_framework_files,runOnlyForDeploymentPostprocessing=0),phase('resources','PBXResourcesBuildPhase',resources),embed,embed_appex],buildRules=[],dependencies=[activity_dep],packageProductDependencies=app_product_deps)
 proxy=add('proxy','PBXContainerItemProxy',containerPortal=project_id,proxyType=1,remoteGlobalIDString=app_target,remoteInfo='WakeOn')
 dep=add('dependency','PBXTargetDependency',target=app_target,targetProxy=proxy)
-test_settings=dict(common,PRODUCT_NAME='$(TARGET_NAME)',PRODUCT_BUNDLE_IDENTIFIER='dev.wakeon.ios.tests',GENERATE_INFOPLIST_FILE='YES',TEST_HOST='$(BUILT_PRODUCTS_DIR)/WakeOn.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/WakeOn',BUNDLE_LOADER='$(TEST_HOST)',SWIFT_OBJC_BRIDGING_HEADER='WakeOn/Bridge.h',HEADER_SEARCH_PATHS=appsettings['HEADER_SEARCH_PATHS'])
+test_settings=dict(common,ONLY_ACTIVE_ARCH='YES',PRODUCT_NAME='$(TARGET_NAME)',PRODUCT_BUNDLE_IDENTIFIER='dev.wakeon.ios.tests',GENERATE_INFOPLIST_FILE='YES',TEST_HOST='$(BUILT_PRODUCTS_DIR)/WakeOn.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/WakeOn',BUNDLE_LOADER='$(TEST_HOST)',SWIFT_OBJC_BRIDGING_HEADER='WakeOn/Bridge.h',HEADER_SEARCH_PATHS=appsettings['HEADER_SEARCH_PATHS'])
 test_target=add('tests','PBXNativeTarget',name='WakeOnTests',productName='WakeOnTests',productReference=test_product,productType='com.apple.product-type.bundle.unit-test',buildConfigurationList=configs('tests',test_settings),buildPhases=[phase('testSources','PBXSourcesBuildPhase',tests),phase('testFrameworks','PBXFrameworksBuildPhase',[])],buildRules=[],dependencies=[dep])
 lab_settings=dict(common,IPHONEOS_DEPLOYMENT_TARGET='18.0',ONLY_ACTIVE_ARCH='YES',PRODUCT_BUNDLE_IDENTIFIER='dev.wakeon.chatlab',PRODUCT_NAME='$(TARGET_NAME)',INFOPLIST_FILE='ChatLab/Info.plist',LD_RUNPATH_SEARCH_PATHS=['$(inherited)','@executable_path/Frameworks'])
 lab_frameworks=add('labFrameworks','PBXFrameworksBuildPhase',buildActionMask=2147483647,files=lab_framework_files,runOnlyForDeploymentPostprocessing=0)
@@ -94,7 +100,7 @@ lab_frameworks=add('labFrameworks','PBXFrameworksBuildPhase',buildActionMask=214
 # Without this the simulator finds it in the build folder and the phone crashes at launch.
 lab_embed_files=[add('labembed'+d,'PBXBuildFile',productRef=d,settings={'ATTRIBUTES':['CodeSignOnCopy','RemoveHeadersOnCopy']}) for d in lab_product_deps if objects[d]['productName']=='LanguageModelChatUI']
 lab_embed=add('labEmbedFrameworks','PBXCopyFilesBuildPhase',buildActionMask=2147483647,dstPath='',dstSubfolderSpec=10,files=lab_embed_files,name='Embed Frameworks',runOnlyForDeploymentPostprocessing=0)
-lab_target=add('labapp','PBXNativeTarget',name='ChatLab',productName='ChatLab',productReference=lab_app,productType='com.apple.product-type.application',buildConfigurationList=configs('lab',lab_settings),buildPhases=[phase('labSources','PBXSourcesBuildPhase',lab_sources),lab_frameworks,phase('labResources','PBXResourcesBuildPhase',lab_resources),lab_embed],buildRules=[],dependencies=[],packageProductDependencies=lab_product_deps)
+lab_target=add('labapp','PBXNativeTarget',name='ChatLab',productName='ChatLab',productReference=lab_app,productType='com.apple.product-type.application',buildConfigurationList=configs('lab',lab_settings),buildPhases=[phase('labSources','PBXSourcesBuildPhase',lab_sources+chat_ui,prefix='labbuild'),lab_frameworks,phase('labResources','PBXResourcesBuildPhase',lab_resources),lab_embed],buildRules=[],dependencies=[],packageProductDependencies=lab_product_deps)
 # Chat Lab UI tests: real swipes in the simulator (e.g. overscrolling a library's list).
 lab_proxy=add('labProxy','PBXContainerItemProxy',containerPortal=project_id,proxyType=1,remoteGlobalIDString=lab_target,remoteInfo='ChatLab')
 lab_dep=add('labDependency','PBXTargetDependency',target=lab_target,targetProxy=lab_proxy)

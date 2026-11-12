@@ -7,7 +7,7 @@ struct LabScenario: Identifiable {
     let lookFor: String     // what to check on each library page
     var compact = false     // F2: render at the Simple tab's height under the orb
     var showsFrameRate = false
-    let script: () -> [LabStep]
+    let script: () -> [ChatStep]
 
     var group: String { String(id.prefix(1)) }
 }
@@ -93,7 +93,7 @@ enum LabText {
     """
 }
 
-extension LabScript {
+extension ChatScript {
     /// Finished turns, shown at once: earlier parts of the call.
     mutating func history(_ turns: Int, startingAt offset: Int = 0) {
         for index in 0..<turns {
@@ -107,8 +107,8 @@ extension LabScript {
 // MARK: - Scenarios
 
 enum LabScenarios {
-    static func script(_ build: @escaping (inout LabScript) -> Void) -> () -> [LabStep] {
-        { var script = LabScript(); build(&script); return script.steps }
+    static func script(_ build: @escaping (inout ChatScript) -> Void) -> () -> [ChatStep] {
+        { var script = ChatScript(); build(&script); return script.steps }
     }
 
     static let all: [LabScenario] = scrolling + transcript + tools + blocks + debug + layout + constraints

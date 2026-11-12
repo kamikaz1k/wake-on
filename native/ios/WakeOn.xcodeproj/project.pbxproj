@@ -79,6 +79,20 @@
 			<key>isa</key>
 			<string>PBXBuildFile</string>
 		</dict>
+		<key>09A0940C677EA0C8B080F30E</key>
+		<dict>
+			<key>fileRef</key>
+			<string>916C3E202D234BBAFB9E0CC1</string>
+			<key>isa</key>
+			<string>PBXBuildFile</string>
+		</dict>
+		<key>0A69D66873FDC791564B039A</key>
+		<dict>
+			<key>fileRef</key>
+			<string>625431900975CEAB27D072BA</string>
+			<key>isa</key>
+			<string>PBXBuildFile</string>
+		</dict>
 		<key>0B4CDEE182E01D65166BE05F</key>
 		<dict>
 			<key>explicitFileType</key>
@@ -131,6 +145,13 @@
 			<key>isa</key>
 			<string>XCConfigurationList</string>
 		</dict>
+		<key>0D9FF04E5D4B80F4BC1A0698</key>
+		<dict>
+			<key>fileRef</key>
+			<string>C63371EE005F6A3E5E3783C1</string>
+			<key>isa</key>
+			<string>PBXBuildFile</string>
+		</dict>
 		<key>0F3BF8A23D1FDE6611CE4A9A</key>
 		<dict>
 			<key>fileRef</key>
@@ -160,6 +181,8 @@
 				<string>$(PROJECT_DIR)/Vendor/build-ios-no-tts/sherpa-onnx.xcframework/Headers</string>
 				<key>IPHONEOS_DEPLOYMENT_TARGET</key>
 				<string>17.0</string>
+				<key>ONLY_ACTIVE_ARCH</key>
+				<string>YES</string>
 				<key>PRODUCT_BUNDLE_IDENTIFIER</key>
 				<string>dev.wakeon.ios.tests</string>
 				<key>PRODUCT_NAME</key>
@@ -208,6 +231,24 @@
 		<dict>
 			<key>fileRef</key>
 			<string>1DC5C0769628AED0F89639D8</string>
+			<key>isa</key>
+			<string>PBXBuildFile</string>
+		</dict>
+		<key>16D192099562F3F2D2F00BAC</key>
+		<dict>
+			<key>isa</key>
+			<string>PBXFileReference</string>
+			<key>lastKnownFileType</key>
+			<string>sourcecode.swift</string>
+			<key>path</key>
+			<string>ChatLab/LabCaptureLibrary.swift</string>
+			<key>sourceTree</key>
+			<string>&lt;group&gt;</string>
+		</dict>
+		<key>19079FD13EDE106FFAA4C6D8</key>
+		<dict>
+			<key>fileRef</key>
+			<string>16D192099562F3F2D2F00BAC</string>
 			<key>isa</key>
 			<string>PBXBuildFile</string>
 		</dict>
@@ -314,6 +355,8 @@
 				<string>$(PROJECT_DIR)/Vendor/build-ios-no-tts/sherpa-onnx.xcframework/Headers</string>
 				<key>IPHONEOS_DEPLOYMENT_TARGET</key>
 				<string>17.0</string>
+				<key>ONLY_ACTIVE_ARCH</key>
+				<string>YES</string>
 				<key>PRODUCT_BUNDLE_IDENTIFIER</key>
 				<string>dev.wakeon.ios.tests</string>
 				<key>PRODUCT_NAME</key>
@@ -351,6 +394,13 @@
 			<key>sourceTree</key>
 			<string>&lt;group&gt;</string>
 		</dict>
+		<key>24E45279F3A315255ADBAB9B</key>
+		<dict>
+			<key>fileRef</key>
+			<string>694D8611755A10832F2AF78C</string>
+			<key>isa</key>
+			<string>PBXBuildFile</string>
+		</dict>
 		<key>25F3246285C958650A5E1323</key>
 		<dict>
 			<key>isa</key>
@@ -359,6 +409,17 @@
 			<string>audio.wav</string>
 			<key>path</key>
 			<string>Resources/VisualizerSamples/viz-u2.wav</string>
+			<key>sourceTree</key>
+			<string>&lt;group&gt;</string>
+		</dict>
+		<key>2612BC79CCEF42CABF176070</key>
+		<dict>
+			<key>isa</key>
+			<string>PBXFileReference</string>
+			<key>lastKnownFileType</key>
+			<string>sourcecode.swift</string>
+			<key>path</key>
+			<string>ChatUI/CaptureReplay.swift</string>
 			<key>sourceTree</key>
 			<string>&lt;group&gt;</string>
 		</dict>
@@ -411,6 +472,13 @@
 			<key>isa</key>
 			<string>PBXBuildFile</string>
 		</dict>
+		<key>2E25DF7EB50C6B90D3C76346</key>
+		<dict>
+			<key>fileRef</key>
+			<string>BEE981B64F5E0E5875912826</string>
+			<key>isa</key>
+			<string>PBXBuildFile</string>
+		</dict>
 		<key>2F254AB562BEFDB66262B1D5</key>
 		<dict>
 			<key>fileRef</key>
@@ -418,17 +486,17 @@
 			<key>isa</key>
 			<string>PBXBuildFile</string>
 		</dict>
+		<key>30C5E3CFB1D9C3FD29B21254</key>
+		<dict>
+			<key>fileRef</key>
+			<string>AD458304449021C88DEBBDF4</string>
+			<key>isa</key>
+			<string>PBXBuildFile</string>
+		</dict>
 		<key>31CF634437FF1CA20604D2BE</key>
 		<dict>
 			<key>fileRef</key>
 			<string>3F1E21A7DC27A28E0003C40A</string>
-			<key>isa</key>
-			<string>PBXBuildFile</string>
-		</dict>
-		<key>32CC02D58D6AE065BECBE99D</key>
-		<dict>
-			<key>fileRef</key>
-			<string>D51DBCE476B3A9F6D9C63988</string>
 			<key>isa</key>
 			<string>PBXBuildFile</string>
 		</dict>
@@ -474,10 +542,10 @@
 			<key>targetProxy</key>
 			<string>6913CD13B977ECDA17D4242F</string>
 		</dict>
-		<key>398A4CC88A7AE5BE5F44C2F4</key>
+		<key>3A7271DD402160791BE63A46</key>
 		<dict>
 			<key>fileRef</key>
-			<string>B5FF211A8E2C834FF319EBF2</string>
+			<string>2612BC79CCEF42CABF176070</string>
 			<key>isa</key>
 			<string>PBXBuildFile</string>
 		</dict>
@@ -524,17 +592,6 @@
 				</array>
 			</dict>
 		</dict>
-		<key>3E62A95FED5BE78926020787</key>
-		<dict>
-			<key>isa</key>
-			<string>PBXFileReference</string>
-			<key>lastKnownFileType</key>
-			<string>sourcecode.swift</string>
-			<key>path</key>
-			<string>ChatLab/LabModel.swift</string>
-			<key>sourceTree</key>
-			<string>&lt;group&gt;</string>
-		</dict>
 		<key>3ECE466EA18A3C06FE668FD7</key>
 		<dict>
 			<key>fileRef</key>
@@ -564,13 +621,6 @@
 		<dict>
 			<key>fileRef</key>
 			<string>5F00D4549D966E634711BB43</string>
-			<key>isa</key>
-			<string>PBXBuildFile</string>
-		</dict>
-		<key>3FE5EC2E51880636DEBAAFF8</key>
-		<dict>
-			<key>fileRef</key>
-			<string>3E62A95FED5BE78926020787</string>
 			<key>isa</key>
 			<string>PBXBuildFile</string>
 		</dict>
@@ -744,6 +794,13 @@
 			<key>isa</key>
 			<string>PBXBuildFile</string>
 		</dict>
+		<key>4DE937AE9C915F3BFDF86A58</key>
+		<dict>
+			<key>fileRef</key>
+			<string>5E087DF3E4AB61A4C8706F07</string>
+			<key>isa</key>
+			<string>PBXBuildFile</string>
+		</dict>
 		<key>4F39308818B726E435B8F2A1</key>
 		<dict>
 			<key>isa</key>
@@ -754,6 +811,13 @@
 			<string>Tests/VoiceSpectrumTests.swift</string>
 			<key>sourceTree</key>
 			<string>&lt;group&gt;</string>
+		</dict>
+		<key>500A6A3FEC60C4AB1D21940F</key>
+		<dict>
+			<key>fileRef</key>
+			<string>2612BC79CCEF42CABF176070</string>
+			<key>isa</key>
+			<string>PBXBuildFile</string>
 		</dict>
 		<key>50AFC405A6062934BEA58612</key>
 		<dict>
@@ -774,12 +838,16 @@
 			<key>runOnlyForDeploymentPostprocessing</key>
 			<integer>0</integer>
 		</dict>
-		<key>5241639BBE58748E4A9A4125</key>
+		<key>50DA919303A83AD83E98CD61</key>
 		<dict>
-			<key>fileRef</key>
-			<string>694D8611755A10832F2AF78C</string>
 			<key>isa</key>
-			<string>PBXBuildFile</string>
+			<string>PBXFileReference</string>
+			<key>lastKnownFileType</key>
+			<string>sourcecode.swift</string>
+			<key>path</key>
+			<string>ChatUI/ChatTranscript.swift</string>
+			<key>sourceTree</key>
+			<string>&lt;group&gt;</string>
 		</dict>
 		<key>524F3925915545FFD660FF3F</key>
 		<dict>
@@ -842,13 +910,6 @@
 			<key>isa</key>
 			<string>PBXBuildFile</string>
 		</dict>
-		<key>5725DC6BB6CEDEEEDBE6F411</key>
-		<dict>
-			<key>fileRef</key>
-			<string>C63371EE005F6A3E5E3783C1</string>
-			<key>isa</key>
-			<string>PBXBuildFile</string>
-		</dict>
 		<key>579F4EE51E22157FC1503151</key>
 		<dict>
 			<key>isa</key>
@@ -866,18 +927,21 @@
 			<integer>2147483647</integer>
 			<key>files</key>
 			<array>
-				<string>68658B7C483A60F3041629D7</string>
-				<string>398A4CC88A7AE5BE5F44C2F4</string>
-				<string>C6C86E0691E168652C4FB7FF</string>
-				<string>D840C7C93C60B89A8321141D</string>
-				<string>D1915CEA3D713F08792671A1</string>
-				<string>BFBC659459B681A0A4CEA975</string>
-				<string>3FE5EC2E51880636DEBAAFF8</string>
-				<string>5725DC6BB6CEDEEEDBE6F411</string>
-				<string>7851A7BB2901F6F4155F041B</string>
-				<string>A726A540471ECB89180FC764</string>
-				<string>32CC02D58D6AE065BECBE99D</string>
-				<string>5241639BBE58748E4A9A4125</string>
+				<string>4DE937AE9C915F3BFDF86A58</string>
+				<string>6F858426DFD9A5AC22DF3E1D</string>
+				<string>0A69D66873FDC791564B039A</string>
+				<string>19079FD13EDE106FFAA4C6D8</string>
+				<string>AC555EFDC11A1FB3F853BC58</string>
+				<string>0D9FF04E5D4B80F4BC1A0698</string>
+				<string>D7A03DDE7898805DF6A3CF6C</string>
+				<string>E1F787BE2CBB368D226A5B46</string>
+				<string>24E45279F3A315255ADBAB9B</string>
+				<string>500A6A3FEC60C4AB1D21940F</string>
+				<string>09A0940C677EA0C8B080F30E</string>
+				<string>70053AA9C4496BF9C7EC65FB</string>
+				<string>30C5E3CFB1D9C3FD29B21254</string>
+				<string>AE8A2770D5CAE99E616773D5</string>
+				<string>8D57C6131DA1F283404544E8</string>
 			</array>
 			<key>isa</key>
 			<string>PBXSourcesBuildPhase</string>
@@ -913,6 +977,8 @@
 					<string>$(inherited)</string>
 					<string>@executable_path/Frameworks</string>
 				</array>
+				<key>ONLY_ACTIVE_ARCH</key>
+				<string>YES</string>
 				<key>OTHER_LDFLAGS</key>
 				<array>
 					<string>$(inherited)</string>
@@ -1180,6 +1246,13 @@
 			<key>isa</key>
 			<string>PBXBuildFile</string>
 		</dict>
+		<key>676B2322EF00AE4346F1EEAC</key>
+		<dict>
+			<key>isa</key>
+			<string>PBXBuildFile</string>
+			<key>productRef</key>
+			<string>1B93CCDDF5C1EB44EE95A2CA</string>
+		</dict>
 		<key>6824193053ECCB52BCD2CC2C</key>
 		<dict>
 			<key>buildActionMask</key>
@@ -1195,13 +1268,6 @@
 			<string>PBXSourcesBuildPhase</string>
 			<key>runOnlyForDeploymentPostprocessing</key>
 			<integer>0</integer>
-		</dict>
-		<key>68658B7C483A60F3041629D7</key>
-		<dict>
-			<key>fileRef</key>
-			<string>5E087DF3E4AB61A4C8706F07</string>
-			<key>isa</key>
-			<string>PBXBuildFile</string>
 		</dict>
 		<key>6913CD13B977ECDA17D4242F</key>
 		<dict>
@@ -1227,6 +1293,13 @@
 			<key>sourceTree</key>
 			<string>&lt;group&gt;</string>
 		</dict>
+		<key>6DB45D0ABFC30C29101B6B1D</key>
+		<dict>
+			<key>fileRef</key>
+			<string>916C3E202D234BBAFB9E0CC1</string>
+			<key>isa</key>
+			<string>PBXBuildFile</string>
+		</dict>
 		<key>6DFDA75F1ECB6EFBF3C21E46</key>
 		<dict>
 			<key>fileRef</key>
@@ -1242,6 +1315,7 @@
 			<array>
 				<string>5BEA58C43D2321DE0F5E9EB9</string>
 				<string>5655D4377A320893D7964C00</string>
+				<string>2E25DF7EB50C6B90D3C76346</string>
 				<string>FD0F0DB50B6695E5A313F02A</string>
 				<string>604415CC5C8C5E7AD42D4232</string>
 				<string>F5A8AD6DD1708ECCF94AA2E2</string>
@@ -1259,6 +1333,13 @@
 			<key>runOnlyForDeploymentPostprocessing</key>
 			<integer>0</integer>
 		</dict>
+		<key>6F858426DFD9A5AC22DF3E1D</key>
+		<dict>
+			<key>fileRef</key>
+			<string>B5FF211A8E2C834FF319EBF2</string>
+			<key>isa</key>
+			<string>PBXBuildFile</string>
+		</dict>
 		<key>6F9C5CC3230BD566FB1619CB</key>
 		<dict>
 			<key>isa</key>
@@ -1272,6 +1353,13 @@
 				<key>minimumVersion</key>
 				<string>0.1.1</string>
 			</dict>
+		</dict>
+		<key>70053AA9C4496BF9C7EC65FB</key>
+		<dict>
+			<key>fileRef</key>
+			<string>DEE377088D8B9DB080770AD8</string>
+			<key>isa</key>
+			<string>PBXBuildFile</string>
 		</dict>
 		<key>7157DD341D0CEEE8A8D2A222</key>
 		<dict>
@@ -1325,22 +1413,13 @@
 				<string>7157DD341D0CEEE8A8D2A222</string>
 				<string>2DA0D1DCE1E3029D27613185</string>
 				<string>3ECE466EA18A3C06FE668FD7</string>
+				<string>676B2322EF00AE4346F1EEAC</string>
+				<string>8ADF20D54F8C9CC9306C3F70</string>
 			</array>
 			<key>isa</key>
 			<string>PBXFrameworksBuildPhase</string>
 			<key>runOnlyForDeploymentPostprocessing</key>
 			<integer>0</integer>
-		</dict>
-		<key>75E34F9BF6DB381C1E742368</key>
-		<dict>
-			<key>isa</key>
-			<string>PBXFileReference</string>
-			<key>lastKnownFileType</key>
-			<string>sourcecode.swift</string>
-			<key>path</key>
-			<string>ChatLab/LabRows.swift</string>
-			<key>sourceTree</key>
-			<string>&lt;group&gt;</string>
 		</dict>
 		<key>760BF1A5DD516B23F29A7716</key>
 		<dict>
@@ -1352,13 +1431,6 @@
 			<string>ChatLab/LabLibraries.swift</string>
 			<key>sourceTree</key>
 			<string>&lt;group&gt;</string>
-		</dict>
-		<key>7851A7BB2901F6F4155F041B</key>
-		<dict>
-			<key>fileRef</key>
-			<string>75E34F9BF6DB381C1E742368</string>
-			<key>isa</key>
-			<string>PBXBuildFile</string>
 		</dict>
 		<key>7964352DDE2EB6CBD9B52FFD</key>
 		<dict>
@@ -1387,6 +1459,13 @@
 				<key>minimumVersion</key>
 				<string>3.3.7</string>
 			</dict>
+		</dict>
+		<key>7C2A3BBA05E9DEB1DCD6B4FC</key>
+		<dict>
+			<key>fileRef</key>
+			<string>50DA919303A83AD83E98CD61</string>
+			<key>isa</key>
+			<string>PBXBuildFile</string>
 		</dict>
 		<key>7C5A1951B4BEF1420051F995</key>
 		<dict>
@@ -1467,12 +1546,24 @@
 			<string>PBXNativeTarget</string>
 			<key>name</key>
 			<string>WakeOn</string>
+			<key>packageProductDependencies</key>
+			<array>
+				<string>1B93CCDDF5C1EB44EE95A2CA</string>
+				<string>FEE81AB82AE7AE36FE2E038D</string>
+			</array>
 			<key>productName</key>
 			<string>WakeOn</string>
 			<key>productReference</key>
 			<string>38A007151ABE87CC01A5B6E9</string>
 			<key>productType</key>
 			<string>com.apple.product-type.application</string>
+		</dict>
+		<key>83DA82C7C30EB912C8D47A04</key>
+		<dict>
+			<key>fileRef</key>
+			<string>AD458304449021C88DEBBDF4</string>
+			<key>isa</key>
+			<string>PBXBuildFile</string>
 		</dict>
 		<key>862894B703A6DEDF96A9DD6C</key>
 		<dict>
@@ -1629,6 +1720,13 @@
 			<key>name</key>
 			<string>Debug</string>
 		</dict>
+		<key>8ADF20D54F8C9CC9306C3F70</key>
+		<dict>
+			<key>isa</key>
+			<string>PBXBuildFile</string>
+			<key>productRef</key>
+			<string>FEE81AB82AE7AE36FE2E038D</string>
+		</dict>
 		<key>8B4F35E544C3FC6DABF208A7</key>
 		<dict>
 			<key>fileRef</key>
@@ -1640,6 +1738,13 @@
 		<dict>
 			<key>fileRef</key>
 			<string>A8851735FAE0A2F73AB0D84E</string>
+			<key>isa</key>
+			<string>PBXBuildFile</string>
+		</dict>
+		<key>8D57C6131DA1F283404544E8</key>
+		<dict>
+			<key>fileRef</key>
+			<string>DB05C6A5CE46BD1228A7C656</string>
 			<key>isa</key>
 			<string>PBXBuildFile</string>
 		</dict>
@@ -1719,6 +1824,17 @@
 			<key>name</key>
 			<string>Debug</string>
 		</dict>
+		<key>916C3E202D234BBAFB9E0CC1</key>
+		<dict>
+			<key>isa</key>
+			<string>PBXFileReference</string>
+			<key>lastKnownFileType</key>
+			<string>sourcecode.swift</string>
+			<key>path</key>
+			<string>ChatUI/ChatItem.swift</string>
+			<key>sourceTree</key>
+			<string>&lt;group&gt;</string>
+		</dict>
 		<key>92404B1FF440E3A7B6630303</key>
 		<dict>
 			<key>fileRef</key>
@@ -1734,17 +1850,6 @@
 			<string>sourcecode.swift</string>
 			<key>path</key>
 			<string>Tests/ChatLogStoreTests.swift</string>
-			<key>sourceTree</key>
-			<string>&lt;group&gt;</string>
-		</dict>
-		<key>95CB8F09A3D2EAFCEEEE6997</key>
-		<dict>
-			<key>isa</key>
-			<string>PBXFileReference</string>
-			<key>lastKnownFileType</key>
-			<string>sourcecode.swift</string>
-			<key>path</key>
-			<string>ChatLab/LabCapture.swift</string>
 			<key>sourceTree</key>
 			<string>&lt;group&gt;</string>
 		</dict>
@@ -1885,13 +1990,6 @@
 			<key>sourceTree</key>
 			<string>&lt;group&gt;</string>
 		</dict>
-		<key>A726A540471ECB89180FC764</key>
-		<dict>
-			<key>fileRef</key>
-			<string>D271D76AB5D8BC578109A18A</string>
-			<key>isa</key>
-			<string>PBXBuildFile</string>
-		</dict>
 		<key>A735366E67E1349A675D19BE</key>
 		<dict>
 			<key>fileRef</key>
@@ -1917,10 +2015,35 @@
 			<key>isa</key>
 			<string>PBXBuildFile</string>
 		</dict>
+		<key>AC555EFDC11A1FB3F853BC58</key>
+		<dict>
+			<key>fileRef</key>
+			<string>760BF1A5DD516B23F29A7716</string>
+			<key>isa</key>
+			<string>PBXBuildFile</string>
+		</dict>
+		<key>AD458304449021C88DEBBDF4</key>
+		<dict>
+			<key>isa</key>
+			<string>PBXFileReference</string>
+			<key>lastKnownFileType</key>
+			<string>sourcecode.swift</string>
+			<key>path</key>
+			<string>ChatUI/ChatRows.swift</string>
+			<key>sourceTree</key>
+			<string>&lt;group&gt;</string>
+		</dict>
 		<key>ADAA82655AC6C4D45728DDA5</key>
 		<dict>
 			<key>fileRef</key>
 			<string>48D1551B54BA62CF771F6761</string>
+			<key>isa</key>
+			<string>PBXBuildFile</string>
+		</dict>
+		<key>AE8A2770D5CAE99E616773D5</key>
+		<dict>
+			<key>fileRef</key>
+			<string>50DA919303A83AD83E98CD61</string>
 			<key>isa</key>
 			<string>PBXBuildFile</string>
 		</dict>
@@ -2074,6 +2197,12 @@
 				<string>2F254AB562BEFDB66262B1D5</string>
 				<string>7C5A1951B4BEF1420051F995</string>
 				<string>3B8E250EBF1A2DB5C7F29222</string>
+				<string>3A7271DD402160791BE63A46</string>
+				<string>6DB45D0ABFC30C29101B6B1D</string>
+				<string>C2BDFA30693C6EA13F39754C</string>
+				<string>83DA82C7C30EB912C8D47A04</string>
+				<string>7C2A3BBA05E9DEB1DCD6B4FC</string>
+				<string>DCD552CBB45C57B95F77C5BD</string>
 			</array>
 			<key>isa</key>
 			<string>PBXSourcesBuildPhase</string>
@@ -2102,6 +2231,17 @@
 			<key>sourceTree</key>
 			<string>&lt;group&gt;</string>
 		</dict>
+		<key>BEE981B64F5E0E5875912826</key>
+		<dict>
+			<key>isa</key>
+			<string>PBXFileReference</string>
+			<key>lastKnownFileType</key>
+			<string>sourcecode.swift</string>
+			<key>path</key>
+			<string>Tests/ChatLogTranscriptTests.swift</string>
+			<key>sourceTree</key>
+			<string>&lt;group&gt;</string>
+		</dict>
 		<key>BF4DD63041143B5F9592615B</key>
 		<dict>
 			<key>isa</key>
@@ -2115,13 +2255,6 @@
 				<key>minimumVersion</key>
 				<string>3.7.0</string>
 			</dict>
-		</dict>
-		<key>BFBC659459B681A0A4CEA975</key>
-		<dict>
-			<key>fileRef</key>
-			<string>E0760B7ACE794DDF5F8C9D2D</string>
-			<key>isa</key>
-			<string>PBXBuildFile</string>
 		</dict>
 		<key>C096918F71FEAB2E9FC49F58</key>
 		<dict>
@@ -2147,6 +2280,13 @@
 		<dict>
 			<key>fileRef</key>
 			<string>524F3925915545FFD660FF3F</string>
+			<key>isa</key>
+			<string>PBXBuildFile</string>
+		</dict>
+		<key>C2BDFA30693C6EA13F39754C</key>
+		<dict>
+			<key>fileRef</key>
+			<string>DEE377088D8B9DB080770AD8</string>
 			<key>isa</key>
 			<string>PBXBuildFile</string>
 		</dict>
@@ -2195,13 +2335,6 @@
 			<string>ChatLab/LabPlayer.swift</string>
 			<key>sourceTree</key>
 			<string>&lt;group&gt;</string>
-		</dict>
-		<key>C6C86E0691E168652C4FB7FF</key>
-		<dict>
-			<key>fileRef</key>
-			<string>625431900975CEAB27D072BA</string>
-			<key>isa</key>
-			<string>PBXBuildFile</string>
 		</dict>
 		<key>CA35135A887A9C332D00398C</key>
 		<dict>
@@ -2297,13 +2430,6 @@
 			<key>isa</key>
 			<string>PBXBuildFile</string>
 		</dict>
-		<key>D1915CEA3D713F08792671A1</key>
-		<dict>
-			<key>fileRef</key>
-			<string>760BF1A5DD516B23F29A7716</string>
-			<key>isa</key>
-			<string>PBXBuildFile</string>
-		</dict>
 		<key>D20988A742E8A10B39F7CB23</key>
 		<dict>
 			<key>fileRef</key>
@@ -2378,10 +2504,10 @@
 			<key>remoteInfo</key>
 			<string>WakeOn</string>
 		</dict>
-		<key>D840C7C93C60B89A8321141D</key>
+		<key>D7A03DDE7898805DF6A3CF6C</key>
 		<dict>
 			<key>fileRef</key>
-			<string>95CB8F09A3D2EAFCEEEE6997</string>
+			<string>D271D76AB5D8BC578109A18A</string>
 			<key>isa</key>
 			<string>PBXBuildFile</string>
 		</dict>
@@ -2424,6 +2550,17 @@
 			<string>DA19DAC196A1C96922A56FB4</string>
 			<key>isa</key>
 			<string>PBXBuildFile</string>
+		</dict>
+		<key>DB05C6A5CE46BD1228A7C656</key>
+		<dict>
+			<key>isa</key>
+			<string>PBXFileReference</string>
+			<key>lastKnownFileType</key>
+			<string>sourcecode.swift</string>
+			<key>path</key>
+			<string>ChatUI/ChatTranscriptView.swift</string>
+			<key>sourceTree</key>
+			<string>&lt;group&gt;</string>
 		</dict>
 		<key>DC46E0EDFBDFAE7278098891</key>
 		<dict>
@@ -2497,6 +2634,7 @@
 				<string>B81F7C4987416DEB2976F4B6</string>
 				<string>4025FAD5BADBA37E3C524972</string>
 				<string>93421563D67A7CA1779FC6D5</string>
+				<string>BEE981B64F5E0E5875912826</string>
 				<string>9F2F0D7B8211BA8CBE1CF982</string>
 				<string>F92C1B086F4CDFB01AAC82C5</string>
 				<string>A52E1E1026008ABCCF27FFB3</string>
@@ -2524,18 +2662,22 @@
 				<string>FE84B97285FF2B40E137CB81</string>
 				<string>23302364766C959F3F1FECD5</string>
 				<string>8D6F34E7725B3AD5A0F6CAF0</string>
+				<string>2612BC79CCEF42CABF176070</string>
+				<string>916C3E202D234BBAFB9E0CC1</string>
+				<string>DEE377088D8B9DB080770AD8</string>
+				<string>AD458304449021C88DEBBDF4</string>
+				<string>50DA919303A83AD83E98CD61</string>
+				<string>DB05C6A5CE46BD1228A7C656</string>
 				<string>5E087DF3E4AB61A4C8706F07</string>
 				<string>B5FF211A8E2C834FF319EBF2</string>
 				<string>625431900975CEAB27D072BA</string>
-				<string>95CB8F09A3D2EAFCEEEE6997</string>
+				<string>16D192099562F3F2D2F00BAC</string>
 				<string>760BF1A5DD516B23F29A7716</string>
-				<string>E0760B7ACE794DDF5F8C9D2D</string>
-				<string>3E62A95FED5BE78926020787</string>
 				<string>C63371EE005F6A3E5E3783C1</string>
-				<string>75E34F9BF6DB381C1E742368</string>
 				<string>D271D76AB5D8BC578109A18A</string>
 				<string>D51DBCE476B3A9F6D9C63988</string>
 				<string>694D8611755A10832F2AF78C</string>
+				<string>0088B281E196A96BE9595A8C</string>
 				<string>DC6D1C4550B84D6367C515C7</string>
 				<string>86CAAB45B151A84EA05282CF</string>
 				<string>5F00D4549D966E634711BB43</string>
@@ -2557,6 +2699,13 @@
 			<string>Resources/VisualizerSamples/viz-u1.wav</string>
 			<key>sourceTree</key>
 			<string>&lt;group&gt;</string>
+		</dict>
+		<key>DCD552CBB45C57B95F77C5BD</key>
+		<dict>
+			<key>fileRef</key>
+			<string>DB05C6A5CE46BD1228A7C656</string>
+			<key>isa</key>
+			<string>PBXBuildFile</string>
 		</dict>
 		<key>DCE26BF595E449F720C1CEAD</key>
 		<dict>
@@ -2629,6 +2778,17 @@
 			<key>targetProxy</key>
 			<string>D799BAE6088A90139B415FCC</string>
 		</dict>
+		<key>DEE377088D8B9DB080770AD8</key>
+		<dict>
+			<key>isa</key>
+			<string>PBXFileReference</string>
+			<key>lastKnownFileType</key>
+			<string>sourcecode.swift</string>
+			<key>path</key>
+			<string>ChatUI/ChatMarkdown.swift</string>
+			<key>sourceTree</key>
+			<string>&lt;group&gt;</string>
+		</dict>
 		<key>DF594260BA11BF317125D44B</key>
 		<dict>
 			<key>isa</key>
@@ -2658,17 +2818,6 @@
 			<key>sourceTree</key>
 			<string>&lt;group&gt;</string>
 		</dict>
-		<key>E0760B7ACE794DDF5F8C9D2D</key>
-		<dict>
-			<key>isa</key>
-			<string>PBXFileReference</string>
-			<key>lastKnownFileType</key>
-			<string>sourcecode.swift</string>
-			<key>path</key>
-			<string>ChatLab/LabMarkdown.swift</string>
-			<key>sourceTree</key>
-			<string>&lt;group&gt;</string>
-		</dict>
 		<key>E131C259A818D1A0E21BDDCC</key>
 		<dict>
 			<key>isa</key>
@@ -2679,6 +2828,13 @@
 			<string>Tests/WakeHandoverTests.swift</string>
 			<key>sourceTree</key>
 			<string>&lt;group&gt;</string>
+		</dict>
+		<key>E1F787BE2CBB368D226A5B46</key>
+		<dict>
+			<key>fileRef</key>
+			<string>D51DBCE476B3A9F6D9C63988</string>
+			<key>isa</key>
+			<string>PBXBuildFile</string>
 		</dict>
 		<key>E31B5919A1444094040D0A2C</key>
 		<dict>
@@ -2815,6 +2971,8 @@
 					<string>$(inherited)</string>
 					<string>@executable_path/Frameworks</string>
 				</array>
+				<key>ONLY_ACTIVE_ARCH</key>
+				<string>YES</string>
 				<key>OTHER_LDFLAGS</key>
 				<array>
 					<string>$(inherited)</string>

@@ -14,30 +14,30 @@ struct ConversationKitRenderer: View {
             // ConversationView has no header slot, so call state (F4) and the live status
             // line (B6) sit above it. Its disclaimer slot only shows after an `.other`
             // message, so it can't carry "Listening…" while you speak.
-            LabCallHeader(call: player.call)
+            ChatCallHeader(call: player.call)
             // Fixed-height slot, so the transcript doesn't shift when the status comes and goes.
             ZStack(alignment: .leading) {
                 Text(" ").font(.footnote).hidden()
-                if let status = player.call.status { LabStatusLine(text: status) }
+                if let status = player.call.status { ChatStatusLine(text: status) }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(.horizontal).padding(.bottom, 4)
             ConversationView(messages: $messages) { message in
                 if let item = message.item, item.speaker == nil {
-                    LabNonMessageRow(item: item)
+                    ChatNonMessageRow(item: item)
                 } else {
                     MessageView(message: message.content, imageURL: message.imageURL,
                                 participant: message.participant, error: message.error)
                     if message.participant == .user, let item = message.item {
                         // Message actions only exist for `.other`, so a user footer goes here.
-                        LabMessageFooter(item: item).frame(maxWidth: .infinity, alignment: .trailing)
+                        ChatMessageFooter(item: item).frame(maxWidth: .infinity, alignment: .trailing)
                     }
                 }
             }
             // Library hook for the row under an AI message: Lobby's timing or "Interrupted".
             .messageActions { message in
                 if let message = message as? LabConvMessage, let item = message.item, item.speaker == .lobby {
-                    LabMessageFooter(item: item).padding(.leading, 34)
+                    ChatMessageFooter(item: item).padding(.leading, 34)
                 }
             }
             .disableAttachments()
@@ -62,9 +62,9 @@ struct LabConvMessage: Message {
     let imageURL: String? = nil
     let participant: Participant
     let error: (any Error)? = nil
-    var item: LabItem?
+    var item: ChatItem?
 
-    init(item: LabItem) {
+    init(item: ChatItem) {
         id = item.id
         participant = item.speaker == .user ? .user : .other
         if case let .message(_, text, _) = item.kind {

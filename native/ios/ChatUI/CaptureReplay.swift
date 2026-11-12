@@ -3,7 +3,7 @@ import SwiftUI
 
 /// A real call recorded by Wake On (`CallCapture`: one JSON object per line with `t_ms`,
 /// `source` and `event`), replayed in Chat Lab at its real timing.
-struct LabCapture: Identifiable {
+struct CapturedCall: Identifiable {
     struct Line {
         var t: TimeInterval
         var source: String
@@ -42,7 +42,7 @@ struct LabCapture: Identifiable {
         }
     }
 
-    static func load(_ url: URL) -> LabCapture? {
+    static func load(_ url: URL) -> CapturedCall? {
         guard let text = try? String(contentsOf: url, encoding: .utf8) else { return nil }
         let lines = text.split(separator: "\n").compactMap { line -> Line? in
             guard let json = (try? JSONSerialization.jsonObject(with: Data(line.utf8))) as? [String: Any],
@@ -50,25 +50,7 @@ struct LabCapture: Identifiable {
             return Line(t: (json["t_ms"] as? Double ?? 0) / 1000, source: json["source"] as? String ?? "", event: event)
         }
         guard !lines.isEmpty else { return nil }
-        return LabCapture(id: url.deletingPathExtension().lastPathComponent, url: url, lines: lines)
-    }
-
-    /// Two scenarios per call: the conversation as a user would see it, and the same call
-    /// with every non-delta event inline (the debug lens).
-    func scenarios(number: Int) -> [LabScenario] {
-        let when = started?.formatted(date: .abbreviated, time: .shortened) ?? "unknown time"
-        let length = Duration.seconds(duration).formatted(.time(pattern: .minuteSecond))
-        let about = isSample ? "A made-up call in the capture format" : "A real call"
-        let base = "\(about) (\(source), \(length), \(when)), replayed at its own timing."
-        let lines = lines
-        return [
-            LabScenario(id: "R\(number)", title: title,
-                        lookFor: base + " Check the tool rows (web search, play_spotify, opening Spotify), the status line while Lobby looks things up, and how filler like \"One moment\" sits next to the answer.",
-                        script: { CaptureReplay(lines: lines, rawEvents: false).steps }),
-            LabScenario(id: "R\(number)e", title: "\(title) · events",
-                        lookFor: base + " Every event sent and received appears inline between the messages; tap one to see its JSON.",
-                        script: { CaptureReplay(lines: lines, rawEvents: true).steps }),
-        ]
+        return CapturedCall(id: url.deletingPathExtension().lastPathComponent, url: url, lines: lines)
     }
 }
 
@@ -82,10 +64,10 @@ struct LabCapture: Identifiable {
 ///   the app's own steps after the call: opening Spotify and media commands.
 /// - Backend stages drive the status line; check-ins and the hang-up become markers.
 struct CaptureReplay {
-    private(set) var steps: [LabStep] = []
-    private var script = LabScript()
+    private(set) var steps: [ChatStep] = []
+    private var script = ChatScript()
 
-    private struct Open { var id: String; var speaker: LabItem.Speaker; var text: String }
+    private struct Open { var id: String; var speaker: ChatItem.Speaker; var text: String }
     private var current: Open?
     /// Id of the last tool row or marker appended (raw event rows don't split messages).
     private var lastRow: String?
@@ -93,11 +75,11 @@ struct CaptureReplay {
     private var replyTimingPending = false
     private var answerArrived = false
     private var answerTimingPending = false
-    private var tools: [String: (id: String, tool: LabItem.Tool)] = [:]
+    private var tools: [String: (id: String, tool: ChatItem.Tool)] = [:]
     /// Web search rows per delegation, to attach the answer and its sources.
     private var searches: [String: [String]] = [:]
 
-    init(lines: [LabCapture.Line], rawEvents: Bool) {
+    init(lines: [CapturedCall.Line], rawEvents: Bool) {
         script.now = 0
         for line in lines {
             script.now = line.t
@@ -110,7 +92,7 @@ struct CaptureReplay {
 
     // MARK: - Events
 
-    private mutating func apply(_ line: LabCapture.Line) {
+    private mutating func apply(_ line: CapturedCall.Line) {
         let e = line.event
         switch line.type {
         case "app.call_started":
@@ -146,7 +128,7 @@ struct CaptureReplay {
             marker(endNote(e, at: line.t))
         case "app.spotify_open":
             let title = e["title"] as? String ?? "Spotify"
-            var tool = LabItem.Tool(name: "open_in_spotify",
+            var tool = ChatItem.Tool(name: "open_in_spotify",
                                     arguments: [title, e["app_url"] as? String].compactMap { $0 }.joined(separator: "\n"),
                                     result: nil, state: .running)
             if let web = e["web_url"] as? String { tool.sources = [.init(title: title, url: web)] }
@@ -207,7 +189,7 @@ struct CaptureReplay {
                 let text = parts.compactMap { $0["text"] as? String }.joined()
                 let sources = parts.flatMap { $0["annotations"] as? [[String: Any]] ?? [] }
                     .filter { $0["type"] as? String == "url_citation" }
-                    .compactMap { a -> LabItem.Source? in
+                    .compactMap { a -> ChatItem.Source? in
                         guard let url = a["url"] as? String else { return nil }
                         return .init(title: a["title"] as? String ?? URL(string: url)?.host ?? url, url: url)
                     }
@@ -230,7 +212,7 @@ struct CaptureReplay {
 
     // MARK: - Messages
 
-    private mutating func say(_ speaker: LabItem.Speaker, _ delta: String, at t: TimeInterval) {
+    private mutating func say(_ speaker: ChatItem.Speaker, _ delta: String, at t: TimeInterval) {
         let continues = current.map {
             $0.speaker == speaker && lastRow == nil && !(speaker == .lobby && answerArrived)
         } ?? false
@@ -242,7 +224,7 @@ struct CaptureReplay {
             current = Open(id: id, speaker: speaker, text: "")
             lastRow = nil
             if speaker == .lobby { answerArrived = false }
-            script.run { $0.append(LabItem(id: id, kind: .message(speaker, text: "", state: .streaming))) }
+            script.run { $0.append(ChatItem(id: id, kind: .message(speaker, text: "", state: .streaming))) }
         }
         guard var open = current else { return }
         open.text += delta
@@ -269,20 +251,20 @@ struct CaptureReplay {
 
     // MARK: - Rows
 
-    private mutating func marker(_ text: String, _ style: LabItem.MarkerStyle = .system) {
+    private mutating func marker(_ text: String, _ style: ChatItem.MarkerStyle = .system) {
         let id = script.id("marker")
         lastRow = id
-        script.run { $0.append(LabItem(id: id, kind: .marker(text, style))) }
+        script.run { $0.append(ChatItem(id: id, kind: .marker(text, style))) }
     }
 
-    private mutating func addTool(_ key: String, _ tool: LabItem.Tool) {
+    private mutating func addTool(_ key: String, _ tool: ChatItem.Tool) {
         let id = script.id("tool")
         tools[key] = (id, tool)
         lastRow = id
-        script.run { $0.append(LabItem(id: id, kind: .tool(tool))) }
+        script.run { $0.append(ChatItem(id: id, kind: .tool(tool))) }
     }
 
-    private mutating func updateTool(_ key: String, _ change: (inout LabItem.Tool) -> Void) {
+    private mutating func updateTool(_ key: String, _ change: (inout ChatItem.Tool) -> Void) {
         guard var entry = tools[key] else { return }
         change(&entry.tool)
         // Keep every alias (item id and call_id) pointing at the latest state.
@@ -292,14 +274,14 @@ struct CaptureReplay {
     }
 
     /// The event itself, collapsed, for the events variant. Deltas would be hundreds of rows.
-    private mutating func raw(_ line: LabCapture.Line) {
+    private mutating func raw(_ line: CapturedCall.Line) {
         var type = line.type
         var body = line.event
         if type == "response.event", let nested = body["event"] as? [String: Any] {
             type = "backend · " + (nested["type"] as? String ?? "event")
         }
         if type.hasSuffix(".delta") || type == "app.milestone" { return }
-        let direction: LabItem.RawEvent.Direction = switch line.source {
+        let direction: ChatItem.RawEvent.Direction = switch line.source {
         case "client": .sent
         case "app": .app
         default: .received
@@ -344,53 +326,5 @@ struct CaptureReplay {
               let data = try? JSONSerialization.data(withJSONObject: object, options: [.prettyPrinted, .sortedKeys, .withoutEscapingSlashes])
         else { return json }
         return String(decoding: data, as: UTF8.self)
-    }
-}
-
-/// Captured calls Chat Lab can replay: a made-up sample in the app, plus real ones in its
-/// Documents folder (scripts/pull-call-captures.sh --lab copies them there, or add them
-/// in the Files app or with Import). Real calls never go in the repo.
-@MainActor
-final class LabCaptureLibrary: ObservableObject {
-    static let shared = LabCaptureLibrary()
-    @Published private(set) var captures: [LabCapture] = []
-
-    var scenarios: [LabScenario] {
-        captures.enumerated().flatMap { $1.scenarios(number: $0 + 1) }
-    }
-
-    static var folder: URL {
-        FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
-            .appendingPathComponent("call-captures", isDirectory: true)
-    }
-
-    init() { reload() }
-
-    func reload() {
-        let documents = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
-        let files = [documents, Self.folder].flatMap {
-            (try? FileManager.default.contentsOfDirectory(at: $0, includingPropertiesForKeys: nil)) ?? []
-        }.filter { $0.pathExtension == "jsonl" }
-        let real = files.compactMap(LabCapture.load).sorted { ($0.started ?? .distantPast) < ($1.started ?? .distantPast) }
-        let bundled = Bundle.main.urls(forResourcesWithExtension: "jsonl", subdirectory: nil) ?? []
-        let sample: [LabCapture] = bundled.compactMap(LabCapture.load).map { capture in
-            var capture = capture
-            capture.isSample = true
-            return capture
-        }
-        captures = sample + real
-    }
-
-    /// Copies picked files into the captures folder.
-    func importFiles(_ urls: [URL]) {
-        try? FileManager.default.createDirectory(at: Self.folder, withIntermediateDirectories: true)
-        for url in urls {
-            let access = url.startAccessingSecurityScopedResource()
-            defer { if access { url.stopAccessingSecurityScopedResource() } }
-            let target = Self.folder.appendingPathComponent(url.lastPathComponent)
-            try? FileManager.default.removeItem(at: target)
-            try? FileManager.default.copyItem(at: url, to: target)
-        }
-        reload()
     }
 }
