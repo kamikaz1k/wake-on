@@ -130,8 +130,10 @@ screenshots without touch; scores should come from trying each page on the phone
 - **exyte/Chat + MarkdownView:** upside-down `UITableView`; opens and follows at the bottom,
   built-in scroll-to-bottom button, keeps place on inserts (unverified by touch). No turn
   anchoring near the top. Input hides cleanly (F1). A custom message view replaces the whole
-  row, so Lobby loses exyte's avatar/name/time. MarkdownView renders tables and code well but
-  measures height late, so the newest bubble briefly clips while streaming. Default user bubble
+  row, so Lobby loses exyte's avatar/name/time. MarkdownView renders tables and code well, but its
+  SwiftUI wrapper measures height after layout: in exyte's recycled cells that changed the list
+  height near the top and caused a bounce loop on the phone. Fixed in the lab with our own
+  wrapper that sizes during layout (`SizedMarkdown`); a swipe UI test (ChatLabUITests) confirmed it. Default user bubble
   truncates some messages (layout bug). Heavy dependencies (Giphy, Kingfisher, MediaPicker).
 - **ConversationKit:** "push and pin" anchors a new user message at the top (A4/A5 partly), but
   then keeps it pinned while the reply streams off-screen; no follow mode or jump button; only

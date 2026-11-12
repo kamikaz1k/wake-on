@@ -106,6 +106,20 @@
 			<key>productType</key>
 			<string>com.apple.product-type.app-extension</string>
 		</dict>
+		<key>0C347AAE4F9F12FA0B1BF00F</key>
+		<dict>
+			<key>buildConfigurations</key>
+			<array>
+				<string>DE48ACFB2DC5E7EC7E4F9F2D</string>
+				<string>874F465EBB8AB36D1378EE50</string>
+			</array>
+			<key>defaultConfigurationIsVisible</key>
+			<integer>0</integer>
+			<key>defaultConfigurationName</key>
+			<string>Release</string>
+			<key>isa</key>
+			<string>XCConfigurationList</string>
+		</dict>
 		<key>0F3BF8A23D1FDE6611CE4A9A</key>
 		<dict>
 			<key>fileRef</key>
@@ -171,6 +185,13 @@
 			<string>Resources/VisualizerSamples/viz-a1.wav</string>
 			<key>sourceTree</key>
 			<string>&lt;group&gt;</string>
+		</dict>
+		<key>10DDFF1AB4A0324DD571FAF7</key>
+		<dict>
+			<key>isa</key>
+			<string>PBXBuildFile</string>
+			<key>productRef</key>
+			<string>FEE81AB82AE7AE36FE2E038D</string>
 		</dict>
 		<key>141FC4B68CEA3CBAC086E734</key>
 		<dict>
@@ -422,6 +443,15 @@
 			<key>sourceTree</key>
 			<string>BUILT_PRODUCTS_DIR</string>
 		</dict>
+		<key>3972800C5E3B90A7D23A8802</key>
+		<dict>
+			<key>isa</key>
+			<string>PBXTargetDependency</string>
+			<key>target</key>
+			<string>C5B168124450AD2BB493BFA4</string>
+			<key>targetProxy</key>
+			<string>6913CD13B977ECDA17D4242F</string>
+		</dict>
 		<key>398A4CC88A7AE5BE5F44C2F4</key>
 		<dict>
 			<key>fileRef</key>
@@ -551,6 +581,19 @@
 			<key>isa</key>
 			<string>XCConfigurationList</string>
 		</dict>
+		<key>44AC8035CAADC9E6A28611C9</key>
+		<dict>
+			<key>explicitFileType</key>
+			<string>wrapper.cfbundle</string>
+			<key>includeInIndex</key>
+			<integer>0</integer>
+			<key>isa</key>
+			<string>PBXFileReference</string>
+			<key>path</key>
+			<string>ChatLabUITests.xctest</string>
+			<key>sourceTree</key>
+			<string>BUILT_PRODUCTS_DIR</string>
+		</dict>
 		<key>44B03283B94CFD4EFE847D7E</key>
 		<dict>
 			<key>isa</key>
@@ -606,6 +649,32 @@
 			<string>Resources/VisualizerSamples/viz-a2.wav</string>
 			<key>sourceTree</key>
 			<string>&lt;group&gt;</string>
+		</dict>
+		<key>4AA624B9A28ADC88DF6317A9</key>
+		<dict>
+			<key>buildConfigurationList</key>
+			<string>0C347AAE4F9F12FA0B1BF00F</string>
+			<key>buildPhases</key>
+			<array>
+				<string>6824193053ECCB52BCD2CC2C</string>
+				<string>CB28A42ADA93E39CD3720711</string>
+			</array>
+			<key>buildRules</key>
+			<array/>
+			<key>dependencies</key>
+			<array>
+				<string>3972800C5E3B90A7D23A8802</string>
+			</array>
+			<key>isa</key>
+			<string>PBXNativeTarget</string>
+			<key>name</key>
+			<string>ChatLabUITests</string>
+			<key>productName</key>
+			<string>ChatLabUITests</string>
+			<key>productReference</key>
+			<string>44AC8035CAADC9E6A28611C9</string>
+			<key>productType</key>
+			<string>com.apple.product-type.bundle.ui-testing</string>
 		</dict>
 		<key>4B1B873BCE242380A2E258EF</key>
 		<dict>
@@ -1037,12 +1106,38 @@
 			<key>isa</key>
 			<string>PBXBuildFile</string>
 		</dict>
+		<key>6824193053ECCB52BCD2CC2C</key>
+		<dict>
+			<key>buildActionMask</key>
+			<integer>2147483647</integer>
+			<key>files</key>
+			<array>
+				<string>8CED41873DA1500FA1E3E1C0</string>
+			</array>
+			<key>isa</key>
+			<string>PBXSourcesBuildPhase</string>
+			<key>runOnlyForDeploymentPostprocessing</key>
+			<integer>0</integer>
+		</dict>
 		<key>68658B7C483A60F3041629D7</key>
 		<dict>
 			<key>fileRef</key>
 			<string>5E087DF3E4AB61A4C8706F07</string>
 			<key>isa</key>
 			<string>PBXBuildFile</string>
+		</dict>
+		<key>6913CD13B977ECDA17D4242F</key>
+		<dict>
+			<key>containerPortal</key>
+			<string>98F54143AB4E86B28C3AFEE0</string>
+			<key>isa</key>
+			<string>PBXContainerItemProxy</string>
+			<key>proxyType</key>
+			<integer>1</integer>
+			<key>remoteGlobalIDString</key>
+			<string>C5B168124450AD2BB493BFA4</string>
+			<key>remoteInfo</key>
+			<string>ChatLab</string>
 		</dict>
 		<key>694D8611755A10832F2AF78C</key>
 		<dict>
@@ -1327,6 +1422,50 @@
 			<key>runOnlyForDeploymentPostprocessing</key>
 			<integer>0</integer>
 		</dict>
+		<key>874F465EBB8AB36D1378EE50</key>
+		<dict>
+			<key>buildSettings</key>
+			<dict>
+				<key>CLANG_ENABLE_MODULES</key>
+				<string>YES</string>
+				<key>CODE_SIGN_STYLE</key>
+				<string>Automatic</string>
+				<key>DEBUG_INFORMATION_FORMAT</key>
+				<string>dwarf-with-dsym</string>
+				<key>DEVELOPMENT_TEAM</key>
+				<string>JDR6VAV2RA</string>
+				<key>ENABLE_TESTABILITY</key>
+				<string>NO</string>
+				<key>GENERATE_INFOPLIST_FILE</key>
+				<string>YES</string>
+				<key>IPHONEOS_DEPLOYMENT_TARGET</key>
+				<string>18.0</string>
+				<key>ONLY_ACTIVE_ARCH</key>
+				<string>YES</string>
+				<key>PRODUCT_BUNDLE_IDENTIFIER</key>
+				<string>dev.wakeon.chatlab.uitests</string>
+				<key>PRODUCT_NAME</key>
+				<string>$(TARGET_NAME)</string>
+				<key>SDKROOT</key>
+				<string>iphoneos</string>
+				<key>SUPPORTED_PLATFORMS</key>
+				<string>iphoneos iphonesimulator</string>
+				<key>SWIFT_ACTIVE_COMPILATION_CONDITIONS</key>
+				<string></string>
+				<key>SWIFT_OPTIMIZATION_LEVEL</key>
+				<string>-O</string>
+				<key>SWIFT_VERSION</key>
+				<string>5.0</string>
+				<key>TARGETED_DEVICE_FAMILY</key>
+				<string>1,2</string>
+				<key>TEST_TARGET_NAME</key>
+				<string>ChatLab</string>
+			</dict>
+			<key>isa</key>
+			<string>XCBuildConfiguration</string>
+			<key>name</key>
+			<string>Release</string>
+		</dict>
 		<key>887985ED78CBDAB42474984B</key>
 		<dict>
 			<key>fileRef</key>
@@ -1398,6 +1537,13 @@
 		<dict>
 			<key>fileRef</key>
 			<string>FA3366121A5DEA92723FCBB5</string>
+			<key>isa</key>
+			<string>PBXBuildFile</string>
+		</dict>
+		<key>8CED41873DA1500FA1E3E1C0</key>
+		<dict>
+			<key>fileRef</key>
+			<string>A8851735FAE0A2F73AB0D84E</string>
 			<key>isa</key>
 			<string>PBXBuildFile</string>
 		</dict>
@@ -1538,6 +1684,7 @@
 				<string>04D13FD0AA6F0197CF2C9990</string>
 				<string>0BF4170444CD473CD4066C79</string>
 				<string>C5B168124450AD2BB493BFA4</string>
+				<string>4AA624B9A28ADC88DF6317A9</string>
 			</array>
 		</dict>
 		<key>9C636EDAE9D9B588A67427F2</key>
@@ -1644,6 +1791,17 @@
 			<string>44B03283B94CFD4EFE847D7E</string>
 			<key>isa</key>
 			<string>PBXBuildFile</string>
+		</dict>
+		<key>A8851735FAE0A2F73AB0D84E</key>
+		<dict>
+			<key>isa</key>
+			<string>PBXFileReference</string>
+			<key>lastKnownFileType</key>
+			<string>sourcecode.swift</string>
+			<key>path</key>
+			<string>ChatLabUITests/ChatLabScrollTests.swift</string>
+			<key>sourceTree</key>
+			<string>&lt;group&gt;</string>
 		</dict>
 		<key>AB253D8DEF578F882C3AD98F</key>
 		<dict>
@@ -1886,6 +2044,7 @@
 			<array>
 				<string>9C636EDAE9D9B588A67427F2</string>
 				<string>1B93CCDDF5C1EB44EE95A2CA</string>
+				<string>FEE81AB82AE7AE36FE2E038D</string>
 				<string>338FE27D0A844D5595B3AA30</string>
 				<string>B5F49A876DFB272FACBDF1EB</string>
 				<string>47790152C955D33B94ED573F</string>
@@ -1932,6 +2091,17 @@
 			<string>E6BBB8D808FE964AEF86FDF6</string>
 			<key>isa</key>
 			<string>PBXBuildFile</string>
+		</dict>
+		<key>CB28A42ADA93E39CD3720711</key>
+		<dict>
+			<key>buildActionMask</key>
+			<integer>2147483647</integer>
+			<key>files</key>
+			<array/>
+			<key>isa</key>
+			<string>PBXFrameworksBuildPhase</string>
+			<key>runOnlyForDeploymentPostprocessing</key>
+			<integer>0</integer>
 		</dict>
 		<key>CC176C17FF9F49D4A917C518</key>
 		<dict>
@@ -2120,6 +2290,7 @@
 			<array>
 				<string>2AFC7628333F2A13B4B5A860</string>
 				<string>D2262972ACBB3CB0D8C16F8B</string>
+				<string>10DDFF1AB4A0324DD571FAF7</string>
 				<string>A20F2D9165915B1692380F98</string>
 				<string>B7021324F3204A05BBC4B2FA</string>
 				<string>FFB8A2F719373B2136F690A0</string>
@@ -2207,6 +2378,7 @@
 				<string>D271D76AB5D8BC578109A18A</string>
 				<string>D51DBCE476B3A9F6D9C63988</string>
 				<string>694D8611755A10832F2AF78C</string>
+				<string>A8851735FAE0A2F73AB0D84E</string>
 				<string>FBDC4F23F93125BBEEAE800C</string>
 			</array>
 			<key>isa</key>
@@ -2242,6 +2414,50 @@
 			<string>5F8D1447DF26309D45C4CBCF</string>
 			<key>isa</key>
 			<string>PBXBuildFile</string>
+		</dict>
+		<key>DE48ACFB2DC5E7EC7E4F9F2D</key>
+		<dict>
+			<key>buildSettings</key>
+			<dict>
+				<key>CLANG_ENABLE_MODULES</key>
+				<string>YES</string>
+				<key>CODE_SIGN_STYLE</key>
+				<string>Automatic</string>
+				<key>DEBUG_INFORMATION_FORMAT</key>
+				<string>dwarf</string>
+				<key>DEVELOPMENT_TEAM</key>
+				<string>JDR6VAV2RA</string>
+				<key>ENABLE_TESTABILITY</key>
+				<string>YES</string>
+				<key>GENERATE_INFOPLIST_FILE</key>
+				<string>YES</string>
+				<key>IPHONEOS_DEPLOYMENT_TARGET</key>
+				<string>18.0</string>
+				<key>ONLY_ACTIVE_ARCH</key>
+				<string>YES</string>
+				<key>PRODUCT_BUNDLE_IDENTIFIER</key>
+				<string>dev.wakeon.chatlab.uitests</string>
+				<key>PRODUCT_NAME</key>
+				<string>$(TARGET_NAME)</string>
+				<key>SDKROOT</key>
+				<string>iphoneos</string>
+				<key>SUPPORTED_PLATFORMS</key>
+				<string>iphoneos iphonesimulator</string>
+				<key>SWIFT_ACTIVE_COMPILATION_CONDITIONS</key>
+				<string>DEBUG</string>
+				<key>SWIFT_OPTIMIZATION_LEVEL</key>
+				<string>-Onone</string>
+				<key>SWIFT_VERSION</key>
+				<string>5.0</string>
+				<key>TARGETED_DEVICE_FAMILY</key>
+				<string>1,2</string>
+				<key>TEST_TARGET_NAME</key>
+				<string>ChatLab</string>
+			</dict>
+			<key>isa</key>
+			<string>XCBuildConfiguration</string>
+			<key>name</key>
+			<string>Debug</string>
 		</dict>
 		<key>DE58E2B17C19600779694943</key>
 		<dict>
@@ -2625,6 +2841,7 @@
 				<string>B7480EC88B7F22D0A4757273</string>
 				<string>CF59003455EA5841ED646673</string>
 				<string>0B4CDEE182E01D65166BE05F</string>
+				<string>44AC8035CAADC9E6A28611C9</string>
 			</array>
 			<key>isa</key>
 			<string>PBXGroup</string>
@@ -2668,6 +2885,15 @@
 			<string>Vendor/build-ios-no-tts/sherpa-onnx.xcframework</string>
 			<key>sourceTree</key>
 			<string>&lt;group&gt;</string>
+		</dict>
+		<key>FEE81AB82AE7AE36FE2E038D</key>
+		<dict>
+			<key>isa</key>
+			<string>XCSwiftPackageProductDependency</string>
+			<key>package</key>
+			<string>BF4DD63041143B5F9592615B</string>
+			<key>productName</key>
+			<string>MarkdownParser</string>
 		</dict>
 		<key>FFB8A2F719373B2136F690A0</key>
 		<dict>

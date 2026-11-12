@@ -1,4 +1,5 @@
 import ExyteChat
+import MarkdownParser
 import MarkdownView
 import SwiftUI
 
@@ -8,6 +9,9 @@ import SwiftUI
 /// date headers and the scroll-to-bottom button are exyte's own; no extra scroll logic.
 struct ExyteRenderer: View {
     @ObservedObject var player: LabPlayer
+    /// "-lab-scroll-top N" scrolls to the oldest message after N s (reproduces scrolling to
+    /// the top without touch).
+    @State private var scrollTo: ScrollToParams?
 
     private static let you = User(id: "you", name: "You", avatarURL: nil, isCurrentUser: true)
     private static let lobby = User(id: "lobby", name: "Lobby", avatarURL: nil, isCurrentUser: false)
@@ -43,7 +47,15 @@ struct ExyteRenderer: View {
             .showMessageMenuOnLongPress(false)
             .setAvailableInputs([])
             // exyte's inverted UITableView draws past its top edge under the header otherwise.
+            .scrollTo(scrollTo)
+            .onContentOffsetChange { ScrollLog.shared.record($0) }
             .clipped()
+        }
+        .onAppear {
+            let args = ProcessInfo.processInfo.arguments
+            if let index = args.firstIndex(of: "-lab-scroll-top"), index + 1 < args.count, let seconds = Double(args[index + 1]) {
+                DispatchQueue.main.asyncAfter(deadline: .now() + seconds) { scrollTo = ScrollToParams(.oldestMessage) }
+            }
         }
     }
 
@@ -128,7 +140,7 @@ private struct LobbyBubble: View {
                 if text.isEmpty {
                     Text("…").foregroundStyle(theme.colors.messageFriendText)
                 } else {
-                    MarkdownView(text)
+                    SizedMarkdown(text: text)
                 }
             }
             .padding(.horizontal, 12).padding(.vertical, 8)
@@ -138,5 +150,68 @@ private struct LobbyBubble: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.leading, 12).padding(.trailing, 40)
         .padding(.top, isTopOfGroup ? 8 : 2)
+    }
+}
+
+/// "-lab-log-scroll" writes every exyte content offset to Documents/scroll.log with a
+/// timestamp, so a bounce loop can be seen after the fact (UI tests, or a phone run).
+final class ScrollLog {
+    static let shared = ScrollLog()
+    private let enabled = ProcessInfo.processInfo.arguments.contains("-lab-log-scroll")
+    private let start = Date()
+    private var lines: [String] = []
+    private let url = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
+        .appendingPathComponent("scroll.log")
+
+    init() {
+        guard enabled else { return }
+        Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true) { [weak self] _ in self?.flush() }
+    }
+
+    func record(_ offset: CGFloat) {
+        guard enabled else { return }
+        lines.append(String(format: "%.3f %.1f", Date().timeIntervalSince(start), offset))
+        if lines.count % 20 == 0 { flush() }
+    }
+
+    func flush() {
+        try? lines.joined(separator: "\n").write(to: url, atomically: true, encoding: .utf8)
+    }
+}
+
+/// MarkdownView's own SwiftUI wrapper measures its height after layout (async) and starts each
+/// new view at 0. In exyte's recycled table cells that made the list's height change by a row
+/// every time a Lobby bubble was reused near the top, so the scroll position kept re-clamping:
+/// the bounce loop at the top. This wrapper reports its height during layout instead.
+struct SizedMarkdown: UIViewRepresentable {
+    let text: String
+
+    final class Coordinator { var text: String? }
+
+    func makeCoordinator() -> Coordinator { Coordinator() }
+
+    func makeUIView(context: Context) -> MarkdownTextView {
+        let view = MarkdownTextView()
+        view.throttleInterval = nil // apply each update now, so the size we report is current
+        view.setContentHuggingPriority(.required, for: .vertical)
+        view.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
+        return view
+    }
+
+    func updateUIView(_ view: MarkdownTextView, context: Context) {
+        apply(to: view, context.coordinator)
+    }
+
+    func sizeThatFits(_ proposal: ProposedViewSize, uiView view: MarkdownTextView, context: Context) -> CGSize? {
+        guard let width = proposal.width, width.isFinite, width > 0 else { return nil }
+        apply(to: view, context.coordinator)
+        return CGSize(width: width, height: ceil(view.boundingSize(for: width).height))
+    }
+
+    private func apply(to view: MarkdownTextView, _ coordinator: Coordinator) {
+        guard coordinator.text != text else { return }
+        coordinator.text = text
+        let content = MarkdownTextView.PreprocessedContent(parserResult: MarkdownParser().parse(text), theme: view.theme)
+        view.setMarkdownManually(content)
     }
 }

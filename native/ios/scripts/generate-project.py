@@ -55,10 +55,12 @@ test_product=add('testproduct','PBXFileReference',explicitFileType='wrapper.cfbu
 # Kept out of Wake On so its packages never touch the voice app or its launch time.
 lab_sources=[file(str(p.relative_to(root)), 'sourcecode.swift') for p in sorted((root/'ChatLab').glob('*.swift'))]
 lab_app=add('labproduct','PBXFileReference',explicitFileType='wrapper.application',path='ChatLab.app',sourceTree='BUILT_PRODUCTS_DIR',includeInIndex=0)
+lab_ui_sources=[file(str(p.relative_to(root)), 'sourcecode.swift') for p in sorted((root/'ChatLabUITests').glob('*.swift'))]
+lab_ui_product=add('labuiproduct','PBXFileReference',explicitFileType='wrapper.cfbundle',path='ChatLabUITests.xctest',sourceTree='BUILT_PRODUCTS_DIR',includeInIndex=0)
 lab_packages=[  # url, requirement, products
     ('https://github.com/exyte/Chat.git', dict(kind='upToNextMajorVersion', minimumVersion='3.3.7'), ['ExyteChat']),
     # MarkdownView stays on 3.x: LanguageModelChatUI 0.2 requires it.
-    ('https://github.com/Lakr233/MarkdownView', dict(kind='upToNextMajorVersion', minimumVersion='3.7.0'), ['MarkdownView']),
+    ('https://github.com/Lakr233/MarkdownView', dict(kind='upToNextMajorVersion', minimumVersion='3.7.0'), ['MarkdownView','MarkdownParser']),
     ('https://github.com/peterfriese/ConversationKit', dict(kind='upToNextMinorVersion', minimumVersion='0.1.1'), ['ConversationKit']),
     ('https://github.com/Lakr233/LanguageModelChatUI', dict(kind='upToNextMinorVersion', minimumVersion='0.2.0'), ['LanguageModelChatUI','ChatClientKit']),
 ]
@@ -70,8 +72,8 @@ for url, requirement, names in lab_packages:
     for name in names:
         lab_product_deps.append(add('pkgproduct'+name,'XCSwiftPackageProductDependency',package=ref_id,productName=name))
 lab_framework_files=[add('labbuild'+d,'PBXBuildFile',productRef=d) for d in lab_product_deps]
-products=add('products','PBXGroup',children=[app,test_product,appex,lab_app],name='Products',sourceTree='<group>')
-group=add('root','PBXGroup',children=sources+shared+activity_sources+[activity_assets]+tests+resources+frameworks+lab_sources+[products],sourceTree='<group>')
+products=add('products','PBXGroup',children=[app,test_product,appex,lab_app,lab_ui_product],name='Products',sourceTree='<group>')
+group=add('root','PBXGroup',children=sources+shared+activity_sources+[activity_assets]+tests+resources+frameworks+lab_sources+lab_ui_sources+[products],sourceTree='<group>')
 common=dict(SWIFT_VERSION='5.0',IPHONEOS_DEPLOYMENT_TARGET='17.0',SDKROOT='iphoneos',SUPPORTED_PLATFORMS='iphoneos iphonesimulator',TARGETED_DEVICE_FAMILY='1,2',CLANG_ENABLE_MODULES='YES',CODE_SIGN_STYLE='Automatic',DEVELOPMENT_TEAM='JDR6VAV2RA')
 appsettings=dict(common,PRODUCT_BUNDLE_IDENTIFIER='dev.wakeon.ios',PRODUCT_NAME='$(TARGET_NAME)',INFOPLIST_FILE='WakeOn/Info.plist',SWIFT_OBJC_BRIDGING_HEADER='WakeOn/Bridge.h',HEADER_SEARCH_PATHS='$(PROJECT_DIR)/Vendor/build-ios-no-tts/sherpa-onnx.xcframework/Headers',OTHER_LDFLAGS=['$(inherited)','-lc++'],LD_RUNPATH_SEARCH_PATHS=['$(inherited)','@executable_path/Frameworks'],ENABLE_USER_SCRIPT_SANDBOXING='YES',ASSETCATALOG_COMPILER_APPICON_NAME='AppIcon')
 project_id=hashlib.sha1(b'project').hexdigest()[:24].upper()
@@ -91,7 +93,12 @@ lab_frameworks=add('labFrameworks','PBXFrameworksBuildPhase',buildActionMask=214
 lab_embed_files=[add('labembed'+d,'PBXBuildFile',productRef=d,settings={'ATTRIBUTES':['CodeSignOnCopy','RemoveHeadersOnCopy']}) for d in lab_product_deps if objects[d]['productName']=='LanguageModelChatUI']
 lab_embed=add('labEmbedFrameworks','PBXCopyFilesBuildPhase',buildActionMask=2147483647,dstPath='',dstSubfolderSpec=10,files=lab_embed_files,name='Embed Frameworks',runOnlyForDeploymentPostprocessing=0)
 lab_target=add('labapp','PBXNativeTarget',name='ChatLab',productName='ChatLab',productReference=lab_app,productType='com.apple.product-type.application',buildConfigurationList=configs('lab',lab_settings),buildPhases=[phase('labSources','PBXSourcesBuildPhase',lab_sources),lab_frameworks,lab_embed],buildRules=[],dependencies=[],packageProductDependencies=lab_product_deps)
-add('project','PBXProject',packageReferences=lab_package_refs,attributes={'LastUpgradeCheck':'2600'},buildConfigurationList=configs('project',common),compatibilityVersion='Xcode 14.0',developmentRegion='en',hasScannedForEncodings=0,knownRegions=['en','Base'],mainGroup=group,productRefGroup=products,projectDirPath='',projectRoot='',targets=[app_target,test_target,activity_target,lab_target])
+# Chat Lab UI tests: real swipes in the simulator (e.g. overscrolling a library's list).
+lab_proxy=add('labProxy','PBXContainerItemProxy',containerPortal=project_id,proxyType=1,remoteGlobalIDString=lab_target,remoteInfo='ChatLab')
+lab_dep=add('labDependency','PBXTargetDependency',target=lab_target,targetProxy=lab_proxy)
+lab_ui_settings=dict(common,IPHONEOS_DEPLOYMENT_TARGET='18.0',ONLY_ACTIVE_ARCH='YES',PRODUCT_NAME='$(TARGET_NAME)',PRODUCT_BUNDLE_IDENTIFIER='dev.wakeon.chatlab.uitests',GENERATE_INFOPLIST_FILE='YES',TEST_TARGET_NAME='ChatLab')
+lab_ui_target=add('labuitests','PBXNativeTarget',name='ChatLabUITests',productName='ChatLabUITests',productReference=lab_ui_product,productType='com.apple.product-type.bundle.ui-testing',buildConfigurationList=configs('labui',lab_ui_settings),buildPhases=[phase('labUISources','PBXSourcesBuildPhase',lab_ui_sources),phase('labUIFrameworks','PBXFrameworksBuildPhase',[])],buildRules=[],dependencies=[lab_dep])
+add('project','PBXProject',packageReferences=lab_package_refs,attributes={'LastUpgradeCheck':'2600'},buildConfigurationList=configs('project',common),compatibilityVersion='Xcode 14.0',developmentRegion='en',hasScannedForEncodings=0,knownRegions=['en','Base'],mainGroup=group,productRefGroup=products,projectDirPath='',projectRoot='',targets=[app_target,test_target,activity_target,lab_target,lab_ui_target])
 proj=root/'WakeOn.xcodeproj'
 proj.mkdir(exist_ok=True)
 (proj/'project.pbxproj').write_bytes(plistlib.dumps(dict(archiveVersion='1',classes={},objectVersion='56',objects=objects,rootObject=project_id)))
@@ -117,6 +124,7 @@ activity_info=dict(CFBundleDevelopmentRegion='en',CFBundleDisplayName='Wake On',
 (scheme/'ChatLab.xcscheme').write_text(f'''<?xml version="1.0" encoding="UTF-8"?>
 <Scheme LastUpgradeVersion="2600" version="1.3">
 <BuildAction parallelizeBuildables="YES" buildImplicitDependencies="YES"><BuildActionEntries><BuildActionEntry buildForTesting="YES" buildForRunning="YES" buildForProfiling="YES" buildForArchiving="YES" buildForAnalyzing="YES">{ref(lab_target,'ChatLab.app')}</BuildActionEntry></BuildActionEntries></BuildAction>
+<TestAction buildConfiguration="Debug" selectedDebuggerIdentifier="Xcode.DebuggerFoundation.Debugger.LLDB" selectedLauncherIdentifier="Xcode.IDEFoundation.Launcher.LLDB"><Testables><TestableReference skipped="NO">{ref(lab_ui_target,'ChatLabUITests.xctest')}</TestableReference></Testables></TestAction>
 <LaunchAction buildConfiguration="Debug" selectedDebuggerIdentifier="Xcode.DebuggerFoundation.Debugger.LLDB" selectedLauncherIdentifier="Xcode.IDEFoundation.Launcher.LLDB" launchStyle="0" useCustomWorkingDirectory="NO" ignoresPersistentStateOnLaunch="NO" debugDocumentVersioning="YES" allowLocationSimulation="YES"><BuildableProductRunnable runnableDebuggingMode="0">{ref(lab_target,'ChatLab.app')}</BuildableProductRunnable></LaunchAction>
 <ProfileAction buildConfiguration="Release"><BuildableProductRunnable runnableDebuggingMode="0">{ref(lab_target,'ChatLab.app')}</BuildableProductRunnable></ProfileAction>
 <AnalyzeAction buildConfiguration="Debug"/><ArchiveAction buildConfiguration="Release" revealArchiveInOrganizer="YES"/>
