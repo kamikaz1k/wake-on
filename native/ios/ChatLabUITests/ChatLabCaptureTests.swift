@@ -18,4 +18,24 @@ final class ChatLabCaptureTests: XCTestCase {
         XCTAssertTrue(shows("Open In Spotify · done"), "the app opening Spotify, as a tool row")
         XCTAssertTrue(shows("ended to play on Spotify"), "why the call ended")
     }
+
+    /// The made-up visual sample (R2): show_visual becomes a page in the chat, the call goes
+    /// on, and tapping the row opens the page full size.
+    func testSampleVisualShowsAndOpensFullSize() throws {
+        let app = XCUIApplication()
+        app.launchArguments = ["-lab-scenario", "R2", "-lab-library", "plain"]
+        app.launch()
+        let open = app.buttons["chat-visual-open"]
+        XCTAssertTrue(open.waitForExistence(timeout: 20), "visual row")
+        XCTAssertTrue(app.webViews.staticTexts["Daily high, °C"].waitForExistence(timeout: 10), "page in the preview")
+        XCTAssertTrue(app.descendants(matching: .any).matching(NSPredicate(format: "label CONTAINS %@", "It's on your screen"))
+            .firstMatch.waitForExistence(timeout: 15), "Lobby goes on talking after the visual")
+        open.tap()
+        let done = app.buttons["chat-visual-done"]
+        XCTAssertTrue(done.waitForExistence(timeout: 5), "full-size sheet")
+        XCTAssertTrue(app.navigationBars["Paris this week"].exists)
+        XCTAssertGreaterThanOrEqual(app.webViews.count, 2, "the page in the sheet as well as the preview")
+        done.tap()
+        XCTAssertTrue(done.waitForNonExistence(timeout: 5))
+    }
 }

@@ -666,7 +666,7 @@ final class VoiceSessionController: ObservableObject {
         }
     }
 
-    /// The backend model called one of the app's tools (only play_spotify so far).
+    /// The backend model called one of the app's tools (play_spotify, control_media, show_visual).
     private func handleFunctionCall(_ item: [String: Any]) {
         let name = item["name"] as? String ?? ""
         let callID = item["call_id"] as? String ?? ""
@@ -690,6 +690,15 @@ final class VoiceSessionController: ObservableObject {
             result = "Sent \(command.rawValue) to whatever is playing; the call is ending."
             pendingMedia = command
             action = ["kind": "media", "command": command.rawValue]
+        } else if name == ShowVisual.toolName {
+            let title = arguments["title"] as? String ?? ""
+            let html = arguments["html"] as? String ?? ""
+            if html.isEmpty {
+                result = "Nothing to show: the html was empty."
+            } else {
+                result = "Shown on the user's screen as \"\(title)\". The call goes on."
+                action = ["kind": "visual", "title": title, "bytes": html.utf8.count]
+            }
         }
         capture?.app("tool_call", ["name": name, "call_id": callID, "arguments": arguments,
                                    "output": result, "action": action.isEmpty ? NSNull() : action])

@@ -46,7 +46,8 @@ final class LabCaptureLibrary: ObservableObject {
             (try? FileManager.default.contentsOfDirectory(at: $0, includingPropertiesForKeys: nil)) ?? []
         }.filter { $0.pathExtension == "jsonl" }
         let real = files.compactMap(CapturedCall.load).sorted { ($0.started ?? .distantPast) < ($1.started ?? .distantPast) }
-        let bundled = Bundle.main.urls(forResourcesWithExtension: "jsonl", subdirectory: nil) ?? []
+        let bundled = (Bundle.main.urls(forResourcesWithExtension: "jsonl", subdirectory: nil) ?? [])
+            .sorted { $0.lastPathComponent < $1.lastPathComponent }
         let sample: [CapturedCall] = bundled.compactMap(CapturedCall.load).map { capture in
             var capture = capture
             capture.isSample = true

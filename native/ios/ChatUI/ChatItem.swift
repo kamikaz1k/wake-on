@@ -16,6 +16,15 @@ struct ChatItem: Identifiable, Equatable {
         var result: String?
         var state: ToolState
         var sources: [Source] = []
+        /// A page from show_visual, shown in a web view.
+        var visual: Visual?
+    }
+
+    struct Visual: Equatable {
+        var title: String
+        var html: String
+        /// False while the model is still writing it.
+        var complete: Bool
     }
 
     struct RawEvent: Equatable {

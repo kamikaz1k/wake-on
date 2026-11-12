@@ -412,6 +412,17 @@
 			<key>sourceTree</key>
 			<string>&lt;group&gt;</string>
 		</dict>
+		<key>23E37AFC95566DEAD09FBB7F</key>
+		<dict>
+			<key>isa</key>
+			<string>PBXFileReference</string>
+			<key>lastKnownFileType</key>
+			<string>sourcecode.swift</string>
+			<key>path</key>
+			<string>Tests/ShowVisualTests.swift</string>
+			<key>sourceTree</key>
+			<string>&lt;group&gt;</string>
+		</dict>
 		<key>24E45279F3A315255ADBAB9B</key>
 		<dict>
 			<key>fileRef</key>
@@ -960,6 +971,7 @@
 				<string>30C5E3CFB1D9C3FD29B21254</string>
 				<string>AE8A2770D5CAE99E616773D5</string>
 				<string>8D57C6131DA1F283404544E8</string>
+				<string>85E520AA605DF2446B073BBB</string>
 			</array>
 			<key>isa</key>
 			<string>PBXSourcesBuildPhase</string>
@@ -1340,6 +1352,7 @@
 				<string>44DA201589CF3D2915F60C94</string>
 				<string>1FD4FDDD07AD5BF53127D39B</string>
 				<string>53100DED70B6793C84D0EFE9</string>
+				<string>923E56ABEC4022D54E7A5068</string>
 				<string>8F689865000D2D112E2DF22D</string>
 				<string>D20988A742E8A10B39F7CB23</string>
 				<string>5D951E7614C0C6E073261858</string>
@@ -1581,6 +1594,13 @@
 		<dict>
 			<key>fileRef</key>
 			<string>AD458304449021C88DEBBDF4</string>
+			<key>isa</key>
+			<string>PBXBuildFile</string>
+		</dict>
+		<key>85E520AA605DF2446B073BBB</key>
+		<dict>
+			<key>fileRef</key>
+			<string>A8BE439C8003B02D5316B471</string>
 			<key>isa</key>
 			<string>PBXBuildFile</string>
 		</dict>
@@ -1854,6 +1874,24 @@
 			<key>sourceTree</key>
 			<string>&lt;group&gt;</string>
 		</dict>
+		<key>919AD98241FE3E02313AEA0F</key>
+		<dict>
+			<key>isa</key>
+			<string>PBXFileReference</string>
+			<key>lastKnownFileType</key>
+			<string>text</string>
+			<key>path</key>
+			<string>ChatLab/Captures/sample-visual.jsonl</string>
+			<key>sourceTree</key>
+			<string>&lt;group&gt;</string>
+		</dict>
+		<key>923E56ABEC4022D54E7A5068</key>
+		<dict>
+			<key>fileRef</key>
+			<string>23E37AFC95566DEAD09FBB7F</string>
+			<key>isa</key>
+			<string>PBXBuildFile</string>
+		</dict>
 		<key>92404B1FF440E3A7B6630303</key>
 		<dict>
 			<key>fileRef</key>
@@ -2027,6 +2065,17 @@
 			<key>sourceTree</key>
 			<string>&lt;group&gt;</string>
 		</dict>
+		<key>A8BE439C8003B02D5316B471</key>
+		<dict>
+			<key>isa</key>
+			<string>PBXFileReference</string>
+			<key>lastKnownFileType</key>
+			<string>sourcecode.swift</string>
+			<key>path</key>
+			<string>ChatUI/ChatVisual.swift</string>
+			<key>sourceTree</key>
+			<string>&lt;group&gt;</string>
+		</dict>
 		<key>AB253D8DEF578F882C3AD98F</key>
 		<dict>
 			<key>fileRef</key>
@@ -2063,6 +2112,13 @@
 		<dict>
 			<key>fileRef</key>
 			<string>50DA919303A83AD83E98CD61</string>
+			<key>isa</key>
+			<string>PBXBuildFile</string>
+		</dict>
+		<key>B14B0BC8CCC712BB507DF782</key>
+		<dict>
+			<key>fileRef</key>
+			<string>919AD98241FE3E02313AEA0F</string>
 			<key>isa</key>
 			<string>PBXBuildFile</string>
 		</dict>
@@ -2222,6 +2278,7 @@
 				<string>83DA82C7C30EB912C8D47A04</string>
 				<string>7C2A3BBA05E9DEB1DCD6B4FC</string>
 				<string>DCD552CBB45C57B95F77C5BD</string>
+				<string>D48643952BC6FD896B1C24F1</string>
 			</array>
 			<key>isa</key>
 			<string>PBXSourcesBuildPhase</string>
@@ -2289,6 +2346,7 @@
 			<key>files</key>
 			<array>
 				<string>3EE874D6094F498B3EB38F4D</string>
+				<string>B14B0BC8CCC712BB507DF782</string>
 			</array>
 			<key>isa</key>
 			<string>PBXResourcesBuildPhase</string>
@@ -2481,6 +2539,13 @@
 			<key>sourceTree</key>
 			<string>&lt;group&gt;</string>
 		</dict>
+		<key>D48643952BC6FD896B1C24F1</key>
+		<dict>
+			<key>fileRef</key>
+			<string>A8BE439C8003B02D5316B471</string>
+			<key>isa</key>
+			<string>PBXBuildFile</string>
+		</dict>
 		<key>D510BDB133AEB16F89091ED0</key>
 		<dict>
 			<key>fileRef</key>
@@ -2660,6 +2725,7 @@
 				<string>7208E077BFADA885CC025FBD</string>
 				<string>1C6E6C00672E94914095F8DB</string>
 				<string>89B55F3E600130F57D0DF153</string>
+				<string>23E37AFC95566DEAD09FBB7F</string>
 				<string>548E5C94CE6D3460317BB2D5</string>
 				<string>D9C92472F248312173947DD4</string>
 				<string>52D89FA008323E37BA1BDF3D</string>
@@ -2688,6 +2754,7 @@
 				<string>AD458304449021C88DEBBDF4</string>
 				<string>50DA919303A83AD83E98CD61</string>
 				<string>DB05C6A5CE46BD1228A7C656</string>
+				<string>A8BE439C8003B02D5316B471</string>
 				<string>5E087DF3E4AB61A4C8706F07</string>
 				<string>B5FF211A8E2C834FF319EBF2</string>
 				<string>625431900975CEAB27D072BA</string>
@@ -2698,6 +2765,7 @@
 				<string>D51DBCE476B3A9F6D9C63988</string>
 				<string>694D8611755A10832F2AF78C</string>
 				<string>0088B281E196A96BE9595A8C</string>
+				<string>919AD98241FE3E02313AEA0F</string>
 				<string>DC6D1C4550B84D6367C515C7</string>
 				<string>86CAAB45B151A84EA05282CF</string>
 				<string>5F00D4549D966E634711BB43</string>

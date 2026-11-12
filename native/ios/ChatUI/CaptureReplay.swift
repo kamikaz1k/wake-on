@@ -195,7 +195,12 @@ struct CaptureReplay {
             updateTool(itemID) { $0.state = .running }
         case "response.function_call_arguments.delta":
             let delta = event["delta"] as? String ?? ""
-            updateTool(itemID) { $0.arguments += delta }
+            updateTool(itemID) {
+                $0.arguments += delta
+                if $0.name == ShowVisual.toolName {
+                    $0.visual = ShowVisual.visual(fromArguments: $0.arguments, complete: false) ?? $0.visual
+                }
+            }
         case "response.output_item.done":
             switch item["type"] as? String {
             case "web_search_call":
@@ -203,8 +208,15 @@ struct CaptureReplay {
                 let queries = action["queries"] as? [String] ?? [action["query"] as? String].compactMap { $0 }
                 updateTool(itemID) { $0.arguments = queries.joined(separator: "\n"); $0.state = .done }
             case "function_call":
-                let arguments = Self.pretty(item["arguments"] as? String ?? "")
-                updateTool(itemID) { $0.arguments = arguments; $0.state = .running }
+                let raw = item["arguments"] as? String ?? ""
+                if item["name"] as? String == ShowVisual.toolName {
+                    // The page is shown by the row; the HTML would swamp the arguments.
+                    let visual = ShowVisual.visual(fromArguments: raw, complete: true)
+                    updateTool(itemID) { $0.visual = visual; $0.arguments = visual?.title ?? raw; $0.state = .running }
+                } else {
+                    let arguments = Self.pretty(raw)
+                    updateTool(itemID) { $0.arguments = arguments; $0.state = .running }
+                }
             case "message":
                 let parts = item["content"] as? [[String: Any]] ?? []
                 let text = parts.compactMap { $0["text"] as? String }.joined()

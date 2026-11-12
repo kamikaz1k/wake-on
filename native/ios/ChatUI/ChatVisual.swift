@@ -1,0 +1,227 @@
+import SwiftUI
+import UIKit
+import WebKit
+
+/// Lobby's show_visual tool: the backend model writes one self-contained HTML page (a chart, a
+/// table, a diagram, a small app) and the chat shows it in a web view while the call goes on.
+///
+/// The page runs in WebKit's own sandboxed process with a throwaway data store and no bridge
+/// into the app, so it can't reach the app's files, the Keychain or the API key. It may load
+/// from the web (CDN libraries, public APIs). Links open in Safari; the page itself can't
+/// navigate away. What a page could still do is send what the model put in it somewhere, so
+/// every page is kept in the call capture for review.
+enum ShowVisual {
+    static let toolName = "show_visual"
+
+    static let tool: [String: Any] = [
+        "type": "function",
+        "name": toolName,
+        "description": "Show the user something visual on their phone screen: a chart, table, diagram, timeline or small interactive page. The call continues while it is shown.",
+        "strict": true,
+        "parameters": [
+            "type": "object",
+            "properties": [
+                "title": ["type": "string", "description": "A short title, a few words."],
+                "html": ["type": "string", "description": "One complete, self-contained HTML document."],
+            ],
+            "required": ["title", "html"],
+            "additionalProperties": false,
+        ] as [String: Any],
+    ]
+
+    static let delegationInstructions = """
+    When the user asks to see, show, draw, chart, map or visualize something, or a table or chart \
+    would answer far better than speech, call show_visual with a title and one complete HTML \
+    document. Look up any data you need first. Make the page fit a phone: width 100%, no fixed \
+    widths, readable at 16px, and support light and dark mode with prefers-color-scheme. Inline \
+    SVG and CSS are best; you may load libraries from cdn.jsdelivr.net or cdnjs.cloudflare.com. \
+    Keep it short so it appears quickly. After it is shown, reply in one sentence saying what is \
+    on their screen.
+    """
+
+    /// Title and HTML from the tool's arguments, which may still be streaming in (a JSON
+    /// prefix): strings are read up to where the text has got to.
+    static func visual(fromArguments json: String, complete: Bool) -> ChatItem.Visual? {
+        guard let html = stringPrefix(of: "html", in: json), !(complete && html.isEmpty) else { return nil }
+        return ChatItem.Visual(title: stringPrefix(of: "title", in: json) ?? "", html: html, complete: complete)
+    }
+
+    /// The (possibly unfinished) value of a top-level string field in a JSON prefix.
+    static func stringPrefix(of key: String, in json: String) -> String? {
+        // The first match is the key: the same text inside an earlier string would be escaped.
+        guard let range = json.range(of: "\"\(key)\"") else { return nil }
+        let chars = Array(json.utf16)
+        var i = json.utf16.distance(from: json.startIndex, to: range.upperBound)
+        func skipSpace() { while i < chars.count, [0x20, 0x0A, 0x0D, 0x09].contains(chars[i]) { i += 1 } }
+        skipSpace()
+        guard i < chars.count, chars[i] == 0x3A else { return nil } // ':'
+        i += 1
+        skipSpace()
+        guard i < chars.count, chars[i] == 0x22 else { return nil } // '"'
+        i += 1
+        var out: [UInt16] = []
+        while i < chars.count {
+            let c = chars[i]
+            if c == 0x22 { break }
+            if c != 0x5C { out.append(c); i += 1; continue } // not '\'
+            guard i + 1 < chars.count else { break }
+            let e = chars[i + 1]
+            switch e {
+            case 0x6E: out.append(0x0A) // n
+            case 0x74: out.append(0x09) // t
+            case 0x72: out.append(0x0D) // r
+            case 0x62: out.append(0x08) // b
+            case 0x66: out.append(0x0C) // f
+            case 0x75: // u
+                guard i + 5 < chars.count,
+                      let code = UInt16(String(decoding: chars[i + 2...i + 5], as: UTF16.self), radix: 16)
+                else { return String(decoding: out, as: UTF16.self) }
+                out.append(code)
+                i += 6
+                continue
+            default: out.append(e) // \" \\ \/
+            }
+            i += 2
+        }
+        return String(decoding: out, as: UTF16.self)
+    }
+}
+
+/// A show_visual row: the page in a small preview, tap to open it full size.
+struct ChatVisualRow: View {
+    let tool: ChatItem.Tool
+    let visual: ChatItem.Visual
+    @State private var open = false
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Button { open = true } label: {
+                HStack(spacing: 8) {
+                    if visual.complete {
+                        Image(systemName: "rectangle.on.rectangle").foregroundStyle(.tint)
+                    } else {
+                        ProgressView().controlSize(.mini)
+                    }
+                    Text(visual.title.isEmpty ? "Visual" : visual.title)
+                        .font(.subheadline.weight(.medium))
+                        .shimmering(!visual.complete)
+                    Spacer()
+                    if !visual.complete {
+                        Text(ByteCountFormatter.string(fromByteCount: Int64(visual.html.utf8.count), countStyle: .file))
+                            .font(.caption.monospacedDigit()).foregroundStyle(.secondary)
+                    }
+                    Image(systemName: "arrow.up.left.and.arrow.down.right")
+                        .font(.caption.weight(.semibold)).foregroundStyle(.tertiary)
+                }
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .accessibilityIdentifier("chat-visual-open")
+            // The preview doesn't take touches, so the chat scrolls over it; the full view does.
+            VisualWebView(html: visual.html, complete: visual.complete)
+                .frame(height: 280)
+                .clipShape(RoundedRectangle(cornerRadius: 8))
+                .allowsHitTesting(false)
+                .onTapGesture { open = true }
+                .accessibilityIdentifier("chat-visual-preview")
+        }
+        .padding(10)
+        .background(Color(.secondarySystemBackground), in: RoundedRectangle(cornerRadius: 12))
+        .contentShape(Rectangle())
+        .onTapGesture { open = true }
+        .sheet(isPresented: $open) {
+            NavigationStack {
+                VisualWebView(html: visual.html, complete: visual.complete)
+                    .ignoresSafeArea(edges: .bottom)
+                    .navigationTitle(visual.title.isEmpty ? "Visual" : visual.title)
+                    .navigationBarTitleDisplayMode(.inline)
+                    .toolbar {
+                        ToolbarItem(placement: .confirmationAction) {
+                            Button("Done") { open = false }.accessibilityIdentifier("chat-visual-done")
+                        }
+                    }
+            }
+        }
+    }
+}
+
+/// A WKWebView showing one page from show_visual. While the page is still being written it is
+/// reloaded at most twice a second, so it fills in as it streams.
+struct VisualWebView: UIViewRepresentable {
+    let html: String
+    var complete = true
+
+    func makeCoordinator() -> Coordinator { Coordinator() }
+
+    func makeUIView(context: Context) -> WKWebView {
+        let config = WKWebViewConfiguration()
+        config.websiteDataStore = .nonPersistent()
+        config.allowsInlineMediaPlayback = true
+        let view = WKWebView(frame: .zero, configuration: config)
+        view.navigationDelegate = context.coordinator
+        view.uiDelegate = context.coordinator
+        view.isOpaque = false
+        view.backgroundColor = .clear
+        #if DEBUG
+        view.isInspectable = true
+        #endif
+        context.coordinator.load(html, complete: complete, in: view)
+        return view
+    }
+
+    func updateUIView(_ view: WKWebView, context: Context) {
+        context.coordinator.load(html, complete: complete, in: view)
+    }
+
+    final class Coordinator: NSObject, WKNavigationDelegate, WKUIDelegate {
+        private var loaded: String?
+        private var pending: String?
+        private var lastLoad = Date.distantPast
+
+        func load(_ html: String, complete: Bool, in view: WKWebView) {
+            guard html != loaded else { return }
+            let wait = 0.5 - Date().timeIntervalSince(lastLoad)
+            if complete || wait <= 0 {
+                pending = nil
+                show(html, in: view)
+                return
+            }
+            let scheduled = pending != nil
+            pending = html
+            guard !scheduled else { return }
+            DispatchQueue.main.asyncAfter(deadline: .now() + wait) { [weak self, weak view] in
+                guard let self, let view, let html = self.pending else { return }
+                self.pending = nil
+                self.show(html, in: view)
+            }
+        }
+
+        private func show(_ html: String, in view: WKWebView) {
+            loaded = html
+            lastLoad = Date()
+            view.loadHTMLString(html, baseURL: nil)
+        }
+
+        /// The page is the one we loaded: links open in Safari, and the page can't replace
+        /// itself with another site. Frames inside it (maps, embeds) may load.
+        func webView(_ webView: WKWebView, decidePolicyFor action: WKNavigationAction,
+                     decisionHandler: @escaping @MainActor (WKNavigationActionPolicy) -> Void) {
+            let url = action.request.url
+            let isOurPage = url?.scheme == "about" || url?.absoluteString == "about:blank"
+            if action.targetFrame?.isMainFrame == false || isOurPage {
+                return decisionHandler(.allow)
+            }
+            if action.navigationType == .linkActivated, let url, ["http", "https"].contains(url.scheme) {
+                UIApplication.shared.open(url)
+            }
+            decisionHandler(.cancel)
+        }
+
+        /// window.open and target=_blank links open in Safari.
+        func webView(_ webView: WKWebView, createWebViewWith configuration: WKWebViewConfiguration,
+                     for action: WKNavigationAction, windowFeatures: WKWindowFeatures) -> WKWebView? {
+            if let url = action.request.url, ["http", "https"].contains(url.scheme) { UIApplication.shared.open(url) }
+            return nil
+        }
+    }
+}
