@@ -106,7 +106,7 @@ struct LabEventRow: View {
                 withAnimation(.snappy) { expanded.toggle() }
             } label: {
                 HStack {
-                    Text(event.direction.rawValue).foregroundStyle(event.direction == .sent ? Color.blue : Color.purple)
+                    Text(event.direction.rawValue).foregroundStyle(event.direction == .sent ? Color.blue : event.direction == .app ? Color.orange : Color.purple)
                     Text(event.type)
                     Spacer()
                 }

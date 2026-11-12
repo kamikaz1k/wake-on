@@ -19,7 +19,7 @@ struct LabItem: Identifiable, Equatable {
     }
 
     struct RawEvent: Equatable {
-        enum Direction: String { case sent = "↑ sent", received = "↓ received" }
+        enum Direction: String { case sent = "↑ sent", received = "↓ received", app = "• app" }
         var direction: Direction
         var type: String
         var body: String

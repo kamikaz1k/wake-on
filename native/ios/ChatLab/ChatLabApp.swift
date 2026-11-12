@@ -1,5 +1,6 @@
 import QuartzCore
 import SwiftUI
+import UniformTypeIdentifiers
 
 @main
 struct ChatLabApp: App {
@@ -53,6 +54,9 @@ struct AppearanceMenu: View {
 /// All scenarios, grouped as in docs/research/chat-ui-scenarios.md, with your scores.
 struct ScenarioListView: View {
     @ObservedObject private var scores = LabScores.shared
+    @ObservedObject private var library = LabCaptureLibrary.shared
+    @State private var importing = false
+    @Environment(\.scenePhase) private var scenePhase
     /// "-lab-scenario A4" opens that scenario on launch (for screenshots).
     @State private var opened: String? = ProcessInfo.processInfo.arguments.firstIndex(of: "-lab-scenario")
         .flatMap { ProcessInfo.processInfo.arguments.dropFirst($0 + 1).first }
@@ -68,19 +72,26 @@ struct ScenarioListView: View {
             } header: { Text("Scores") } footer: {
                 Text("Open a scenario, then swipe sideways to compare libraries. Score each 0 (fights it), 1 (needs our code) or 2 (out of the box).")
             }
+            Section {
+                ForEach(library.scenarios) { scenario in
+                    NavigationLink {
+                        ScenarioPager(scenario: scenario)
+                    } label: {
+                        ScenarioLabel(scenario: scenario)
+                    }
+                    .accessibilityIdentifier("scenario-\(scenario.id)")
+                }
+                Button("Import Capture…", systemImage: "square.and.arrow.down") { importing = true }
+            } header: { Text("Real calls") } footer: {
+                Text("Calls recorded by Wake On, replayed at their own timing. Share one from a chat log, or plug in the phone and run scripts/pull-call-captures.sh --lab.")
+            }
             ForEach(LabGroup.allCases) { group in
                 Section(group.rawValue) {
                     ForEach(LabScenarios.all.filter { $0.group == group.id }) { scenario in
                         NavigationLink {
                             ScenarioPager(scenario: scenario)
                         } label: {
-                            HStack {
-                                Text(scenario.id).font(.caption.monospaced().weight(.semibold)).foregroundStyle(.secondary)
-                                    .frame(width: 34, alignment: .leading)
-                                Text(scenario.title)
-                                Spacer()
-                                ScoreDots(scenario: scenario.id)
-                            }
+                            ScenarioLabel(scenario: scenario)
                         }
                         .accessibilityIdentifier("scenario-\(scenario.id)")
                     }
@@ -89,10 +100,27 @@ struct ScenarioListView: View {
         }
         .navigationTitle("Chat Lab")
         .toolbar { AppearanceMenu() }
+        .fileImporter(isPresented: $importing, allowedContentTypes: [.data, .json, .plainText], allowsMultipleSelection: true) { result in
+            if case let .success(urls) = result { library.importFiles(urls) }
+        }
+        .onChange(of: scenePhase) { _, phase in if phase == .active { library.reload() } }
         .navigationDestination(isPresented: Binding(get: { opened != nil }, set: { if !$0 { opened = nil } })) {
-            if let scenario = LabScenarios.all.first(where: { $0.id == opened }) {
+            if let scenario = (library.scenarios + LabScenarios.all).first(where: { $0.id == opened }) {
                 ScenarioPager(scenario: scenario)
             }
+        }
+    }
+}
+
+private struct ScenarioLabel: View {
+    let scenario: LabScenario
+    var body: some View {
+        HStack {
+            Text(scenario.id).font(.caption.monospaced().weight(.semibold)).foregroundStyle(.secondary)
+                .frame(width: 34, alignment: .leading)
+            Text(scenario.title)
+            Spacer()
+            ScoreDots(scenario: scenario.id)
         }
     }
 }

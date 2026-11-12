@@ -1,9 +1,13 @@
 #!/bin/sh
 # Copies Wake On's call captures (full Live API event logs, one .jsonl per chat log) and the
 # chat logs themselves from the phone into native/ios/captures/ (git-ignored: these are real
-# conversations). Usage: scripts/pull-call-captures.sh [device id or name]
+# conversations). With --lab, also copies the captures into Chat Lab on the same phone, where
+# they show up under "Real calls".
+# Usage: scripts/pull-call-captures.sh [--lab] [device id or name]
 set -eu
 cd "$(dirname "$0")/.."
+lab=no
+if [ "${1:-}" = "--lab" ]; then lab=yes; shift; fi
 device="${1:-5976CF6D-0FD6-5A57-9711-AA29F94404E7}"
 out=captures
 mkdir -p "$out"
@@ -16,4 +20,12 @@ if copy "Library/Application Support/call-captures" "$out/call-captures" 2>/dev/
   echo "$(ls "$out/call-captures" | wc -l | tr -d ' ') captures in $out/call-captures"
 else
   echo "No call captures on the phone yet: make a call with this build first."
+fi
+if [ "$lab" = yes ] && [ -d "$out/call-captures" ]; then
+  for f in "$out"/call-captures/*.jsonl; do
+    xcrun devicectl device copy to --device "$device" --domain-type appDataContainer \
+      --domain-identifier dev.wakeon.chatlab --source "$f" \
+      --destination "Documents/call-captures/$(basename "$f")" >/dev/null
+  done
+  echo "Copied them into Chat Lab (Real calls)."
 fi

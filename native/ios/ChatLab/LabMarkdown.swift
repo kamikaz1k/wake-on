@@ -48,6 +48,9 @@ struct SizedMarkdown: UIViewRepresentable {
         coordinator.text = text
         let content = MarkdownTextView.PreprocessedContent(parserResult: MarkdownParser().parse(text), theme: view.theme)
         view.setMarkdownManually(content)
+        // MarkdownView draws text VoiceOver can't read; expose the message as one element.
+        view.isAccessibilityElement = true
+        view.accessibilityLabel = text
         // Hint that a too-wide table scrolls sideways (MarkdownView hides its indicators);
         // at most every 2 s, so a table that is still streaming doesn't flicker.
         if Self.containsTable(text), Date().timeIntervalSince(coordinator.lastFlash) > 2 {

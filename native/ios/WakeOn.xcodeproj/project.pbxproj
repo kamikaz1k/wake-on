@@ -10,6 +10,17 @@
 	<string>56</string>
 	<key>objects</key>
 	<dict>
+		<key>0088B281E196A96BE9595A8C</key>
+		<dict>
+			<key>isa</key>
+			<string>PBXFileReference</string>
+			<key>lastKnownFileType</key>
+			<string>text</string>
+			<key>path</key>
+			<string>ChatLab/Captures/sample-spotify.jsonl</string>
+			<key>sourceTree</key>
+			<string>&lt;group&gt;</string>
+		</dict>
 		<key>0189424A5A60FED329FA868E</key>
 		<dict>
 			<key>buildActionMask</key>
@@ -531,6 +542,13 @@
 			<key>isa</key>
 			<string>PBXBuildFile</string>
 		</dict>
+		<key>3EE874D6094F498B3EB38F4D</key>
+		<dict>
+			<key>fileRef</key>
+			<string>0088B281E196A96BE9595A8C</string>
+			<key>isa</key>
+			<string>PBXBuildFile</string>
+		</dict>
 		<key>3F1E21A7DC27A28E0003C40A</key>
 		<dict>
 			<key>isa</key>
@@ -851,6 +869,7 @@
 				<string>68658B7C483A60F3041629D7</string>
 				<string>398A4CC88A7AE5BE5F44C2F4</string>
 				<string>C6C86E0691E168652C4FB7FF</string>
+				<string>D840C7C93C60B89A8321141D</string>
 				<string>D1915CEA3D713F08792671A1</string>
 				<string>BFBC659459B681A0A4CEA975</string>
 				<string>3FE5EC2E51880636DEBAAFF8</string>
@@ -952,6 +971,13 @@
 		<dict>
 			<key>fileRef</key>
 			<string>52D89FA008323E37BA1BDF3D</string>
+			<key>isa</key>
+			<string>PBXBuildFile</string>
+		</dict>
+		<key>5DAD89B249E6C204732C8348</key>
+		<dict>
+			<key>fileRef</key>
+			<string>86CAAB45B151A84EA05282CF</string>
 			<key>isa</key>
 			<string>PBXBuildFile</string>
 		</dict>
@@ -1161,6 +1187,7 @@
 			<key>files</key>
 			<array>
 				<string>CA96E234578042035BE64B67</string>
+				<string>5DAD89B249E6C204732C8348</string>
 				<string>3FA687701F257A5753BDCC71</string>
 				<string>8CED41873DA1500FA1E3E1C0</string>
 			</array>
@@ -1461,6 +1488,17 @@
 			<key>isa</key>
 			<string>XCConfigurationList</string>
 		</dict>
+		<key>86CAAB45B151A84EA05282CF</key>
+		<dict>
+			<key>isa</key>
+			<string>PBXFileReference</string>
+			<key>lastKnownFileType</key>
+			<string>sourcecode.swift</string>
+			<key>path</key>
+			<string>ChatLabUITests/ChatLabCaptureTests.swift</string>
+			<key>sourceTree</key>
+			<string>&lt;group&gt;</string>
+		</dict>
 		<key>87284A5F642FDDEE9F7229B6</key>
 		<dict>
 			<key>buildActionMask</key>
@@ -1696,6 +1734,17 @@
 			<string>sourcecode.swift</string>
 			<key>path</key>
 			<string>Tests/ChatLogStoreTests.swift</string>
+			<key>sourceTree</key>
+			<string>&lt;group&gt;</string>
+		</dict>
+		<key>95CB8F09A3D2EAFCEEEE6997</key>
+		<dict>
+			<key>isa</key>
+			<string>PBXFileReference</string>
+			<key>lastKnownFileType</key>
+			<string>sourcecode.swift</string>
+			<key>path</key>
+			<string>ChatLab/LabCapture.swift</string>
 			<key>sourceTree</key>
 			<string>&lt;group&gt;</string>
 		</dict>
@@ -2081,6 +2130,19 @@
 			<key>isa</key>
 			<string>PBXBuildFile</string>
 		</dict>
+		<key>C17353CC56749F94F62ED0EC</key>
+		<dict>
+			<key>buildActionMask</key>
+			<integer>2147483647</integer>
+			<key>files</key>
+			<array>
+				<string>3EE874D6094F498B3EB38F4D</string>
+			</array>
+			<key>isa</key>
+			<string>PBXResourcesBuildPhase</string>
+			<key>runOnlyForDeploymentPostprocessing</key>
+			<integer>0</integer>
+		</dict>
 		<key>C1A248E97250536E9457FB6A</key>
 		<dict>
 			<key>fileRef</key>
@@ -2096,6 +2158,7 @@
 			<array>
 				<string>5A6404DDD8072BAD39E9C571</string>
 				<string>DC46E0EDFBDFAE7278098891</string>
+				<string>C17353CC56749F94F62ED0EC</string>
 				<string>5F7AB0418ABBDC8B7808DE63</string>
 			</array>
 			<key>buildRules</key>
@@ -2315,6 +2378,13 @@
 			<key>remoteInfo</key>
 			<string>WakeOn</string>
 		</dict>
+		<key>D840C7C93C60B89A8321141D</key>
+		<dict>
+			<key>fileRef</key>
+			<string>95CB8F09A3D2EAFCEEEE6997</string>
+			<key>isa</key>
+			<string>PBXBuildFile</string>
+		</dict>
 		<key>D901E739FA33909C40A270E5</key>
 		<dict>
 			<key>isa</key>
@@ -2457,6 +2527,7 @@
 				<string>5E087DF3E4AB61A4C8706F07</string>
 				<string>B5FF211A8E2C834FF319EBF2</string>
 				<string>625431900975CEAB27D072BA</string>
+				<string>95CB8F09A3D2EAFCEEEE6997</string>
 				<string>760BF1A5DD516B23F29A7716</string>
 				<string>E0760B7ACE794DDF5F8C9D2D</string>
 				<string>3E62A95FED5BE78926020787</string>
@@ -2466,6 +2537,7 @@
 				<string>D51DBCE476B3A9F6D9C63988</string>
 				<string>694D8611755A10832F2AF78C</string>
 				<string>DC6D1C4550B84D6367C515C7</string>
+				<string>86CAAB45B151A84EA05282CF</string>
 				<string>5F00D4549D966E634711BB43</string>
 				<string>A8851735FAE0A2F73AB0D84E</string>
 				<string>FBDC4F23F93125BBEEAE800C</string>
