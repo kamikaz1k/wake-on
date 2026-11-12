@@ -45,6 +45,7 @@ final class LabPlayer: ObservableObject {
 
     func restart() {
         task?.cancel()
+        interrupted = []
         extraTasks.forEach { $0.cancel() }
         extraTasks = []
         items = []
@@ -87,10 +88,21 @@ final class LabPlayer: ObservableObject {
 
     private var extraTasks: [Task<Void, Never>] = []
     private var turnCount = 0
+    /// Lobby replies you talked over: marked cut off, and the script's later updates to them
+    /// are ignored, like a real barge-in.
+    private var interrupted: Set<String> = []
 
     /// Adds a spoken turn from you plus a streamed Lobby reply right now, on top of whatever
     /// is playing, so you can position the view first and then see how a library reacts.
     func newTurn() {
+        // Talking over Lobby interrupts it (B3): cut off any reply that is still streaming.
+        for index in items.indices {
+            if case let .message(.lobby, text, .streaming) = items[index].kind {
+                items[index].kind = .message(.lobby, text: text, state: .cutOff)
+                interrupted.insert(items[index].id)
+            }
+        }
+        touched()
         turnCount += 1
         let index = turnCount
         var script = LabScript()
@@ -126,7 +138,7 @@ final class LabPlayer: ObservableObject {
     }
 
     func update(_ id: String, _ change: (inout LabItem) -> Void) {
-        guard let index = items.firstIndex(where: { $0.id == id }) else { return }
+        guard !interrupted.contains(id), let index = items.firstIndex(where: { $0.id == id }) else { return }
         change(&items[index])
         touched()
     }
