@@ -84,7 +84,7 @@ proxy=add('proxy','PBXContainerItemProxy',containerPortal=project_id,proxyType=1
 dep=add('dependency','PBXTargetDependency',target=app_target,targetProxy=proxy)
 test_settings=dict(common,PRODUCT_NAME='$(TARGET_NAME)',PRODUCT_BUNDLE_IDENTIFIER='dev.wakeon.ios.tests',GENERATE_INFOPLIST_FILE='YES',TEST_HOST='$(BUILT_PRODUCTS_DIR)/WakeOn.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/WakeOn',BUNDLE_LOADER='$(TEST_HOST)',SWIFT_OBJC_BRIDGING_HEADER='WakeOn/Bridge.h',HEADER_SEARCH_PATHS=appsettings['HEADER_SEARCH_PATHS'])
 test_target=add('tests','PBXNativeTarget',name='WakeOnTests',productName='WakeOnTests',productReference=test_product,productType='com.apple.product-type.bundle.unit-test',buildConfigurationList=configs('tests',test_settings),buildPhases=[phase('testSources','PBXSourcesBuildPhase',tests),phase('testFrameworks','PBXFrameworksBuildPhase',[])],buildRules=[],dependencies=[dep])
-lab_settings=dict(common,ONLY_ACTIVE_ARCH='YES',PRODUCT_BUNDLE_IDENTIFIER='dev.wakeon.chatlab',PRODUCT_NAME='$(TARGET_NAME)',INFOPLIST_FILE='ChatLab/Info.plist',LD_RUNPATH_SEARCH_PATHS=['$(inherited)','@executable_path/Frameworks'])
+lab_settings=dict(common,IPHONEOS_DEPLOYMENT_TARGET='18.0',ONLY_ACTIVE_ARCH='YES',PRODUCT_BUNDLE_IDENTIFIER='dev.wakeon.chatlab',PRODUCT_NAME='$(TARGET_NAME)',INFOPLIST_FILE='ChatLab/Info.plist',LD_RUNPATH_SEARCH_PATHS=['$(inherited)','@executable_path/Frameworks'])
 lab_frameworks=add('labFrameworks','PBXFrameworksBuildPhase',buildActionMask=2147483647,files=lab_framework_files,runOnlyForDeploymentPostprocessing=0)
 # LanguageModelChatUI is a dynamic library product: Xcode links it but only embeds it when told.
 # Without this the simulator finds it in the build folder and the phone crashes at launch.

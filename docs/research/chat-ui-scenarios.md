@@ -123,8 +123,10 @@ Stream's StreamChatAI is excluded: its license only covers Stream customers.
 Built in the Chat Lab app (`native/ios/ChatLab`, scheme `ChatLab`). These notes come from
 screenshots without touch; scores should come from trying each page on the phone.
 
-- **Plain SwiftUI:** always pinned to the bottom (fails A1, A4–A6), no jump button,
-  inline-only markdown (tables and code show as raw text). Everything else is our rows.
+- **Our SwiftUI (was "Plain"):** now implements shadcn's scroll rules itself (iOS 18 `scrollPosition`,
+  scroll geometry and phase): new turns anchor 64 pt below the top with the previous turn peeking,
+  follows only while at the live edge, a jump button says what's below, an outline with search
+  jumps to any turn, saved calls open at the last message. Markdown is still inline-only.
 - **exyte/Chat + MarkdownView:** upside-down `UITableView`; opens and follows at the bottom,
   built-in scroll-to-bottom button, keeps place on inserts (unverified by touch). No turn
   anchoring near the top. Input hides cleanly (F1). A custom message view replaces the whole

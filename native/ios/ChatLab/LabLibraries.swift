@@ -8,7 +8,7 @@ enum LabLibrary: String, CaseIterable, Identifiable {
 
     var name: String {
         switch self {
-        case .plain: "Plain SwiftUI"
+        case .plain: "Our SwiftUI (shadcn rules)"
         case .exyte: "exyte/Chat + MarkdownView"
         case .conversationKit: "ConversationKit"
         case .languageModelChatUI: "LanguageModelChatUI"
@@ -17,7 +17,7 @@ enum LabLibrary: String, CaseIterable, Identifiable {
 
     var shortName: String {
         switch self {
-        case .plain: "Plain"
+        case .plain: "Ours"
         case .exyte: "exyte"
         case .conversationKit: "ConvKit"
         case .languageModelChatUI: "LMChatUI"
@@ -28,7 +28,7 @@ enum LabLibrary: String, CaseIterable, Identifiable {
     var facts: String {
         switch self {
         case .plain:
-            "Baseline · SwiftUI ScrollView + LazyVStack · iOS 17 · no dependencies"
+            "Ours · SwiftUI ScrollView + scrollPosition, implements shadcn's scroll rules · iOS 18 · no dependencies · inline markdown only"
         case .exyte:
             "exyte/Chat 3.3.7 (SwiftUI over UITableView, MIT, iOS 17, pulls in Giphy, Kingfisher, MediaPicker) + MarkdownView 3.9.1 (MIT)"
         case .conversationKit:
