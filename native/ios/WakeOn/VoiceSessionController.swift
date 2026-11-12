@@ -17,7 +17,7 @@ final class VoiceSessionController: ObservableObject {
     static let shared = VoiceSessionController()
 
     enum Phase: Equatable { case idle, connecting, live, ending }
-    enum Probe: String { case greeting, search, spotify, pause }
+    enum Probe: String { case greeting, search, spotify, pause, visual }
 
     struct TimelineRow: Identifiable { let id = UUID(); let name: String; let ms: Double }
     struct TranscriptLine: Identifiable { let id = UUID(); let speaker: String; var text: String }
@@ -868,10 +868,11 @@ final class VoiceSessionController: ObservableObject {
         case .greeting:
             provider?.send(["type": "session.commentary.append", "delegation_id": NSNull(),
                             "content": "Greet the user in five words or fewer."])
-        case .search, .spotify, .pause:
+        case .search, .spotify, .pause, .visual:
             let text = switch probe {
             case .search: "Search the web: what is the current weather in Toronto?"
             case .spotify: "Play Blinding Lights by The Weeknd on Spotify."
+            case .visual: "Show me a chart of the forecast high in Toronto for the next five days."
             default: "Okay, stop the music."
             }
             provider?.send(["type": "response.item.create",
