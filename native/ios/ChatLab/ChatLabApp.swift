@@ -121,18 +121,42 @@ struct ScenarioPager: View {
                 Button(player.isPlaying ? "Replaying…" : "Replay", systemImage: "arrow.counterclockwise") { player.restart() }
                     .accessibilityIdentifier("lab-replay")
                 Spacer()
-                // Library switcher, also reachable by swiping.
+                // Library switcher. Swiping works too, but some libraries' views swallow the
+                // sideways swipe (ConversationKit), so taps always work.
+                Button("Previous library", systemImage: "chevron.left") { step(-1) }
+                    .labelStyle(.iconOnly)
+                    .disabled(page == LabLibrary.allCases.first)
+                    .accessibilityIdentifier("lab-previous")
                 HStack(spacing: 6) {
                     ForEach(LabLibrary.allCases) { library in
-                        Capsule().fill(library == page ? Color.accentColor : Color(.tertiarySystemFill))
-                            .frame(width: library == page ? 18 : 7, height: 7)
+                        Button {
+                            withAnimation { page = library }
+                        } label: {
+                            Capsule().fill(library == page ? Color.accentColor : Color(.tertiarySystemFill))
+                                .frame(width: library == page ? 18 : 7, height: 7)
+                                .padding(.vertical, 10)
+                                .contentShape(Rectangle())
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityLabel(library.name)
                     }
                 }
+                Button("Next library", systemImage: "chevron.right") { step(1) }
+                    .labelStyle(.iconOnly)
+                    .disabled(page == LabLibrary.allCases.last)
+                    .accessibilityIdentifier("lab-next")
             }
             .font(.footnote)
         }
         .padding(.horizontal).padding(.vertical, 8)
         .background(.bar)
+    }
+
+    private func step(_ offset: Int) {
+        let all = LabLibrary.allCases
+        guard let index = all.firstIndex(of: page) else { return }
+        let next = min(max(index + offset, 0), all.count - 1)
+        withAnimation { page = all[next] }
     }
 }
 
