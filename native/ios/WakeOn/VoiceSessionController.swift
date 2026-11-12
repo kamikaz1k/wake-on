@@ -214,6 +214,7 @@ final class VoiceSessionController: ObservableObject {
         fullTranscript = []
         callTrigger = trigger
         callStartedAt = Date()
+        capture = Self.startCapture(trigger: trigger, origin: origin)
         lastResponseMs = nil
         roundTripMs = nil
         jitterBufferMs = nil
@@ -532,6 +533,7 @@ final class VoiceSessionController: ObservableObject {
         switch event {
         case let .milestone(name, time, fields):
             record(name, at: time, fields: fields)
+            capture?.app("milestone", ["name": name, "fields": fields], at: time)
             if name == "first_audio_packet_received" {
                 firstAudio = true
                 finishSetupIfReady()
@@ -541,7 +543,10 @@ final class VoiceSessionController: ObservableObject {
                 markListening()
             }
         case let .server(json, time):
+            capture?.record(.server, json, at: time)
             handleServer(json, at: time)
+        case let .sent(json, time):
+            capture?.record(.client, json, at: time)
         case let .stats(stats):
             handleStats(stats)
         case let .ended(reason):
@@ -667,19 +672,25 @@ final class VoiceSessionController: ObservableObject {
             .flatMap { try? JSONSerialization.jsonObject(with: $0) as? [String: Any] } ?? [:]
         log("function_call name=\(name) arguments=\(item["arguments"] as? String ?? "")")
         var result = "unknown tool"
+        var action: [String: Any] = [:]
         if name == SpotifyPlayer.toolName,
            let request = SpotifyPlayer.request(spotifyURL: arguments["spotify_url"] as? String ?? "",
                                                query: arguments["query"] as? String ?? "",
                                                title: arguments["title"] as? String ?? "") {
             result = "Opening \(request.title) in Spotify; the call is ending."
             pendingSpotify = request
+            action = ["kind": "spotify", "title": request.title, "app_url": request.appURL.absoluteString,
+                      "web_url": request.webURL?.absoluteString ?? NSNull()]
         } else if name == SpotifyPlayer.toolName {
             result = "Nothing to play: no link and no query."
         } else if name == MediaControl.toolName,
                   let command = (arguments["action"] as? String).flatMap(MediaControl.Command.init) {
             result = "Sent \(command.rawValue) to whatever is playing; the call is ending."
             pendingMedia = command
+            action = ["kind": "media", "command": command.rawValue]
         }
+        capture?.app("tool_call", ["name": name, "call_id": callID, "arguments": arguments,
+                                   "output": result, "action": action.isEmpty ? NSNull() : action])
         // Every call needs an output before the backend can go on (see OpenAI's delegation guide).
         provider?.send(["type": "response.item.create",
                         "item": ["type": "function_call_output", "call_id": callID, "output": result]])
@@ -715,6 +726,19 @@ final class VoiceSessionController: ObservableObject {
     private var fullTranscript: [ChatLog.Line] = []
     private var callTrigger = ""
     private var callStartedAt = Date()
+    /// Every event of the call, saved with its chat log (see `CallCapture`).
+    private var capture: CallCapture?
+
+    private static func startCapture(trigger: String, origin: UInt64) -> CallCapture {
+        let capture = CallCapture(origin: origin)
+        var config = makeConfig()
+        config.voice = LiveVoiceConfig.chosenVoice
+        // The session as requested, without the SDP offer (the API key is only in a header).
+        let session = config.requestBody(sdp: "")["session"] ?? [:]
+        capture.app("call_started", ["trigger": trigger, "started": ISO8601DateFormatter().string(from: Date()),
+                                     "session": session], at: origin)
+        return capture
+    }
 
     // MARK: - Turn timing
 
@@ -931,7 +955,15 @@ final class VoiceSessionController: ObservableObject {
             let text = line.text.trimmingCharacters(in: .whitespacesAndNewlines)
             return text.isEmpty ? nil : ChatLog.Line(speaker: line.speaker, text: text)
         }
-        ChatLogStore.shared.add(ChatLog(started: callStartedAt, ended: Date(), trigger: callTrigger, lines: lines))
+        let capture = self.capture
+        self.capture = nil
+        capture?.app("call_ended", ["reason": reason, "usage_seconds": usageSeconds ?? NSNull(),
+                                    "spotify_pending": pendingSpotify != nil,
+                                    "media_pending": pendingMedia?.rawValue ?? NSNull()])
+        let chatLog = ChatLog(id: capture?.id ?? UUID(), started: callStartedAt, ended: Date(), trigger: callTrigger, lines: lines)
+        // Kept only with its log; the Spotify and media steps below append to it afterwards.
+        let kept = ChatLogStore.shared.add(chatLog, capture: capture)
+        let laterCapture = kept ? capture : nil
         fullTranscript = []
         setupTrace?.finish("failed:\(reason)")
         turn?.finish("call_ended")
@@ -976,9 +1008,11 @@ final class VoiceSessionController: ObservableObject {
             Task {
                 try? await Task.sleep(for: .milliseconds(800))
                 MediaControl.run(command)
+                laterCapture?.app("media_command", ["command": command.rawValue])
                 guard command.repeatable else { return }
                 try? await Task.sleep(for: .milliseconds(1000))
                 MediaControl.run(command)
+                laterCapture?.app("media_command", ["command": command.rawValue, "repeat": true])
             }
         }
         if let spotify = pendingSpotify {
@@ -989,7 +1023,11 @@ final class VoiceSessionController: ObservableObject {
                 let wake = WakeController.shared
                 for _ in 0..<60 where wake.busy && !wake.enabled { try? await Task.sleep(for: .milliseconds(50)) }
                 self.log("spotify_after_listener listening=\(wake.enabled)")
-                SpotifyPlayer.open(spotify)
+                laterCapture?.app("spotify_open", ["title": spotify.title, "app_url": spotify.appURL.absoluteString,
+                                                   "web_url": spotify.webURL?.absoluteString ?? NSNull()])
+                SpotifyPlayer.open(spotify) { outcome in
+                    laterCapture?.app("spotify_opened", ["outcome": outcome])
+                }
             }
         }
         #if DEBUG

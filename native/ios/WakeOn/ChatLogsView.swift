@@ -127,6 +127,13 @@ struct ChatLogDetailView: View {
         .navigationTitle(log.started.formatted(date: .abbreviated, time: .shortened))
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
+            // Every event of the call as JSON lines (see CallCapture), for replaying in Chat Lab.
+            if let capture = store.captureURL(for: log.id) {
+                ToolbarItem(placement: .primaryAction) {
+                    ShareLink(item: capture) { Label("Share Call Data", systemImage: "square.and.arrow.up") }
+                        .accessibilityIdentifier("chat-log-share-capture")
+                }
+            }
             ToolbarItem(placement: .bottomBar) {
                 Button("Delete", systemImage: "trash", role: .destructive) { confirmDelete = true }
                     .accessibilityIdentifier("chat-log-delete")

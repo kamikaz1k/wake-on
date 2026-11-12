@@ -38,9 +38,12 @@ final class ChatLogStore: ObservableObject {
 
     @Published private(set) var logs: [ChatLog] = []
     private let url: URL
+    /// Each log's full call data (`CallCapture`), named by the log's id.
+    let capturesFolder: URL
 
-    init(url: URL = ChatLogStore.defaultURL) {
+    init(url: URL = ChatLogStore.defaultURL, capturesFolder: URL = CallCapture.defaultFolder) {
         self.url = url
+        self.capturesFolder = capturesFolder
         if let data = try? Data(contentsOf: url), let saved = try? JSONDecoder().decode([ChatLog].self, from: data) {
             logs = saved.sorted { $0.started > $1.started }
         }
@@ -52,15 +55,27 @@ final class ChatLogStore: ObservableObject {
         return folder.appendingPathComponent("chat-logs.json")
     }
 
-    func add(_ log: ChatLog) {
-        guard !log.lines.isEmpty else { return }
+    /// Saves the log and, if given, its call capture under the same id. Returns false for a
+    /// call with nothing said, which isn't kept.
+    @discardableResult
+    func add(_ log: ChatLog, capture: CallCapture? = nil) -> Bool {
+        guard !log.lines.isEmpty else { return false }
         logs.insert(log, at: 0)
         save()
+        capture?.save(in: capturesFolder)
+        return true
     }
 
     func delete(ids: Set<UUID>) {
         logs.removeAll { ids.contains($0.id) }
         save()
+        for id in ids { try? FileManager.default.removeItem(at: CallCapture.url(for: id, in: capturesFolder)) }
+    }
+
+    /// The log's call capture file, if it has one (calls from before captures don't).
+    func captureURL(for id: UUID) -> URL? {
+        let url = CallCapture.url(for: id, in: capturesFolder)
+        return FileManager.default.fileExists(atPath: url.path) ? url : nil
     }
 
     /// Logs that the bulk delete would remove.

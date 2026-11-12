@@ -69,8 +69,9 @@ enum SpotifyPlayer {
 
     /// Opens the item in Spotify. A background app can't open other apps, so then it posts a
     /// notification; tapping it opens the item (see `WakeController`).
+    /// `done` gets how it went: "universal_link", "app_link", "notification" or "failed".
     @MainActor
-    static func open(_ request: Request) {
+    static func open(_ request: Request, done: (@MainActor (String) -> Void)? = nil) {
         guard UIApplication.shared.applicationState == .active else {
             let content = UNMutableNotificationContent()
             content.title = "Play on Spotify"
@@ -79,27 +80,29 @@ enum SpotifyPlayer {
                                 "spotifyWebURL": request.webURL?.absoluteString ?? ""]
             UNUserNotificationCenter.current().add(UNNotificationRequest(identifier: "spotify-play", content: content, trigger: nil))
             VoiceSessionController.appLog("spotify_notification \(request.appURL.absoluteString)")
+            done?("notification")
             return
         }
-        openNow(app: request.appURL, web: request.webURL)
+        openNow(app: request.appURL, web: request.webURL, done: done)
     }
 
     /// The open.spotify.com link first, as a universal link: Spotify opens it directly, while a
     /// `spotify:` link makes iOS ask "Open in Spotify?". The `spotify:` link is the fallback.
 
     @MainActor
-    static func openNow(app: URL, web: URL?) {
-        guard let web else { return openScheme(app) }
+    static func openNow(app: URL, web: URL?, done: (@MainActor (String) -> Void)? = nil) {
+        guard let web else { return openScheme(app, done: done) }
         UIApplication.shared.open(web, options: [.universalLinksOnly: true]) { opened in
             VoiceSessionController.appLog("spotify_open universal \(web.absoluteString) opened=\(opened)")
-            if !opened { openScheme(app) }
+            if opened { done?("universal_link") } else { openScheme(app, done: done) }
         }
     }
 
     @MainActor
-    private static func openScheme(_ app: URL) {
+    private static func openScheme(_ app: URL, done: (@MainActor (String) -> Void)?) {
         UIApplication.shared.open(app) { opened in
             VoiceSessionController.appLog("spotify_open \(app.absoluteString) opened=\(opened)")
+            done?(opened ? "app_link" : "failed")
         }
     }
 }

@@ -91,6 +91,8 @@ enum LiveVoiceEvent {
     /// A setup milestone with the uptime (ns) it happened at.
     case milestone(String, UInt64, [String: Any])
     case server([String: Any], UInt64)
+    /// An event the app sent on the data channel.
+    case sent([String: Any], UInt64)
     case stats(LiveVoiceStats)
     case ended(String)
 }
@@ -401,6 +403,7 @@ final class OpenAILiveVoiceProvider: NSObject {
         guard let channel, channel.readyState == .open,
               let data = try? JSONSerialization.data(withJSONObject: event) else { return }
         channel.sendData(RTCDataBuffer(data: data, isBinary: false))
+        onEvent?(.sent(event, DispatchTime.now().uptimeNanoseconds))
     }
 
     /// Asks the server to finish the session; `session.closed` follows on the data channel.
