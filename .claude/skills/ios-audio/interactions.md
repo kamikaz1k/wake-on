@@ -19,6 +19,7 @@ and wake times: see "Summarise listener sessions" below.
 | Exclusive | Media pauses or the user leaves it | `interruption_ended shouldResume=false`; every background restart fails with `'!int'`; resumes only when the app is opened or the notice is tapped | Verified 2026-10-26 (YouTube, Spotify) |
 | Shared, measurement mode | Media plays | Plays alongside; listener keeps going; other apps sound flat and quiet | Verified 2026-10-26 |
 | Shared, default mode (**the default**) | Media starts with the listener running in the background | Plays alongside at full sound; listener keeps going; "Hey Lobby" detected over music (trace 2026-10-26T01:04Z: background at 4 s, no stop, wake at 19 s) | Verified 2026-10-26, **once**. Contradicted 2026-11-13, see below |
+| Shared, default mode | Same as above, 2026-11-13 09:36 (40dc21d, orb and launch prebuild on) | No interruption and no "Listening paused" notice (listener ran in the background for ~30 s with Spotify), but **0 wakes** in the battery session (`battery-current.jsonl` `wakes`) although the user said "Hey Lobby" over the music | Listener survives; detection over speaker music failed once |
 | Shared, default mode | Same as above, 2026-11-13 08:54 | Interrupted 0.9 s after going to the background (`interruption reason=0`); stayed off while music played; `interruption_ended shouldResume=true` ~15 s later, restarted from the background and succeeded (`auto_resume_succeeded`, within the 30 s background task) | **Open regression** |
 
 ## The early-background interruption (open, since 2026-10-27)
@@ -53,6 +54,10 @@ Next step: a controlled test without music, one change at a time. Start listenin
 app, go to the home screen, wait 20 s, read the trace. Then repeat with the Live Activity
 off, then with the launch prebuild skipped. Then repeat the passing case (music started
 from Spotify while listening in the background).
+
+Tip: a detection leaves no voice-log line unless "Start a conversation on Hey Lobby" is on;
+count them with `wakes` in `Documents/battery-current.jsonl` (the running session) or the
+listener trace (written when listening stops).
 
 ## Calls, Siri, alarms
 
