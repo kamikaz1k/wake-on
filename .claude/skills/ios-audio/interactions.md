@@ -23,6 +23,30 @@ and wake times: see "Summarise listener sessions" below.
 | Shared, default mode | Music paused, app in the background, 2026-11-13 ~09:43 (40dc21d) | "Hey Lobby" detected; call started in the listener's session (`session_kept … outputs=Speaker`), full request transcribed, goodbye hang-up | Verified. So the 09:36 failure is detection over speaker music, not the listener |
 | Shared, default mode | Same as above, 2026-11-13 08:54 | Interrupted 0.9 s after going to the background (`interruption reason=0`); stayed off while music played; `interruption_ended shouldResume=true` ~15 s later, restarted from the background and succeeded (`auto_resume_succeeded`, within the 30 s background task) | **Open regression** |
 
+## Hearing "Hey Lobby" over music
+
+- 2026-11-13: over Spotify on the phone's speaker, 0 detections in two tries, in default mode
+  and in measurement mode (raw mic; user-reported, logs not read: phone unreachable). With the
+  music paused it works in the background. So iOS's mic processing is not the cause.
+- Offline (`native/ios/scripts/wake-over-music.py`, 32 saved recordings mixed with GarageBand
+  loops with vocals, the phone's detector settings `threshold=0.1 score=2`):
+
+  | Voice vs music | clean | +20 dB | +10 dB | +5 dB | 0 dB | −5 dB | −10 dB |
+  |---|---|---|---|---|---|---|---|
+  | Detected of 32 (funk / R&B) | 25 / 25 | 24 / 26 | 22 / 23 | 20 / 23 | 13 / 14 | 7 / 8 | 1 / 3 |
+
+  More sensitive settings (threshold 0.05 or 0.02, score 3) add only 2–6 detections at 0 dB
+  and −5 dB, with no false wakes on 3 minutes of music alone (too little to trust).
+  Even clean, 7 of 32 recordings are missed with the phone's settings.
+- Not measured: how loud music from the phone's own speaker is at its microphone compared
+  with the user's voice. With the speaker centimetres from the mic it is likely well below
+  0 dB, where detection mostly fails. Measuring it needs a debug recording of the listener's
+  input during music.
+- Options: tune the detector (small gain); cancel the phone's own playback from the mic
+  (voice processing in the listener, untested for other apps' audio, costs battery and may
+  duck music); have Lobby pause or lower the music, which needs a way to trigger without the
+  wake word.
+
 ## The early-background interruption (open, since 2026-10-27)
 
 Interrupted about 1 s after the app goes to the background, in shared default mode:

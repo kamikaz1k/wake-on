@@ -103,6 +103,10 @@ Each line: what to do → what the logs must show.
 
 ### Automated (always)
 
+- Wake detection over music, offline: `.venv/bin/python -I native/ios/scripts/wake-over-music.py
+  <work dir>` after any change to the wake model, keywords file or detector settings. Compare
+  with the table in `interactions.md` (2026-11-13: 22–23 of 32 at +10 dB, 13–14 at 0 dB).
+
 - Wake On unit tests (`xcodebuild … test`), including `WakeHandoverTests`.
 - Chat Lab UI tests if the chat or captures changed.
 
