@@ -218,6 +218,9 @@ final class BrowserSession: NSObject, ObservableObject, WKNavigationDelegate, WK
     @Published private(set) var progress = 0.0
     @Published private(set) var canGoBack = false
     @Published private(set) var canGoForward = false
+    /// The page's colour for the top bar, as Safari and Chrome do: the site's theme colour
+    /// (`<meta name="theme-color">`), else the colour behind the page.
+    @Published private(set) var pageColor: UIColor?
     /// What Lobby is doing on the page right now, shown over it ("Searching for …").
     @Published private(set) var activity: String?
     let webView: WKWebView
@@ -244,6 +247,8 @@ final class BrowserSession: NSObject, ObservableObject, WKNavigationDelegate, WK
             webView.observe(\.estimatedProgress) { view, _ in MainActor.assumeIsolated { self.progress = view.estimatedProgress } },
             webView.observe(\.canGoBack) { view, _ in MainActor.assumeIsolated { self.canGoBack = view.canGoBack } },
             webView.observe(\.canGoForward) { view, _ in MainActor.assumeIsolated { self.canGoForward = view.canGoForward } },
+            webView.observe(\.themeColor) { view, _ in MainActor.assumeIsolated { self.pageColor = view.themeColor ?? view.underPageBackgroundColor } },
+            webView.observe(\.underPageBackgroundColor) { view, _ in MainActor.assumeIsolated { self.pageColor = view.themeColor ?? view.underPageBackgroundColor } },
         ]
     }
 
@@ -426,43 +431,76 @@ struct BrowserSheet: View {
     @ObservedObject var voice: VoiceSessionController = .shared
     @State private var address = ""
     @FocusState private var editing: Bool
+    @Environment(\.colorScheme) private var systemScheme
 
     var body: some View {
-        NavigationStack {
-            BrowserWebView(webView: browser.webView)
-                .ignoresSafeArea(edges: .bottom)
-                .overlay(alignment: .top) {
-                    if browser.isLoading { ProgressView(value: browser.progress).progressViewStyle(.linear) }
-                }
-                .safeAreaInset(edge: .bottom) {
-                    lobbyBar.padding(.bottom, 8)
-                }
-                .animation(.default, value: browser.activity)
-                .animation(.default, value: voice.phase)
-                .navigationBarTitleDisplayMode(.inline)
-                .toolbar {
-                    ToolbarItem(placement: .principal) { addressBar }
-                    ToolbarItem(placement: .confirmationAction) {
-                        Button("Done") { browser.isOpen = false }.accessibilityIdentifier("browser-done")
-                    }
-                    ToolbarItemGroup(placement: .bottomBar) {
-                        Button("Back", systemImage: "chevron.backward") { browser.webView.goBack() }
-                            .disabled(!browser.canGoBack)
-                        Button("Forward", systemImage: "chevron.forward") { browser.webView.goForward() }
-                            .disabled(!browser.canGoForward)
-                        Spacer()
-                        if let url = browser.url {
-                            Link(destination: url) { Label("Open in Safari", systemImage: "safari") }
-                        }
-                    }
-                }
-        }
-        .onAppear { address = browser.url?.absoluteString ?? "" }
-        .onChange(of: browser.url) { _, url in if !editing { address = url?.absoluteString ?? "" } }
+        BrowserWebView(webView: browser.webView)
+            .ignoresSafeArea(edges: .bottom)
+            .safeAreaInset(edge: .top, spacing: 0) { topBar }
+            .safeAreaInset(edge: .bottom) {
+                lobbyBar.padding(.bottom, 8)
+            }
+            .animation(.default, value: browser.activity)
+            .animation(.default, value: voice.phase)
+            .animation(.snappy(duration: 0.25), value: editing)
+            .onChange(of: browser.url) { _, url in if !editing { address = url?.absoluteString ?? "" } }
     }
 
-    /// Like Safari's: the site's name with a lock, in a capsule; tap it to type an address or
-    /// search words.
+    /// Like Chrome's and Safari's: the bar takes the page's colour and runs up behind the status
+    /// bar. Close, the address in the middle, and a menu; tapping the address widens it for typing.
+    private var topBar: some View {
+        HStack(spacing: 12) {
+            if !editing {
+                Button("Close", systemImage: "xmark") { browser.isOpen = false }
+                    .labelStyle(.iconOnly)
+                    .font(.body.weight(.medium))
+                    .frame(width: 32, height: 36)
+                    .accessibilityIdentifier("browser-done")
+                    .transition(.move(edge: .leading).combined(with: .opacity))
+            }
+            addressBar
+            if editing {
+                Button("Cancel") { editing = false }
+                    .transition(.move(edge: .trailing).combined(with: .opacity))
+            } else {
+                menu
+                    .transition(.move(edge: .trailing).combined(with: .opacity))
+            }
+        }
+        .tint(.primary)
+        .padding(.horizontal, 12)
+        .padding(.top, 4)
+        .padding(.bottom, 8)
+        .overlay(alignment: .bottom) {
+            if browser.isLoading {
+                ProgressView(value: browser.progress).progressViewStyle(.linear).tint(.accentColor)
+            }
+        }
+        .background { barColor.ignoresSafeArea(edges: .top) }
+        .environment(\.colorScheme, barScheme)
+    }
+
+    private var menu: some View {
+        Menu {
+            Button("Back", systemImage: "chevron.backward") { browser.webView.goBack() }
+                .disabled(!browser.canGoBack)
+            Button("Forward", systemImage: "chevron.forward") { browser.webView.goForward() }
+                .disabled(!browser.canGoForward)
+            Button("Reload", systemImage: "arrow.clockwise") { browser.webView.reload() }
+            if let url = browser.url {
+                Link(destination: url) { Label("Open in Safari", systemImage: "safari") }
+            }
+        } label: {
+            Label("More", systemImage: "ellipsis")
+                .labelStyle(.iconOnly)
+                .font(.body.weight(.medium))
+                .frame(width: 32, height: 36)
+        }
+        .accessibilityIdentifier("browser-menu")
+    }
+
+    /// The site's name with a lock, centred; tap to type an address or search words, with the
+    /// whole address selected so typing replaces it.
     private var addressBar: some View {
         ZStack {
             TextField("Search or enter website", text: $address)
@@ -474,35 +512,51 @@ struct BrowserSheet: View {
                 .focused($editing)
                 .onSubmit { browser.show(address); editing = false }
                 .opacity(editing ? 1 : 0)
+                .allowsHitTesting(editing)
                 .accessibilityIdentifier("browser-address")
             if !editing {
-                Button {
-                    address = browser.url?.absoluteString ?? ""
-                    editing = true
-                } label: {
-                    HStack(spacing: 5) {
-                        if browser.url?.scheme == "https" {
-                            Image(systemName: "lock.fill").font(.caption2).foregroundStyle(.secondary)
-                        }
-                        Text(displayHost).lineLimit(1).truncationMode(.middle)
+                HStack(spacing: 5) {
+                    if browser.url?.scheme == "https" {
+                        Image(systemName: "lock.fill").font(.caption2).foregroundStyle(.secondary)
                     }
-                    .frame(maxWidth: .infinity)
-                    .contentShape(Rectangle())
+                    Text(displayHost).lineLimit(1).truncationMode(.middle)
                 }
-                .buttonStyle(.plain)
+                .frame(maxWidth: .infinity)
+                .accessibilityElement(children: .combine)
+                .accessibilityAddTraits(.isButton)
                 .accessibilityIdentifier("browser-host")
             }
         }
         .font(.subheadline.weight(.medium))
-        .padding(.horizontal, 14)
-        .frame(height: 36)
+        .padding(.horizontal, 16)
+        .frame(height: 40)
         .frame(maxWidth: .infinity)
-        .background(.fill.tertiary, in: Capsule())
+        .background(.fill.secondary, in: Capsule())
+        .contentShape(Capsule())
+        .onTapGesture {
+            guard !editing else { return }
+            address = browser.url?.absoluteString ?? ""
+            editing = true
+            // Select the whole address once the field has the keyboard.
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
+                UIApplication.shared.sendAction(#selector(UIResponder.selectAll(_:)), to: nil, from: nil, for: nil)
+            }
+        }
     }
 
     private var displayHost: String {
         guard let host = browser.url?.host() else { return "Search or enter website" }
         return host.hasPrefix("www.") ? String(host.dropFirst(4)) : host
+    }
+
+    private var barColor: Color { browser.pageColor.map(Color.init(uiColor:)) ?? Color(.systemBackground) }
+
+    /// Light text on a dark page colour, dark on a light one.
+    private var barScheme: ColorScheme {
+        guard let color = browser.pageColor else { return systemScheme }
+        var r: CGFloat = 0, g: CGFloat = 0, b: CGFloat = 0, a: CGFloat = 0
+        color.resolvedColor(with: .current).getRed(&r, green: &g, blue: &b, alpha: &a)
+        return 0.299 * r + 0.587 * g + 0.114 * b < 0.55 ? .dark : .light
     }
 
     /// Lobby in the browser. No call: Ask Lobby, which starts a call that knows this page is

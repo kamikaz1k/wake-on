@@ -7,7 +7,6 @@ struct ContentView: View {
     @ObservedObject var controller: WakeController
     @AppStorage("ui.tab") private var mode: Mode = .simple
     @ObservedObject private var browser = BrowserSession.shared
-    @State private var browserDetent: PresentationDetent = .large
     /// Debug screenshots of the visualizer gallery (Advanced) open that tab.
     static let galleryRequested = ProcessInfo.processInfo.arguments.contains("-visualizer-gallery")
 
@@ -20,11 +19,10 @@ struct ContentView: View {
                 .tabItem { Label("Simple", systemImage: "waveform") }
                 .tag(Mode.simple)
         }
-        // Lobby's browser, or yours from the Simple page. At half height the call stays usable.
-        .sheet(isPresented: $browser.isOpen) {
+        // Lobby's browser, or yours from the Simple page: full screen so its top bar can take
+        // the page's colour behind the status bar, as Safari and Chrome do.
+        .fullScreenCover(isPresented: $browser.isOpen) {
             BrowserSheet(browser: browser)
-                .presentationDetents([.medium, .large], selection: $browserDetent)
-                .presentationBackgroundInteraction(.enabled(upThrough: .medium))
         }
         #if DEBUG
         // `-browser <address or words>`, then `-browser-step <action> <text>` (repeatable):

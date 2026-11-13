@@ -124,4 +124,17 @@ final class BrowserDriverTests: XCTestCase {
         let result = await browser.perform(action: "search", text: "x")
         XCTAssertTrue(result.contains("no search box"), result)
     }
+
+    /// The top bar takes the site's theme colour, as Safari and Chrome do, and falls back to
+    /// the colour behind the page.
+    func testTopBarTakesThePageColour() async throws {
+        let browser = BrowserSession()
+        await browser.loadForTesting(html: "<meta name=theme-color content=#123456><title>T</title><p>x</p>")
+        var r: CGFloat = 0, g: CGFloat = 0, b: CGFloat = 0, a: CGFloat = 0
+        try XCTUnwrap(browser.pageColor).getRed(&r, green: &g, blue: &b, alpha: &a)
+        XCTAssertEqual(Int((r * 255).rounded()), 0x12)
+        XCTAssertEqual(Int((b * 255).rounded()), 0x56)
+        await browser.loadForTesting(html: "<body style='background:#000'><p>plain</p></body>")
+        XCTAssertNotNil(browser.pageColor, "no theme colour: the page's own background")
+    }
 }
