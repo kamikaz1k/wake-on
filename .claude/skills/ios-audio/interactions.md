@@ -32,6 +32,13 @@ Interrupted about 1 s after the app goes to the background, in shared default mo
   `devicectl` launch, not proven.
 - 2026-11-13T13:54Z: background at 14.4 s, interrupted at 15.3 s, with Spotify starting.
 
+2026-11-13T14:27Z (40dc21d), **no music**, orb on and launch prebuild on: three trips to
+the background (20 s, 10 s, 19 s), no interruption. So going to the background alone does
+not trigger it; the remaining suspect is another app starting playback. (The debug switches
+were not in effect: no `experiment` lines, the app wasn't relaunched.) Two more interruptions
+the same morning came 108 s and ~5 min after going to the background, both ending
+`shouldResume=true` ~33–47 s later, cause unknown (likely the user's own music).
+
 The one clean pass (2026-10-26T01:04Z) predates the Live Activity. Suspects, untested:
 
 1. **The Live Activity** (`ListeningActivityController`), new between the pass and the first
