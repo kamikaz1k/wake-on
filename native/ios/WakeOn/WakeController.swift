@@ -40,6 +40,9 @@ final class WakeController: NSObject, ObservableObject, UNUserNotificationCenter
     static let bridgeLookback = 0.4
     /// Recent microphone chunks at the device rate, newest last.
     private var recentPCM: [(AVAudioPCMBuffer, AVAudioTime)] = [] // worker-queue confined
+    #if DEBUG
+    private var inputMeter = ListenerInputMeter() // worker-queue confined
+    #endif
     /// Main thread: the listener is handing its microphone over to a voice call.
     private(set) var handingOver = false
     private var callbackCount = 0
@@ -440,6 +443,9 @@ final class WakeController: NSObject, ObservableObject, UNUserNotificationCenter
                 DispatchQueue.main.async { self.microphoneReady(metric) }
             }
         }
+        #if DEBUG
+        inputMeter.add(samples)
+        #endif
         // Blocks of at most 20 ms bound trigger granularity in fixture and live paths.
         for offset in stride(from: 0, to: samples.count, by: 320) {
             let block = Array(samples[offset..<min(offset + 320, samples.count)])
@@ -877,6 +883,35 @@ extension WakeController {
 }
 
 // MARK: - Automatic resume
+
+#if DEBUG
+/// What the listener's microphone receives, logged every 2 s (`listen_input`): average and
+/// peak level of 20 ms blocks, the share of exact zeros (iOS feeding silence), and whether
+/// iOS reports other audio playing. For debugging "Hey Lobby" over music.
+struct ListenerInputMeter {
+    private var energy = 0.0, peakBlock = -120.0, samples = 0, zeros = 0, block: [Float] = []
+
+    mutating func add(_ chunk: [Float]) {
+        for x in chunk {
+            energy += Double(x * x); samples += 1
+            if x == 0 { zeros += 1 }
+            block.append(x)
+            if block.count == 320 {
+                let e = block.reduce(0.0) { $0 + Double($1 * $1) } / 320
+                peakBlock = max(peakBlock, 10 * log10(max(e, 1e-12)))
+                block.removeAll(keepingCapacity: true)
+            }
+        }
+        guard samples >= 32_000 else { return } // 2 s at 16 kHz
+        let avg = 10 * log10(max(energy / Double(samples), 1e-12))
+        let line = String(format: "listen_input avgDb=%.0f peakDb=%.0f zeros=%.0f%% otherAudio=%@",
+                          avg, peakBlock, 100 * Double(zeros) / Double(samples),
+                          AVAudioSession.sharedInstance().isOtherAudioPlaying ? "yes" : "no")
+        VoiceSessionController.appLog(line)
+        energy = 0; peakBlock = -120; samples = 0; zeros = 0
+    }
+}
+#endif
 
 extension WakeController {
     enum ResumeWhen { case never, soon, whenInterruptionEnds, retry }
