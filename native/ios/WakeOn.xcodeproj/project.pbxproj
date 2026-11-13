@@ -545,6 +545,13 @@
 			<key>isa</key>
 			<string>PBXBuildFile</string>
 		</dict>
+		<key>34DA8C221A8B8B9D3F76A912</key>
+		<dict>
+			<key>fileRef</key>
+			<string>7C0049C4258514821473C407</string>
+			<key>isa</key>
+			<string>PBXBuildFile</string>
+		</dict>
 		<key>38534BB08E9D76D11C587E49</key>
 		<dict>
 			<key>isa</key>
@@ -1371,6 +1378,7 @@
 				<string>1FD4FDDD07AD5BF53127D39B</string>
 				<string>34BE19A39DA587EA5BC45054</string>
 				<string>53100DED70B6793C84D0EFE9</string>
+				<string>34DA8C221A8B8B9D3F76A912</string>
 				<string>923E56ABEC4022D54E7A5068</string>
 				<string>8F689865000D2D112E2DF22D</string>
 				<string>D20988A742E8A10B39F7CB23</string>
@@ -1496,6 +1504,17 @@
 			<string>E0678D08500F2A583925D8DB</string>
 			<key>isa</key>
 			<string>PBXBuildFile</string>
+		</dict>
+		<key>7C0049C4258514821473C407</key>
+		<dict>
+			<key>isa</key>
+			<string>PBXFileReference</string>
+			<key>lastKnownFileType</key>
+			<string>sourcecode.swift</string>
+			<key>path</key>
+			<string>Tests/ScreenPresenceTests.swift</string>
+			<key>sourceTree</key>
+			<string>&lt;group&gt;</string>
 		</dict>
 		<key>7C00743840BBDF44C1A235E4</key>
 		<dict>
@@ -1659,6 +1678,17 @@
 			<string>sourcecode.swift</string>
 			<key>path</key>
 			<string>ChatLabUITests/ChatLabCaptureTests.swift</string>
+			<key>sourceTree</key>
+			<string>&lt;group&gt;</string>
+		</dict>
+		<key>87105F25CC7CC6DEA9C90E2F</key>
+		<dict>
+			<key>isa</key>
+			<string>PBXFileReference</string>
+			<key>lastKnownFileType</key>
+			<string>sourcecode.swift</string>
+			<key>path</key>
+			<string>WakeOn/ScreenPresence.swift</string>
 			<key>sourceTree</key>
 			<string>&lt;group&gt;</string>
 		</dict>
@@ -2288,6 +2318,7 @@
 				<string>89707B9627501A6CC5C878D6</string>
 				<string>C096918F71FEAB2E9FC49F58</string>
 				<string>5373CC8CC3E0F75852F1F863</string>
+				<string>D4317A1DC07C5B2CACB8F187</string>
 				<string>FD1C91C3AC027CAB5DF0EF7F</string>
 				<string>D1659F995F92D85D2ED65EAA</string>
 				<string>A735366E67E1349A675D19BE</string>
@@ -2574,6 +2605,13 @@
 			<key>sourceTree</key>
 			<string>&lt;group&gt;</string>
 		</dict>
+		<key>D4317A1DC07C5B2CACB8F187</key>
+		<dict>
+			<key>fileRef</key>
+			<string>87105F25CC7CC6DEA9C90E2F</string>
+			<key>isa</key>
+			<string>PBXBuildFile</string>
+		</dict>
 		<key>D48643952BC6FD896B1C24F1</key>
 		<dict>
 			<key>fileRef</key>
@@ -2732,6 +2770,7 @@
 				<string>1CB063FB3A6A99A499006954</string>
 				<string>DCE26BF595E449F720C1CEAD</string>
 				<string>BE46A50C7DB40B32F9FB5D05</string>
+				<string>87105F25CC7CC6DEA9C90E2F</string>
 				<string>F636C0629379102AB42F410B</string>
 				<string>3C25795FAF8E71C5399FC534</string>
 				<string>44B03283B94CFD4EFE847D7E</string>
@@ -2762,6 +2801,7 @@
 				<string>1C6E6C00672E94914095F8DB</string>
 				<string>E176221F59CDA0010ED929FE</string>
 				<string>89B55F3E600130F57D0DF153</string>
+				<string>7C0049C4258514821473C407</string>
 				<string>23E37AFC95566DEAD09FBB7F</string>
 				<string>548E5C94CE6D3460317BB2D5</string>
 				<string>D9C92472F248312173947DD4</string>

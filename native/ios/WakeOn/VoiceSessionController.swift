@@ -566,6 +566,7 @@ final class VoiceSessionController: ObservableObject {
             sessionStarted = true
             record("session_started", at: time)
             phase = .live
+            watchScreen()
             if !localListening { status = "Connecting… almost ready" }
             if OpenAILiveVoiceProvider.useHotAudio {
                 if voiceProcessingDeferred {
@@ -697,6 +698,7 @@ final class VoiceSessionController: ObservableObject {
                                                    travel: arguments["travel"] as? String ?? "") {
             if request.mode == .show {
                 result = "A map of \(request.title) with a link to Google Maps is on the user's screen. The call goes on."
+                if ScreenPresence.current == .away { result += ScreenPresence.awayResult }
                 action = ["kind": "map_show", "title": request.title, "embed_url": request.embedURL.absoluteString,
                           "web_url": request.webURL.absoluteString]
             } else {
@@ -714,6 +716,7 @@ final class VoiceSessionController: ObservableObject {
                 result = "Nothing to show: the html was empty."
             } else {
                 result = "Shown on the user's screen as \"\(title)\". The call goes on."
+                if ScreenPresence.current == .away { result += ScreenPresence.awayResult }
                 action = ["kind": "visual", "title": title, "bytes": html.utf8.count]
             }
         }
@@ -728,6 +731,42 @@ final class VoiceSessionController: ObservableObject {
         if pendingMedia != nil { stop(reason: "media") }
         // Leaving for Google Maps: hang up first, as for Spotify, then open it (finishCall).
         if pendingMap != nil { stop(reason: "maps") }
+    }
+
+    // MARK: - Screen in view
+
+    private var screenObservers: [NSObjectProtocol] = []
+    /// What the models were last told.
+    private var screenSent: ScreenPresence?
+    private var screenCheck: Task<Void, Never>?
+
+    /// Tells the models whether the user can see the screen now, and again whenever that
+    /// changes. Changes wait a second, so a launch or a glance at Control Center doesn't flap.
+    private func watchScreen() {
+        sendScreen()
+        guard screenObservers.isEmpty else { return }
+        for name in [UIApplication.didEnterBackgroundNotification, UIApplication.willEnterForegroundNotification] {
+            screenObservers.append(NotificationCenter.default.addObserver(forName: name, object: nil, queue: .main) { [weak self] _ in
+                MainActor.assumeIsolated {
+                    guard let self else { return }
+                    self.screenCheck?.cancel()
+                    self.screenCheck = Task { [weak self] in
+                        try? await Task.sleep(for: .seconds(1))
+                        guard !Task.isCancelled else { return }
+                        self?.sendScreen()
+                    }
+                }
+            })
+        }
+    }
+
+    private func sendScreen() {
+        let screen = ScreenPresence.current
+        guard phase == .live, screen != screenSent, let provider else { return }
+        screenSent = screen
+        provider.sendScreen(screen)
+        capture?.app("screen", ["state": screen.rawValue])
+        log("screen \(screen.rawValue)")
     }
 
     /// Opened once the call has ended and released the audio session.
@@ -1037,6 +1076,9 @@ final class VoiceSessionController: ObservableObject {
         provider = nil
         if let interruption { NotificationCenter.default.removeObserver(interruption) }
         interruption = nil
+        screenObservers.forEach(NotificationCenter.default.removeObserver)
+        screenObservers = []
+        screenSent = nil
         #if DEBUG
         if let last = transcript.last { log("transcript \(last.speaker): \(last.text)") }
         log("server_events " + serverEventCounts.sorted { $0.key < $1.key }.map { "\($0.key)=\($0.value)" }.joined(separator: " "))

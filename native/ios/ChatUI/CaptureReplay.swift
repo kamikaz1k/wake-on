@@ -76,6 +76,7 @@ struct CaptureReplay {
     private var lastRow: String?
     private var lastUserWords: TimeInterval?
     private var replyTimingPending = false
+    private var screenNoted = false
     private var answerArrived = false
     private var answerTimingPending = false
     private var tools: [String: (id: String, tool: ChatItem.Tool)] = [:]
@@ -191,6 +192,11 @@ struct CaptureReplay {
             default: "Google Maps didn't open"
             }
             updateTool("map-open") { $0.result = result; $0.state = outcome == "failed" ? .failed : .done }
+        case "app.screen":
+            // What Lobby was told about the screen; the usual start (in view) isn't worth a line.
+            let away = e["state"] as? String == "away"
+            if away || screenNoted { marker(away ? "Screen not in view · Lobby answers in speech" : "Screen in view · Lobby can show things") }
+            screenNoted = true
         case "app.media_command":
             let command = e["command"] as? String ?? ""
             addTool("media-\(line.t)", .init(name: "media_control", arguments: command,

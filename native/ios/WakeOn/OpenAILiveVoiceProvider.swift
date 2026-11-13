@@ -58,13 +58,32 @@ struct LiveVoiceConfig {
     var iceQuietPeriod: Duration = .milliseconds(25)
     var statsInterval: Duration = .milliseconds(50)
 
+    /// The backend's instructions; with `screen`, a last line saying whether the user can see it.
+    func backendInstructions(screen: ScreenPresence? = nil) -> String {
+        var text = delegationInstructions
+        if spotify { text += " " + SpotifyPlayer.delegationInstructions }
+        if mediaControl { text += " " + MediaControl.delegationInstructions }
+        if maps { text += " " + MapsOpener.delegationInstructions }
+        if visuals { text += " " + ShowVisual.delegationInstructions }
+        if visuals || maps {
+            text += " " + ScreenPresence.backendGuidance
+            if let screen { text += "\n" + screen.backendLine }
+        }
+        return text
+    }
+
+    /// Mid-call update for the backend when the screen comes into view or goes away. The
+    /// voice model is told with `session.thinking.append` (see `ScreenPresence.thinking`).
+    func screenUpdate(_ screen: ScreenPresence) -> [String: Any] {
+        ["type": "session.update",
+         "session": ["delegation": ["type": "responses",
+                                    "responses": ["instructions": backendInstructions(screen: screen)]]]]
+    }
+
     func requestBody(sdp: String) -> [String: Any] {
-        var backendInstructions = delegationInstructions
-        if spotify { backendInstructions += " " + SpotifyPlayer.delegationInstructions }
-        if mediaControl { backendInstructions += " " + MediaControl.delegationInstructions }
-        if maps { backendInstructions += " " + MapsOpener.delegationInstructions }
-        if visuals { backendInstructions += " " + ShowVisual.delegationInstructions }
-        var responses: [String: Any] = ["model": delegationModel, "instructions": backendInstructions]
+        // The screen line comes once the call is up: a prepared offer is built before the
+        // trigger, when the app's state says nothing about the call.
+        var responses: [String: Any] = ["model": delegationModel, "instructions": backendInstructions()]
         var tools: [[String: Any]] = []
         if webSearch { tools.append(["type": "web_search"]) }
         if spotify { tools.append(SpotifyPlayer.tool) }
@@ -420,6 +439,12 @@ final class OpenAILiveVoiceProvider: NSObject {
 
     /// Asks the server to finish the session; `session.closed` follows on the data channel.
     func requestClose() { send(["type": "session.close"]) }
+
+    /// Tells both models whether the user can see the screen (see `ScreenPresence`).
+    func sendScreen(_ screen: ScreenPresence) {
+        send(config.screenUpdate(screen))
+        send(["type": "session.thinking.append", "delegation_id": NSNull(), "content": screen.thinking])
+    }
 
     /// Gives the Live model something to say to the user now (`session.commentary.append`).
     func sendCommentary(_ content: String) {
