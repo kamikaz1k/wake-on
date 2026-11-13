@@ -65,6 +65,8 @@ struct BatteryView: View {
             }
         }
         .navigationTitle("Battery")
+        // The tab bar shows on the main pages only, never over a page's own controls.
+        .toolbar(.hidden, for: .tabBar)
         .confirmationDialog("Delete all past battery sessions?", isPresented: $confirmClear, titleVisibility: .visible) {
             Button("Delete", role: .destructive) { monitor.clearHistory() }
         }
@@ -125,6 +127,8 @@ private struct SessionDetail: View {
             Section("Power over time") { PowerChart(session: session) }
         }
         .navigationTitle(session.kind == .listening ? "Listening session" : "Call")
+        // The tab bar shows on the main pages only, never over a page's own controls.
+        .toolbar(.hidden, for: .tabBar)
     }
 }
 

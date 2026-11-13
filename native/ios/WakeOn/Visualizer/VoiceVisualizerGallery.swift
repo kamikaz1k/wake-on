@@ -79,6 +79,8 @@ struct VoiceVisualizerGallery: View {
             .padding()
         }
         .navigationTitle("Visualizer")
+        // The tab bar shows on the main pages only, never over a page's own controls.
+        .toolbar(.hidden, for: .tabBar)
         .onAppear { if autoplay && !player.isPlaying { player.play() } }
         .onDisappear { player.stop() }
     }

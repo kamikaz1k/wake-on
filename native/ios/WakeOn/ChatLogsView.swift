@@ -39,6 +39,8 @@ struct ChatLogsView: View {
             }
         }
         .navigationTitle("Chat logs")
+        // The tab bar shows on the main pages only, never over a page's own controls.
+        .toolbar(.hidden, for: .tabBar)
         .navigationDestination(isPresented: $openNewest) {
             if let newest = store.logs.first { ChatLogDetailView(log: newest) }
         }
@@ -123,6 +125,8 @@ struct ChatLogDetailView: View {
             }
         }
         .navigationTitle(log.started.formatted(date: .abbreviated, time: .shortened))
+        // The tab bar shows on the main pages only, never over a page's own controls.
+        .toolbar(.hidden, for: .tabBar)
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             // Every event of the call as JSON lines (see CallCapture), for replaying in Chat Lab.
