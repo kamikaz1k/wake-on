@@ -26,6 +26,15 @@ final class ListeningActivityController {
     private var subscriptions: Set<AnyCancellable> = []
     private var loggedBackgroundSkip = false
 
+    #if DEBUG
+    /// Audio experiment: no orb this launch; clear any left by an earlier one.
+    func endAll() {
+        for activity in Activity<ListeningActivityAttributes>.activities {
+            Task { await activity.end(nil, dismissalPolicy: .immediate) }
+        }
+    }
+    #endif
+
     func activate() {
         guard subscriptions.isEmpty else { return }
         // Adopt an activity left by an earlier launch; end any extras.

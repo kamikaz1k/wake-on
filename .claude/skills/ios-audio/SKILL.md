@@ -195,6 +195,10 @@ xcrun devicectl device copy from --device 5976CF6D-0FD6-5A57-9711-AA29F94404E7 \
 
 ## Before shipping an audio change
 
+Run the scenarios in `regression.md` (this folder): the full checklist of listener, media,
+interruption, route, call and lifecycle cases, the settings that affect them, and the
+minimum set for each kind of change.
+
 - Don't regress the Action Button flow (foreground `.voiceChat` calls).
 - Test on the device: a locked-phone "Hey Lobby" call, an Action Button call, music playing
   alongside, and AirPods connected. Check the log shows `outputs=Speaker` (or the headphones)

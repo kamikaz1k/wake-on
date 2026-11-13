@@ -9,11 +9,27 @@ final class AppDelegate: NSObject, UIApplicationDelegate {
         Task { @MainActor in
             BatteryMonitor.shared.activate()
             // The orb in the Dynamic Island while listening.
+            #if DEBUG
+            if UserDefaults.standard.bool(forKey: AudioExperiments.noLiveActivityKey) {
+                VoiceSessionController.appLog("experiment no_live_activity")
+                ListeningActivityController.shared.endAll()
+            } else {
+                ListeningActivityController.shared.activate()
+            }
+            #else
             ListeningActivityController.shared.activate()
+            #endif
             // Screen stays on while charging with Wake On open (a phone on a stand).
             ScreenAwake.shared.activate()
         }
-        if application.applicationState == .background, OpenAILiveVoiceProvider.useHotAudio {
+        var prebuild = application.applicationState == .background && OpenAILiveVoiceProvider.useHotAudio
+        #if DEBUG
+        if UserDefaults.standard.bool(forKey: AudioExperiments.noLaunchPrebuildKey) {
+            VoiceSessionController.appLog("experiment no_launch_prebuild")
+            prebuild = false
+        }
+        #endif
+        if prebuild {
             HotAudioDevice.shared.mayArm = false
             HotAudioDevice.shared.prebuildAsync { result in
                 if case .success(let timing) = result {

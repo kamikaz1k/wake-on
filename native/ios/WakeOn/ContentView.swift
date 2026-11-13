@@ -116,6 +116,9 @@ struct AdvancedView: View {
                     Text("After a wake, detection pauses until you rearm it. Calls and input changes stop this prototype; enable listening again afterward.")
                         .foregroundStyle(.secondary)
                 }
+                #if DEBUG
+                AudioExperimentsSection()
+                #endif
             }
             .navigationTitle("Wake On")
             #if DEBUG
@@ -126,3 +129,28 @@ struct AdvancedView: View {
         }
     }
 }
+
+#if DEBUG
+/// Switches that leave out one launch-time audio piece, to find what interrupts the listener.
+/// See `.claude/skills/ios-audio/regression.md`.
+enum AudioExperiments {
+    static let noLiveActivityKey = "debug.noLiveActivity"
+    static let noLaunchPrebuildKey = "debug.noLaunchPrebuild"
+}
+
+private struct AudioExperimentsSection: View {
+    @AppStorage(AudioExperiments.noLiveActivityKey) private var noLiveActivity = false
+    @AppStorage(AudioExperiments.noLaunchPrebuildKey) private var noLaunchPrebuild = false
+
+    var body: some View {
+        Section {
+            Toggle("No Dynamic Island orb", isOn: $noLiveActivity)
+            Toggle("No call audio prepared at launch", isOn: $noLaunchPrebuild)
+        } header: {
+            Text("Audio experiments")
+        } footer: {
+            Text("Debug builds only. Takes effect the next time Wake On launches: swipe it away, then open it from its icon.")
+        }
+    }
+}
+#endif
