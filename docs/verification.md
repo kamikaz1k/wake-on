@@ -13,6 +13,8 @@ When a check is redone, add a new row rather than editing the old one.
 
 | Date | SHA | Check | How | Where | Result | Files |
 | --- | --- | --- | --- | --- | --- | --- |
+| 2026-11-12 | 4a4871c | open_map: Google Maps links (directions, search, names with & + #), tool offered to the backend, chat rows and "ended to open Google Maps" | unit tests `MapsOpenerTests` (4); Wake On suite 74 tests; Chat Lab UI tests 6 | sim | All pass | `native/ios/WakeOn/MapsOpener.swift`, `native/ios/ChatUI/CaptureReplay.swift`, `native/ios/WakeOn/OpenAILiveVoiceProvider.swift` |
+| 2026-11-12 | da9b031 | show_visual in a real call ("show it to me in like a HTML") | phone, by you; capture read | phone | Works well enough (your words); 1.5 KB page, shown about 1 s before Lobby said so | `native/ios/ChatUI/ChatVisual.swift`, `native/ios/WakeOn/VoiceSessionController.swift` |
 | 2026-11-12 | a175014 | Lobby's show_visual page shows in the live call screen, Lobby keeps talking after it | `--demo-call` with the made-up `sample-visual.jsonl`, screenshots | sim | Chart page shows in a preview under the web search row; Lobby's reply follows; the call stays open. The page filling in while it streams wasn't caught on screen (covered by the unit test) | `native/ios/ChatUI/ChatVisual.swift`, `native/ios/ChatUI/CaptureReplay.swift`, `native/ios/ChatUI/ChatRows.swift` |
 | 2026-11-12 | a175014 | Tapping a visual opens it full size; Done closes it | UI test `ChatLabCaptureTests.testSampleVisualShowsAndOpensFullSize` (Chat Lab suite, 6 tests) | sim | All pass | `native/ios/ChatUI/ChatVisual.swift`, `native/ios/ChatLab`, `native/ios/ChatLabUITests` |
 | 2026-11-12 | a175014 | show_visual: HTML read while it streams (escapes, cut-offs), live chat matches the saved log, tool offered to the backend | unit tests `ShowVisualTests` (3); Wake On suite 70 tests | sim | All pass | `native/ios/ChatUI/ChatVisual.swift`, `native/ios/ChatUI/CaptureReplay.swift`, `native/ios/WakeOn/OpenAILiveVoiceProvider.swift` |
@@ -38,4 +40,5 @@ When a check is redone, add a new row rather than editing the old one.
 | --- | --- | --- |
 | 2026-11-12 | How the live call screen looks and scrolls in a real call; a Hey Lobby call | Waiting on your verdict; only an Action Button call so far |
 | 2026-11-12 | Action Button time to mic live, with more samples | One cold start so far (543 ms, at the top of the earlier range); warm starts not measured yet |
-| 2026-11-12 | show_visual in a real call: whether Lobby writes a good page, how long it takes, links opening in Safari, pages loading from the web | Installed on the phone (30e49d8); the `--talk visual` test call didn't run because the phone was locked |
+| 2026-11-12 | show_visual: links opening in Safari, pages loading from the web | Not tried in a real call yet |
+| 2026-11-12 | open_map in a real call: Google Maps opening by its link (no prompt), from the background via the notification | Installed on the phone (4a4871c); the `--talk map` test call was refused because the phone was locked |
