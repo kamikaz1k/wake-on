@@ -17,7 +17,7 @@ final class VoiceSessionController: ObservableObject {
     static let shared = VoiceSessionController()
 
     enum Phase: Equatable { case idle, connecting, live, ending }
-    enum Probe: String { case greeting, search, spotify, pause, visual }
+    enum Probe: String { case greeting, search, spotify, pause, visual, map }
 
     struct TimelineRow: Identifiable { let id = UUID(); let name: String; let ms: Double }
     struct TranscriptLine: Identifiable { let id = UUID(); let speaker: String; var text: String }
@@ -666,7 +666,7 @@ final class VoiceSessionController: ObservableObject {
         }
     }
 
-    /// The backend model called one of the app's tools (play_spotify, control_media, show_visual).
+    /// The backend model called one of the app's tools (play_spotify, control_media, open_map, show_visual).
     private func handleFunctionCall(_ item: [String: Any]) {
         let name = item["name"] as? String ?? ""
         let callID = item["call_id"] as? String ?? ""
@@ -690,6 +690,17 @@ final class VoiceSessionController: ObservableObject {
             result = "Sent \(command.rawValue) to whatever is playing; the call is ending."
             pendingMedia = command
             action = ["kind": "media", "command": command.rawValue]
+        } else if name == MapsOpener.toolName,
+                  let request = MapsOpener.request(place: arguments["place"] as? String ?? "",
+                                                   address: arguments["address"] as? String ?? "",
+                                                   mode: arguments["mode"] as? String ?? "",
+                                                   travel: arguments["travel"] as? String ?? "") {
+            result = "Opening \(request.title) in Google Maps; the call is ending."
+            pendingMap = request
+            action = ["kind": "map", "title": request.title, "mode": request.mode.rawValue,
+                      "web_url": request.webURL.absoluteString, "app_url": request.appURL.absoluteString]
+        } else if name == MapsOpener.toolName {
+            result = "Nothing to open: no place and no address."
         } else if name == ShowVisual.toolName {
             let title = arguments["title"] as? String ?? ""
             let html = arguments["html"] as? String ?? ""
@@ -709,10 +720,14 @@ final class VoiceSessionController: ObservableObject {
         // Spotify's playback would fight the call for audio: hang up, then open it (finishCall).
         if pendingSpotify != nil { stop(reason: "spotify") }
         if pendingMedia != nil { stop(reason: "media") }
+        // Leaving for Google Maps: hang up first, as for Spotify, then open it (finishCall).
+        if pendingMap != nil { stop(reason: "maps") }
     }
 
     /// Opened once the call has ended and released the audio session.
     private var pendingSpotify: SpotifyPlayer.Request?
+    /// Opened once the call has ended, like Spotify.
+    private var pendingMap: MapsOpener.Request?
     /// Sent once the call has ended. An exclusive (foreground) call pauses other apps, which may
     /// resume by themselves when it ends, so the command waits for that to settle.
     private var pendingMedia: MediaControl.Command?
@@ -868,11 +883,12 @@ final class VoiceSessionController: ObservableObject {
         case .greeting:
             provider?.send(["type": "session.commentary.append", "delegation_id": NSNull(),
                             "content": "Greet the user in five words or fewer."])
-        case .search, .spotify, .pause, .visual:
+        case .search, .spotify, .pause, .visual, .map:
             let text = switch probe {
             case .search: "Search the web: what is the current weather in Toronto?"
             case .spotify: "Play Blinding Lights by The Weeknd on Spotify."
             case .visual: "Show me a chart of the forecast high in Toronto for the next five days."
+            case .map: "Give me directions to the CN Tower in Google Maps."
             default: "Okay, stop the music."
             }
             provider?.send(["type": "response.item.create",
@@ -998,7 +1014,8 @@ final class VoiceSessionController: ObservableObject {
         self.capture = nil
         capture?.app("call_ended", ["reason": reason, "usage_seconds": usageSeconds ?? NSNull(),
                                     "spotify_pending": pendingSpotify != nil,
-                                    "media_pending": pendingMedia?.rawValue ?? NSNull()])
+                                    "media_pending": pendingMedia?.rawValue ?? NSNull(),
+                                    "map_pending": pendingMap != nil])
         let chatLog = ChatLog(id: capture?.id ?? UUID(), started: callStartedAt, ended: Date(), trigger: callTrigger, lines: lines)
         // Kept only with its log; the Spotify and media steps below append to it afterwards.
         let kept = ChatLogStore.shared.add(chatLog, capture: capture)
@@ -1066,6 +1083,20 @@ final class VoiceSessionController: ObservableObject {
                                                    "web_url": spotify.webURL?.absoluteString ?? NSNull()])
                 SpotifyPlayer.open(spotify) { outcome in
                     laterCapture?.app("spotify_opened", ["outcome": outcome])
+                }
+            }
+        }
+        if let map = pendingMap {
+            pendingMap = nil
+            Task {
+                // As for Spotify: leave the screen only once the restarting listener runs.
+                let wake = WakeController.shared
+                for _ in 0..<60 where wake.busy && !wake.enabled { try? await Task.sleep(for: .milliseconds(50)) }
+                self.log("maps_after_listener listening=\(wake.enabled)")
+                laterCapture?.app("map_open", ["title": map.title, "mode": map.mode.rawValue,
+                                               "web_url": map.webURL.absoluteString, "app_url": map.appURL.absoluteString])
+                MapsOpener.open(map) { outcome in
+                    laterCapture?.app("map_opened", ["outcome": outcome])
                 }
             }
         }

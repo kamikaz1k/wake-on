@@ -163,6 +163,25 @@ struct CaptureReplay {
             default: "Spotify didn't open"
             }
             updateTool("spotify-open") { $0.result = result; $0.state = outcome == "failed" ? .failed : .done }
+        case "app.map_open":
+            let title = e["title"] as? String ?? "Google Maps"
+            let directions = e["mode"] as? String == "directions"
+            var tool = ChatItem.Tool(name: "open_in_google_maps",
+                                    arguments: [directions ? "Directions to \(title)" : title, e["web_url"] as? String]
+                                        .compactMap { $0 }.joined(separator: "\n"),
+                                    result: nil, state: .running)
+            if let web = e["web_url"] as? String { tool.sources = [.init(title: title, url: web)] }
+            addTool("map-open", tool)
+        case "app.map_opened":
+            let outcome = e["outcome"] as? String ?? ""
+            let result = switch outcome {
+            case "universal_link": "Opened in Google Maps (google.com/maps link)"
+            case "app_link": "Opened in Google Maps (comgooglemaps: link)"
+            case "web": "Google Maps isn't installed: opened it on the web"
+            case "notification": "Wake On was in the background: posted a notification to tap"
+            default: "Google Maps didn't open"
+            }
+            updateTool("map-open") { $0.result = result; $0.state = outcome == "failed" ? .failed : .done }
         case "app.media_command":
             let command = e["command"] as? String ?? ""
             addTool("media-\(line.t)", .init(name: "media_control", arguments: command,
@@ -331,6 +350,7 @@ struct CaptureReplay {
         let length = Duration.seconds(t).formatted(.time(pattern: .minuteSecond))
         let why: String
         if e["spotify_pending"] as? Bool == true { why = "ended to play on Spotify" }
+        else if e["map_pending"] as? Bool == true { why = "ended to open Google Maps" }
         else if let media = e["media_pending"] as? String { why = "ended to \(media) the music" }
         else {
             why = switch e["reason"] as? String ?? "" {

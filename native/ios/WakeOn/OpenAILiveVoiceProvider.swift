@@ -22,6 +22,8 @@ struct LiveVoiceConfig {
     current or factual information you are unsure of, delegate it so it can be searched on the web. \
     Delegate requests to play music too; they open in Spotify and the call ends. Also delegate \
     requests to pause, stop, resume or skip whatever is playing; the call ends after that too. \
+    Delegate requests for directions or to open a place in Maps too; they open in Google Maps and \
+    the call ends. \
     Delegate requests to see, show, chart, draw or visualize something: it appears on the user's \
     screen and the call goes on. \
     You cannot play, pause or open anything yourself: only a delegated request does it, so always \
@@ -46,6 +48,8 @@ struct LiveVoiceConfig {
     var spotify = true
     /// The control_media tool: pause, resume, skip whatever is playing (see MediaControl).
     var mediaControl = true
+    /// The open_map tool: directions or a place in Google Maps (see MapsOpener).
+    var maps = true
     /// The show_visual tool: an HTML page shown in the chat (see ShowVisual).
     var visuals = true
     /// Host candidates are enough: OpenAI's media servers are publicly reachable.
@@ -58,12 +62,14 @@ struct LiveVoiceConfig {
         var backendInstructions = delegationInstructions
         if spotify { backendInstructions += " " + SpotifyPlayer.delegationInstructions }
         if mediaControl { backendInstructions += " " + MediaControl.delegationInstructions }
+        if maps { backendInstructions += " " + MapsOpener.delegationInstructions }
         if visuals { backendInstructions += " " + ShowVisual.delegationInstructions }
         var responses: [String: Any] = ["model": delegationModel, "instructions": backendInstructions]
         var tools: [[String: Any]] = []
         if webSearch { tools.append(["type": "web_search"]) }
         if spotify { tools.append(SpotifyPlayer.tool) }
         if mediaControl { tools.append(MediaControl.tool) }
+        if maps { tools.append(MapsOpener.tool) }
         if visuals { tools.append(ShowVisual.tool) }
         if !tools.isEmpty {
             responses["tools"] = tools

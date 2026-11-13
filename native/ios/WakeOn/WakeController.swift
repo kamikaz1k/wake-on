@@ -723,6 +723,10 @@ final class WakeController: NSObject, ObservableObject, UNUserNotificationCenter
             let web = (info["spotifyWebURL"] as? String).flatMap(URL.init(string:))
             DispatchQueue.main.async { MainActor.assumeIsolated { SpotifyPlayer.openNow(app: app, web: web) } }
         }
+        if let web = (info["mapsWebURL"] as? String).flatMap(URL.init(string:)),
+           let app = (info["mapsAppURL"] as? String).flatMap(URL.init(string:)) {
+            DispatchQueue.main.async { MainActor.assumeIsolated { MapsOpener.openNow(web: web, app: app) } }
+        }
         completionHandler()
     }
 

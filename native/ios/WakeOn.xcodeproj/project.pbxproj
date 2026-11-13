@@ -538,6 +538,13 @@
 			<key>productName</key>
 			<string>ConversationKit</string>
 		</dict>
+		<key>34BE19A39DA587EA5BC45054</key>
+		<dict>
+			<key>fileRef</key>
+			<string>E176221F59CDA0010ED929FE</string>
+			<key>isa</key>
+			<string>PBXBuildFile</string>
+		</dict>
 		<key>38534BB08E9D76D11C587E49</key>
 		<dict>
 			<key>isa</key>
@@ -1129,6 +1136,17 @@
 			<key>sourceTree</key>
 			<string>&lt;group&gt;</string>
 		</dict>
+		<key>5FBF5422A42236CB15FFB899</key>
+		<dict>
+			<key>isa</key>
+			<string>PBXFileReference</string>
+			<key>lastKnownFileType</key>
+			<string>sourcecode.swift</string>
+			<key>path</key>
+			<string>WakeOn/MapsOpener.swift</string>
+			<key>sourceTree</key>
+			<string>&lt;group&gt;</string>
+		</dict>
 		<key>5FC6ABF06938EC4B0E292BA0</key>
 		<dict>
 			<key>buildSettings</key>
@@ -1351,6 +1369,7 @@
 				<string>F5A8AD6DD1708ECCF94AA2E2</string>
 				<string>44DA201589CF3D2915F60C94</string>
 				<string>1FD4FDDD07AD5BF53127D39B</string>
+				<string>34BE19A39DA587EA5BC45054</string>
 				<string>53100DED70B6793C84D0EFE9</string>
 				<string>923E56ABEC4022D54E7A5068</string>
 				<string>8F689865000D2D112E2DF22D</string>
@@ -1589,6 +1608,13 @@
 			<string>38A007151ABE87CC01A5B6E9</string>
 			<key>productType</key>
 			<string>com.apple.product-type.application</string>
+		</dict>
+		<key>8122B136745D748BA8B26D6C</key>
+		<dict>
+			<key>fileRef</key>
+			<string>5FBF5422A42236CB15FFB899</string>
+			<key>isa</key>
+			<string>PBXBuildFile</string>
 		</dict>
 		<key>83DA82C7C30EB912C8D47A04</key>
 		<dict>
@@ -2250,6 +2276,7 @@
 				<string>40C95F44524CD4C23904F439</string>
 				<string>E4FB3D48505D22D8422194F8</string>
 				<string>FBC965F89A87825EA3D43EDB</string>
+				<string>8122B136745D748BA8B26D6C</string>
 				<string>DAFE12478B484E6833DABDF8</string>
 				<string>89707B9627501A6CC5C878D6</string>
 				<string>C096918F71FEAB2E9FC49F58</string>
@@ -2692,6 +2719,7 @@
 				<string>74C3E4252EFD564EB7FA8736</string>
 				<string>9F81E2B6F38D383DBF87C9B7</string>
 				<string>427734F696037F60000C4197</string>
+				<string>5FBF5422A42236CB15FFB899</string>
 				<string>DA19DAC196A1C96922A56FB4</string>
 				<string>1CB063FB3A6A99A499006954</string>
 				<string>DCE26BF595E449F720C1CEAD</string>
@@ -2724,6 +2752,7 @@
 				<string>A52E1E1026008ABCCF27FFB3</string>
 				<string>7208E077BFADA885CC025FBD</string>
 				<string>1C6E6C00672E94914095F8DB</string>
+				<string>E176221F59CDA0010ED929FE</string>
 				<string>89B55F3E600130F57D0DF153</string>
 				<string>23E37AFC95566DEAD09FBB7F</string>
 				<string>548E5C94CE6D3460317BB2D5</string>
@@ -2914,6 +2943,17 @@
 			<string>sourcecode.swift</string>
 			<key>path</key>
 			<string>Tests/WakeHandoverTests.swift</string>
+			<key>sourceTree</key>
+			<string>&lt;group&gt;</string>
+		</dict>
+		<key>E176221F59CDA0010ED929FE</key>
+		<dict>
+			<key>isa</key>
+			<string>PBXFileReference</string>
+			<key>lastKnownFileType</key>
+			<string>sourcecode.swift</string>
+			<key>path</key>
+			<string>Tests/MapsOpenerTests.swift</string>
 			<key>sourceTree</key>
 			<string>&lt;group&gt;</string>
 		</dict>
