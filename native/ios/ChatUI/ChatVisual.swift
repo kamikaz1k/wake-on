@@ -225,3 +225,74 @@ struct VisualWebView: UIViewRepresentable {
         }
     }
 }
+
+/// A place from open_map's show mode: Google's embedded map of it, with a link out to Google
+/// Maps. The preview doesn't take touches (the chat scrolls over it); tapping opens a map you
+/// can pan and zoom.
+struct ChatPlaceRow: View {
+    let place: ChatItem.Place
+    @State private var open = false
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Button { open = true } label: {
+                HStack(spacing: 8) {
+                    Image(systemName: "mappin.and.ellipse").foregroundStyle(.red)
+                    Text(place.title.isEmpty ? "Map" : place.title).font(.subheadline.weight(.medium))
+                    Spacer()
+                    Image(systemName: "arrow.up.left.and.arrow.down.right")
+                        .font(.caption.weight(.semibold)).foregroundStyle(.tertiary)
+                }
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .accessibilityIdentifier("chat-place-open")
+            VisualWebView(html: html)
+                .frame(height: 220)
+                .clipShape(RoundedRectangle(cornerRadius: 8))
+                .allowsHitTesting(false)
+                .contentShape(Rectangle())
+                .onTapGesture { open = true }
+                .accessibilityIdentifier("chat-place-map")
+            if let url = URL(string: place.webURL) {
+                Link(destination: url) {
+                    Label("Open in Google Maps", systemImage: "arrow.up.right.square")
+                        .font(.subheadline.weight(.medium))
+                        .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(.bordered)
+                .accessibilityIdentifier("chat-place-link")
+            }
+        }
+        .padding(10)
+        .background(Color(.secondarySystemBackground), in: RoundedRectangle(cornerRadius: 12))
+        .sheet(isPresented: $open) {
+            NavigationStack {
+                VisualWebView(html: html)
+                    .ignoresSafeArea(edges: .bottom)
+                    .navigationTitle(place.title.isEmpty ? "Map" : place.title)
+                    .navigationBarTitleDisplayMode(.inline)
+                    .toolbar {
+                        ToolbarItem(placement: .confirmationAction) {
+                            Button("Done") { open = false }.accessibilityIdentifier("chat-place-done")
+                        }
+                        if let url = URL(string: place.webURL) {
+                            ToolbarItem(placement: .topBarLeading) {
+                                Link(destination: url) { Label("Open in Google Maps", systemImage: "arrow.up.right.square") }
+                            }
+                        }
+                    }
+            }
+        }
+    }
+
+    /// The embed fills the page; its own "View larger map" link opens Google Maps too.
+    private var html: String {
+        let src = place.embedURL.replacingOccurrences(of: "&", with: "&amp;").replacingOccurrences(of: "\"", with: "&quot;")
+        return """
+        <!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1">
+        <style>html,body{margin:0;height:100%;background:transparent}iframe{border:0;width:100%;height:100%;display:block}</style>
+        </head><body><iframe src="\(src)" allowfullscreen referrerpolicy="no-referrer-when-downgrade"></iframe></body></html>
+        """
+    }
+}

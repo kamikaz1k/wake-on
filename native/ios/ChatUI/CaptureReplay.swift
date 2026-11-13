@@ -143,7 +143,16 @@ struct CaptureReplay {
             script.status(nil)
         case "app.tool_call":
             let callID = e["call_id"] as? String ?? ""
-            updateTool(callID) { $0.result = e["output"] as? String; $0.state = .done }
+            let action = e["action"] as? [String: Any] ?? [:]
+            let place: ChatItem.Place? = if action["kind"] as? String == "map_show",
+                let embed = action["embed_url"] as? String, let web = action["web_url"] as? String {
+                ChatItem.Place(title: action["title"] as? String ?? "", embedURL: embed, webURL: web)
+            } else { nil }
+            updateTool(callID) {
+                $0.result = e["output"] as? String
+                $0.state = .done
+                if let place { $0.place = place }
+            }
         case "app.call_ended":
             finishMessage()
             marker(endNote(e, at: line.t))

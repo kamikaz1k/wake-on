@@ -17,7 +17,7 @@ final class VoiceSessionController: ObservableObject {
     static let shared = VoiceSessionController()
 
     enum Phase: Equatable { case idle, connecting, live, ending }
-    enum Probe: String { case greeting, search, spotify, pause, visual, map }
+    enum Probe: String { case greeting, search, spotify, pause, visual, map, place }
 
     struct TimelineRow: Identifiable { let id = UUID(); let name: String; let ms: Double }
     struct TranscriptLine: Identifiable { let id = UUID(); let speaker: String; var text: String }
@@ -695,10 +695,16 @@ final class VoiceSessionController: ObservableObject {
                                                    address: arguments["address"] as? String ?? "",
                                                    mode: arguments["mode"] as? String ?? "",
                                                    travel: arguments["travel"] as? String ?? "") {
-            result = "Opening \(request.title) in Google Maps; the call is ending."
-            pendingMap = request
-            action = ["kind": "map", "title": request.title, "mode": request.mode.rawValue,
-                      "web_url": request.webURL.absoluteString, "app_url": request.appURL.absoluteString]
+            if request.mode == .show {
+                result = "A map of \(request.title) with a link to Google Maps is on the user's screen. The call goes on."
+                action = ["kind": "map_show", "title": request.title, "embed_url": request.embedURL.absoluteString,
+                          "web_url": request.webURL.absoluteString]
+            } else {
+                result = "Opening \(request.title) in Google Maps; the call is ending."
+                pendingMap = request
+                action = ["kind": "map", "title": request.title, "mode": request.mode.rawValue,
+                          "web_url": request.webURL.absoluteString, "app_url": request.appURL.absoluteString]
+            }
         } else if name == MapsOpener.toolName {
             result = "Nothing to open: no place and no address."
         } else if name == ShowVisual.toolName {
@@ -883,12 +889,13 @@ final class VoiceSessionController: ObservableObject {
         case .greeting:
             provider?.send(["type": "session.commentary.append", "delegation_id": NSNull(),
                             "content": "Greet the user in five words or fewer."])
-        case .search, .spotify, .pause, .visual, .map:
+        case .search, .spotify, .pause, .visual, .map, .place:
             let text = switch probe {
             case .search: "Search the web: what is the current weather in Toronto?"
             case .spotify: "Play Blinding Lights by The Weeknd on Spotify."
             case .visual: "Show me a chart of the forecast high in Toronto for the next five days."
             case .map: "Give me directions to the CN Tower in Google Maps."
+            case .place: "Where is the CN Tower?"
             default: "Okay, stop the music."
             }
             provider?.send(["type": "response.item.create",

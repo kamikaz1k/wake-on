@@ -1444,6 +1444,13 @@
 			<key>isa</key>
 			<string>PBXBuildFile</string>
 		</dict>
+		<key>74ACB5CCD03DBDEDD28A8655</key>
+		<dict>
+			<key>fileRef</key>
+			<string>FB9F4FD9552779739A9F2E45</string>
+			<key>isa</key>
+			<string>PBXBuildFile</string>
+		</dict>
 		<key>74C3E4252EFD564EB7FA8736</key>
 		<dict>
 			<key>isa</key>
@@ -2372,6 +2379,7 @@
 			<integer>2147483647</integer>
 			<key>files</key>
 			<array>
+				<string>74ACB5CCD03DBDEDD28A8655</string>
 				<string>3EE874D6094F498B3EB38F4D</string>
 				<string>B14B0BC8CCC712BB507DF782</string>
 			</array>
@@ -2793,6 +2801,7 @@
 				<string>D271D76AB5D8BC578109A18A</string>
 				<string>D51DBCE476B3A9F6D9C63988</string>
 				<string>694D8611755A10832F2AF78C</string>
+				<string>FB9F4FD9552779739A9F2E45</string>
 				<string>0088B281E196A96BE9595A8C</string>
 				<string>919AD98241FE3E02313AEA0F</string>
 				<string>DC6D1C4550B84D6367C515C7</string>
@@ -3283,6 +3292,17 @@
 			<string>E131C259A818D1A0E21BDDCC</string>
 			<key>isa</key>
 			<string>PBXBuildFile</string>
+		</dict>
+		<key>FB9F4FD9552779739A9F2E45</key>
+		<dict>
+			<key>isa</key>
+			<string>PBXFileReference</string>
+			<key>lastKnownFileType</key>
+			<string>text</string>
+			<key>path</key>
+			<string>ChatLab/Captures/sample-place.jsonl</string>
+			<key>sourceTree</key>
+			<string>&lt;group&gt;</string>
 		</dict>
 		<key>FBC965F89A87825EA3D43EDB</key>
 		<dict>

@@ -1,0 +1,31 @@
+{"t_ms": 0, "source": "app", "event": {"type": "app.call_started", "trigger": "in_app", "started": "2026-11-12T23:50:00Z", "session": {"model": "gpt-live-1", "note": "made-up sample in the CallCapture format"}}}
+{"t_ms": 900, "source": "server", "event": {"type": "session.started"}}
+{"t_ms": 1500, "source": "server", "event": {"type": "session.input_transcript.delta", "delta": " Where"}}
+{"t_ms": 1800, "source": "server", "event": {"type": "session.input_transcript.delta", "delta": " is"}}
+{"t_ms": 2100, "source": "server", "event": {"type": "session.input_transcript.delta", "delta": " Demetres"}}
+{"t_ms": 2400, "source": "server", "event": {"type": "session.input_transcript.delta", "delta": " exactly?"}}
+{"t_ms": 3000, "source": "server", "event": {"type": "session.delegation.created", "delegation": {"id": "item_place1", "target": "responses"}}}
+{"t_ms": 3300, "source": "server", "event": {"type": "session.output_transcript.delta", "delta": " One"}}
+{"t_ms": 3500, "source": "server", "event": {"type": "session.output_transcript.delta", "delta": " sec."}}
+{"t_ms": 3900, "source": "server", "event": {"type": "response.event", "delegation_id": "item_place1", "event": {"type": "response.output_item.added", "item": {"type": "function_call", "id": "fc_p1", "call_id": "call_p1", "name": "open_map"}}}}
+{"t_ms": 4100, "source": "server", "event": {"type": "response.event", "delegation_id": "item_place1", "event": {"type": "response.function_call_arguments.delta", "item_id": "fc_p1", "delta": "{\"place\": \"Demetres\", \"address\": \"9174 Yonge St, Richmond Hill, ON\", \"mode\": \"show\", \"travel\": \"driving\"}"}}}
+{"t_ms": 4150, "source": "server", "event": {"type": "response.event", "delegation_id": "item_place1", "event": {"type": "response.output_item.done", "item": {"type": "function_call", "id": "fc_p1", "call_id": "call_p1", "name": "open_map", "arguments": "{\"place\": \"Demetres\", \"address\": \"9174 Yonge St, Richmond Hill, ON\", \"mode\": \"show\", \"travel\": \"driving\"}"}}}}
+{"t_ms": 4155, "source": "app", "event": {"type": "app.tool_call", "name": "open_map", "call_id": "call_p1", "arguments": {"place": "Demetres", "address": "9174 Yonge St, Richmond Hill, ON", "mode": "show", "travel": "driving"}, "output": "A map of Demetres with a link to Google Maps is on the user's screen. The call goes on.", "action": {"kind": "map_show", "title": "Demetres", "embed_url": "https://maps.google.com/maps?q=Demetres%2C%209174%20Yonge%20St%2C%20Richmond%20Hill%2C%20ON&z=15&output=embed", "web_url": "https://www.google.com/maps/search/?api=1&query=Demetres%2C%209174%20Yonge%20St%2C%20Richmond%20Hill%2C%20ON"}}}
+{"t_ms": 4900, "source": "server", "event": {"type": "response.event", "delegation_id": "item_place1", "event": {"type": "response.output_item.done", "item": {"type": "message", "content": [{"type": "output_text", "text": "Demetres is at 9174 Yonge Street, just south of Highway 7; the map is on your screen.", "annotations": []}]}}}}
+{"t_ms": 4920, "source": "server", "event": {"type": "response.event", "delegation_id": "item_place1", "event": {"type": "response.completed"}}}
+{"t_ms": 5300, "source": "server", "event": {"type": "session.output_transcript.delta", "delta": " It's"}}
+{"t_ms": 5520, "source": "server", "event": {"type": "session.output_transcript.delta", "delta": " at"}}
+{"t_ms": 5740, "source": "server", "event": {"type": "session.output_transcript.delta", "delta": " 9174"}}
+{"t_ms": 5960, "source": "server", "event": {"type": "session.output_transcript.delta", "delta": " Yonge,"}}
+{"t_ms": 6180, "source": "server", "event": {"type": "session.output_transcript.delta", "delta": " just"}}
+{"t_ms": 6400, "source": "server", "event": {"type": "session.output_transcript.delta", "delta": " south"}}
+{"t_ms": 6620, "source": "server", "event": {"type": "session.output_transcript.delta", "delta": " of"}}
+{"t_ms": 6840, "source": "server", "event": {"type": "session.output_transcript.delta", "delta": " Highway"}}
+{"t_ms": 7060, "source": "server", "event": {"type": "session.output_transcript.delta", "delta": " 7."}}
+{"t_ms": 7280, "source": "server", "event": {"type": "session.output_transcript.delta", "delta": " The"}}
+{"t_ms": 7500, "source": "server", "event": {"type": "session.output_transcript.delta", "delta": " map's"}}
+{"t_ms": 7720, "source": "server", "event": {"type": "session.output_transcript.delta", "delta": " on"}}
+{"t_ms": 7940, "source": "server", "event": {"type": "session.output_transcript.delta", "delta": " your"}}
+{"t_ms": 8160, "source": "server", "event": {"type": "session.output_transcript.delta", "delta": " screen."}}
+{"t_ms": 11380, "source": "server", "event": {"type": "session.closed"}}
+{"t_ms": 11390, "source": "app", "event": {"type": "app.call_ended", "reason": "close_requested", "usage_seconds": 11, "map_pending": false}}

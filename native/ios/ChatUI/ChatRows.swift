@@ -213,7 +213,9 @@ struct ChatNonMessageRow: View {
         switch item.kind {
         case .message: EmptyView()
         case let .tool(tool):
-            if let visual = tool.visual { ChatVisualRow(tool: tool, visual: visual) } else { ChatToolRow(tool: tool) }
+            if let visual = tool.visual { ChatVisualRow(tool: tool, visual: visual) }
+            else if let place = tool.place { ChatPlaceRow(place: place) }
+            else { ChatToolRow(tool: tool) }
         case let .marker(text, style): ChatMarkerRow(text: text, style: style)
         case let .event(event): ChatEventRow(event: event)
         case let .card(card): ChatCardView(card: card)

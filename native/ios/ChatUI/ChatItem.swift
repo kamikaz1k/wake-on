@@ -18,6 +18,14 @@ struct ChatItem: Identifiable, Equatable {
         var sources: [Source] = []
         /// A page from show_visual, shown in a web view.
         var visual: Visual?
+        /// A place from open_map's show mode, shown as an embedded map.
+        var place: Place?
+    }
+
+    struct Place: Equatable {
+        var title: String
+        var embedURL: String
+        var webURL: String
     }
 
     struct Visual: Equatable {

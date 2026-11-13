@@ -62,4 +62,26 @@ final class MapsOpenerTests: XCTestCase {
         XCTAssertEqual(tools[1].sources, [.init(title: "Demetres", url: web)])
         XCTAssertTrue(items.contains { $0.kind == .marker("Call ended · 0:04 · ended to open Google Maps", .system) })
     }
+
+    func testShowModeEmbedsAMapAndTheCallGoesOn() throws {
+        let request = try XCTUnwrap(MapsOpener.request(place: "Demetres", address: "9174 Yonge St, Richmond Hill, ON",
+                                                       mode: "show", travel: "driving"))
+        XCTAssertEqual(request.mode, .show)
+        XCTAssertEqual(request.embedURL.absoluteString,
+                       "https://maps.google.com/maps?q=Demetres%2C%209174%20Yonge%20St%2C%20Richmond%20Hill%2C%20ON&z=15&output=embed")
+        XCTAssertTrue(request.webURL.absoluteString.hasPrefix("https://www.google.com/maps/search/?api=1&query=Demetres"))
+        // The made-up sample: the tool row becomes a map with a link out, and Lobby keeps talking.
+        let url = URL(fileURLWithPath: #filePath).deletingLastPathComponent()
+            .appendingPathComponent("../ChatLab/Captures/sample-place.jsonl")
+        let call = try XCTUnwrap(CapturedCall.load(url))
+        let items = ChatTranscript(steps: CaptureReplay(lines: call.lines, rawEvents: false).steps, startedAt: Date()).items
+        let place = try XCTUnwrap(items.compactMap { item -> ChatItem.Place? in
+            if case let .tool(tool) = item.kind { tool.place } else { nil }
+        }.first)
+        XCTAssertEqual(place, ChatItem.Place(title: "Demetres", embedURL: request.embedURL.absoluteString,
+                                             webURL: request.webURL.absoluteString))
+        XCTAssertTrue(items.contains { $0.kind == .message(.lobby, text: "It's at 9174 Yonge, just south of Highway 7. The map's on your screen.", state: .done) })
+        XCTAssertTrue(items.contains { $0.kind == .marker("Call ended · 0:12 · ended after goodbye", .system) } ||
+                      items.contains { if case let .marker(text, _) = $0.kind { text.hasSuffix("ended after goodbye") } else { false } })
+    }
 }

@@ -1,19 +1,20 @@
 import UIKit
 import UserNotifications
 
-/// Lobby's "open it in Google Maps" tool. The backend model finds the place's address (web
-/// search if needed) and calls `open_map`; like play_spotify, the app ends the call and opens
-/// Google Maps with directions or a search. No Google account or API key is involved.
+/// Lobby's Google Maps tool. The backend model finds the place's address (web search if
+/// needed) and calls `open_map`. Mode show puts an embedded Google Map in the chat with a link
+/// out, and the call goes on. Directions and search work like play_spotify: the app ends the
+/// call and opens Google Maps. No Google account or API key is involved.
 enum MapsOpener {
     static let toolName = "open_map"
 
-    enum Mode: String, CaseIterable { case directions, search }
+    enum Mode: String, CaseIterable { case show, directions, search }
     enum Travel: String, CaseIterable { case driving, walking, transit, bicycling }
 
     static let tool: [String: Any] = [
         "type": "function",
         "name": toolName,
-        "description": "Open a place in the user's Google Maps app, with directions to it or just showing it. Call it when the user asks for directions, a map, or to open a place in Maps.",
+        "description": "Show a place on a map in the chat, or open it in the user's Google Maps app with directions or a search. Call it when the user asks where a place is, for a map, for directions, or to open a place in Maps.",
         "strict": true,
         "parameters": [
             "type": "object",
@@ -21,7 +22,7 @@ enum MapsOpener {
                 "place": ["type": "string", "description": "The place's name, such as \"Demetres\". Empty for a plain address."],
                 "address": ["type": "string", "description": "Full street address with city, such as \"9174 Yonge St, Richmond Hill, ON\". Empty if unknown."],
                 "mode": ["type": "string", "enum": Mode.allCases.map(\.rawValue),
-                         "description": "directions when the user wants to go there, search to just show it."],
+                         "description": "show to put a map on their screen while the call goes on; directions to open Google Maps with directions; search to open the place in Google Maps."],
                 "travel": ["type": "string", "enum": Travel.allCases.map(\.rawValue),
                            "description": "How they are getting there; driving unless they said otherwise."],
             ],
@@ -31,11 +32,13 @@ enum MapsOpener {
     ]
 
     static let delegationInstructions = """
-    When the user asks for directions, a map, or to open a place in Maps or Google Maps, call \
-    open_map with the place's name and full street address; search the web for the address \
-    first if you don't know it. Use mode directions when they want to go there. It opens in \
-    Google Maps and the call ends, so reply with only a short sentence such as "Opening \
-    directions to Demetres."
+    When the user asks where a place is, about a location you are recommending, for a map, \
+    for directions, or to open a place in Maps or Google Maps, call open_map with the place's \
+    name and full street address; search the web for the address first if you don't know it. \
+    Use mode show by default: a map with a link to Google Maps appears on their screen and the \
+    call goes on, so say it is on their screen. Use directions when they want to go there or ask \
+    for directions, and search when they ask to open it in Maps: those open Google Maps and end \
+    the call, so reply with only a short sentence such as "Opening directions to Demetres."
     """
 
     struct Request: Equatable {
@@ -45,6 +48,8 @@ enum MapsOpener {
         /// comgooglemaps: link, used if the web link doesn't open the app.
         var appURL: URL
         var mode: Mode
+        /// Embeddable Google Map of the place, for mode show.
+        var embedURL: URL
     }
 
     /// Google Maps links for a tool call (Maps URLs, developers.google.com/maps/documentation/urls).
@@ -61,12 +66,14 @@ enum MapsOpener {
         case .directions:
             web = "https://www.google.com/maps/dir/?api=1&destination=\(q)&travelmode=\(travel.rawValue)"
             app = "comgooglemaps://?daddr=\(q)&directionsmode=\(travel.rawValue)"
-        case .search:
+        case .search, .show:
             web = "https://www.google.com/maps/search/?api=1&query=\(q)"
             app = "comgooglemaps://?q=\(q)"
         }
-        guard let webURL = URL(string: web), let appURL = URL(string: app) else { return nil }
-        return Request(title: place.isEmpty ? address : place, webURL: webURL, appURL: appURL, mode: mode)
+        // The keyless embed (output=embed) that Google's own "Embed a map" share uses.
+        guard let webURL = URL(string: web), let appURL = URL(string: app),
+              let embedURL = URL(string: "https://maps.google.com/maps?q=\(q)&z=15&output=embed") else { return nil }
+        return Request(title: place.isEmpty ? address : place, webURL: webURL, appURL: appURL, mode: mode, embedURL: embedURL)
     }
 
     /// Percent-encodes everything but unreserved characters, so "&", "+" and "#" in a name
