@@ -13,10 +13,10 @@ struct ContentView: View {
     var body: some View {
         TabView(selection: Binding(get: { Self.galleryRequested ? .advanced : mode }, set: { mode = $0 })) {
             AdvancedView(controller: controller)
-                .tabItem { Label("Advanced", systemImage: "slider.horizontal.3") }
+                .tabItem { Label("Advanced", systemImage: "gearshape") }
                 .tag(Mode.advanced)
             SimpleView(wake: controller)
-                .tabItem { Label("Simple", systemImage: "waveform") }
+                .tabItem { Label("Simple", systemImage: "mic") }
                 .tag(Mode.simple)
         }
         // Lobby's browser, or yours from the Simple page: full screen so its top bar can take
