@@ -144,6 +144,11 @@ the log and run `native/ios/scripts/check-wake-handover.py <log>` (exit 1 = brok
 
 ## Interruptions and resume
 
+**Start with `interactions.md` in this folder:** a table of how the listener reacts to media
+apps, calls, routes and background restarts, with dates and evidence, including an open
+regression (interrupted ~1 s after going to the background, since 2026-10-27). Check it
+before proposing an interruption fix, and add a row after every device test.
+
 - Phone calls, Siri, alarms and other apps' exclusive audio interrupt the listener
   (`interruption type=1`). On `interruption_ended shouldResume=true` it resumes; route
   changes and media-service resets resume "soon" with background retries.
