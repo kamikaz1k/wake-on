@@ -28,6 +28,19 @@ and wake times: see "Summarise listener sessions" below.
 - 2026-11-13: over Spotify on the phone's speaker, 0 detections in two tries, in default mode
   and in measurement mode (raw mic; user-reported, logs not read: phone unreachable). With the
   music paused it works in the background. So iOS's mic processing is not the cause.
+- 2026-11-13 11:16 (62e4d10, with the `listen_input` meter), full sound on, Spotify quiet on
+  the speaker: **3 of 3 "Hey Lobby" detected over music**, each started a call. The mic gets
+  real audio (no zeros): ~−50 to −60 dB in a quiet room, **~−19 dB average with Spotify on
+  quiet**, so the phone's own speaker is loud at its mic. Why the earlier tries failed with the
+  same settings is unexplained (fresh install and launch this time).
+- Over music, **the pause detector never fires** (music keeps the level within 15 dB of the
+  wake phrase), so the call's audio starts at the 8 s limit (`audio_start_after_pause
+  reason=limit afterMs=8000`): the request reaches OpenAI 8 s late, Lobby's idle nudge
+  ("Anything else?") fires at 5 s before the call's mic is even live, and the ready chime
+  plays at 8 s instead of right after the wake.
+- The ready chime plays when the call's mic goes live, which since 2026-11-07 is the user's
+  first pause, not the wake. So it never marks the moment "Hey Lobby" was heard, and over
+  music it comes at 8 s.
 - Offline (`native/ios/scripts/wake-over-music.py`, 32 saved recordings mixed with GarageBand
   loops with vocals, the phone's detector settings `threshold=0.1 score=2`):
 
