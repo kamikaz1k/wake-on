@@ -32,7 +32,6 @@ struct SimpleView: View {
 
     private var list: some View {
             List {
-                ModePicker.row
                 Section {
                     if voice.phase == .connecting || voice.phase == .live {
                         VoiceVisualizer(style: visualizerStyle, palette: .named(visualizerPalette))

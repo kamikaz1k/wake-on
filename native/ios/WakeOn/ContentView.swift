@@ -1,43 +1,23 @@
 import SwiftUI
 
-/// Simple (everyday controls) or Advanced (the full test surface), switched with a segmented
-/// control at the top of each screen. A tab bar reserved icon space even with text only.
+/// Two tabs in the standard tab bar (Liquid Glass on iOS 26): Simple (everyday controls) and
+/// Advanced (the full test surface).
 struct ContentView: View {
     enum Mode: String { case advanced, simple }
     @ObservedObject var controller: WakeController
-    @AppStorage(ModePicker.key) private var mode: Mode = .simple
-    /// Debug screenshots of the visualizer gallery (Advanced) open that mode.
+    @AppStorage("ui.tab") private var mode: Mode = .simple
+    /// Debug screenshots of the visualizer gallery (Advanced) open that tab.
     static let galleryRequested = ProcessInfo.processInfo.arguments.contains("-visualizer-gallery")
 
     var body: some View {
-        if mode == .advanced || Self.galleryRequested {
+        TabView(selection: Binding(get: { Self.galleryRequested ? .advanced : mode }, set: { mode = $0 })) {
             AdvancedView(controller: controller)
-        } else {
+                .tabItem { Label("Advanced", systemImage: "slider.horizontal.3") }
+                .tag(Mode.advanced)
             SimpleView(wake: controller)
+                .tabItem { Label("Simple", systemImage: "waveform") }
+                .tag(Mode.simple)
         }
-    }
-}
-
-/// "Advanced | Simple": a standard segmented control, the first row of both screens.
-struct ModePicker: View {
-    /// As a list row without a card behind it.
-    static var row: some View {
-        ModePicker()
-            .frame(maxWidth: .infinity)
-            .listRowBackground(Color.clear)
-            .listRowInsets(EdgeInsets())
-    }
-
-    static let key = "ui.tab"
-    @AppStorage(key) private var mode: ContentView.Mode = .simple
-    var body: some View {
-        Picker("Mode", selection: $mode) {
-            Text("Advanced").tag(ContentView.Mode.advanced)
-            Text("Simple").tag(ContentView.Mode.simple)
-        }
-        .pickerStyle(.segmented)
-        .labelsHidden()
-        .accessibilityIdentifier("mode-picker")
     }
 }
 
@@ -52,7 +32,6 @@ struct AdvancedView: View {
     var body: some View {
         NavigationStack {
             List {
-                ModePicker.row
                 VoiceSectionView(voice: VoiceSessionController.shared)
                 Section {
                     Label(controller.status, systemImage: controller.enabled ? "mic.fill" : "mic.slash")
