@@ -17,7 +17,7 @@ final class VoiceSessionController: ObservableObject {
     static let shared = VoiceSessionController()
 
     enum Phase: Equatable { case idle, connecting, live, ending }
-    enum Probe: String { case greeting, search, spotify, pause, visual, map, place }
+    enum Probe: String { case greeting, search, spotify, pause, visual, map, place, browser }
 
     struct TimelineRow: Identifiable { let id = UUID(); let name: String; let ms: Double }
     struct TranscriptLine: Identifiable { let id = UUID(); let speaker: String; var text: String }
@@ -84,6 +84,8 @@ final class VoiceSessionController: ObservableObject {
     /// Lobby has started speaking its check-in since the nudge.
     private var checkInSpoken = false
     private var lookingUpSince: Double?
+    /// Browser steps waiting on a page; the lookup isn't over while one runs.
+    private var browserStepsRunning = 0
 
     private init() {}
 
@@ -241,6 +243,7 @@ final class VoiceSessionController: ObservableObject {
         lastActivity = nil
         nudgedAt = nil
         checkInSpoken = false
+        browserStepsRunning = 0
         lookingUpSince = nil
         record("start_entered", at: origin + 1)
         if OpenAILiveVoiceProvider.useHotAudio {
@@ -484,6 +487,7 @@ final class VoiceSessionController: ObservableObject {
 
     static func makeConfig() -> LiveVoiceConfig {
         var config = LiveVoiceConfig()
+        config.browser = BrowserTool.enabled
         #if DEBUG
         let args = ProcessInfo.processInfo.arguments
         if args.contains("--no-delegation") { config.delegation = false }
@@ -645,7 +649,10 @@ final class VoiceSessionController: ObservableObject {
                 exchanges.forEach { $0.backend(nested, at: time) }
                 log("backend \(nested)")
             }
-            if nested == "response.completed" || nested == "response.failed" || nested == "response.incomplete" {
+            // A response that ends in a browser step isn't the end of the lookup: the step's
+            // output starts the next one (see completeFunctionCall).
+            if nested == "response.completed" || nested == "response.failed" || nested == "response.incomplete",
+               browserStepsRunning == 0 {
                 lookingUpSince = nil
             }
             if nested == "response.completed", phase == .live { status = "Live · speak now" }
@@ -674,6 +681,22 @@ final class VoiceSessionController: ObservableObject {
         let arguments = (item["arguments"] as? String).flatMap { $0.data(using: .utf8) }
             .flatMap { try? JSONSerialization.jsonObject(with: $0) as? [String: Any] } ?? [:]
         log("function_call name=\(name) arguments=\(item["arguments"] as? String ?? "")")
+        if name == BrowserTool.toolName {
+            // Browser actions wait for pages to load, so the output follows when it's done.
+            let step = arguments["action"] as? String ?? ""
+            browserStepsRunning += 1
+            lookingUpSince = uptimeSeconds()
+            Task { @MainActor in
+                let browser = BrowserSession.shared
+                var result = await browser.perform(action: step, text: arguments["text"] as? String ?? "")
+                self.browserStepsRunning = max(0, self.browserStepsRunning - 1)
+                if step != "close", ScreenPresence.current == .away { result += ScreenPresence.awayResult }
+                self.completeFunctionCall(name: name, callID: callID, arguments: arguments, result: result,
+                                          action: ["kind": "browser", "step": step,
+                                                   "url": browser.url?.absoluteString ?? NSNull()])
+            }
+            return
+        }
         var result = "unknown tool"
         var action: [String: Any] = [:]
         if name == SpotifyPlayer.toolName,
@@ -720,8 +743,16 @@ final class VoiceSessionController: ObservableObject {
                 action = ["kind": "visual", "title": title, "bytes": html.utf8.count]
             }
         }
+        completeFunctionCall(name: name, callID: callID, arguments: arguments, result: result, action: action)
+    }
+
+    /// Records the call and sends its output so the backend goes on.
+    private func completeFunctionCall(name: String, callID: String, arguments: [String: Any],
+                                      result: String, action: [String: Any]) {
         capture?.app("tool_call", ["name": name, "call_id": callID, "arguments": arguments,
                                    "output": result, "action": action.isEmpty ? NSNull() : action])
+        // The backend goes on with this output: still looking it up, so silence isn't idle.
+        lookingUpSince = uptimeSeconds()
         // Every call needs an output before the backend can go on (see OpenAI's delegation guide).
         provider?.send(["type": "response.item.create",
                         "item": ["type": "function_call_output", "call_id": callID, "output": result]])
@@ -738,6 +769,7 @@ final class VoiceSessionController: ObservableObject {
     private var screenObservers: [NSObjectProtocol] = []
     /// What the models were last told.
     private var screenSent: ScreenPresence?
+    private var browserSent: String?
     private var screenCheck: Task<Void, Never>?
 
     /// Tells the models whether the user can see the screen now, and again whenever that
@@ -745,7 +777,8 @@ final class VoiceSessionController: ObservableObject {
     private func watchScreen() {
         sendScreen()
         guard screenObservers.isEmpty else { return }
-        for name in [UIApplication.didEnterBackgroundNotification, UIApplication.willEnterForegroundNotification] {
+        for name in [UIApplication.didEnterBackgroundNotification, UIApplication.willEnterForegroundNotification,
+                     BrowserSession.changed] {
             screenObservers.append(NotificationCenter.default.addObserver(forName: name, object: nil, queue: .main) { [weak self] _ in
                 MainActor.assumeIsolated {
                     guard let self else { return }
@@ -760,13 +793,22 @@ final class VoiceSessionController: ObservableObject {
         }
     }
 
+    /// Also says whether the browser is open, and on which page.
     private func sendScreen() {
         let screen = ScreenPresence.current
-        guard phase == .live, screen != screenSent, let provider else { return }
+        let browser = BrowserSession.shared.contextLine
+        guard phase == .live, screen != screenSent || browser != browserSent, let provider else { return }
+        var notes: [String] = []
+        if screen != screenSent { notes.append(screen.thinking) }
+        // Only opening and closing: a new page is in the backend's instructions already.
+        if (browser != nil) != (browserSent != nil), screenSent != nil || browser != nil {
+            notes.append(BrowserTool.voiceNote(open: browser != nil))
+        }
         screenSent = screen
-        provider.sendScreen(screen)
-        capture?.app("screen", ["state": screen.rawValue])
-        log("screen \(screen.rawValue)")
+        browserSent = browser
+        provider.sendScreen(screen, browser: browser, notes: notes)
+        capture?.app("screen", ["state": screen.rawValue, "browser": browser ?? NSNull()])
+        log("screen \(screen.rawValue) browser=\(browser == nil ? "closed" : "open")")
     }
 
     /// Opened once the call has ended and released the audio session.
@@ -928,13 +970,14 @@ final class VoiceSessionController: ObservableObject {
         case .greeting:
             provider?.send(["type": "session.commentary.append", "delegation_id": NSNull(),
                             "content": "Greet the user in five words or fewer."])
-        case .search, .spotify, .pause, .visual, .map, .place:
+        case .search, .spotify, .pause, .visual, .map, .place, .browser:
             let text = switch probe {
             case .search: "Search the web: what is the current weather in Toronto?"
             case .spotify: "Play Blinding Lights by The Weeknd on Spotify."
             case .visual: "Show me a chart of the forecast high in Toronto for the next five days."
             case .map: "Give me directions to the CN Tower in Google Maps."
             case .place: "Where is the CN Tower?"
+            case .browser: "Open Wikipedia, search it for the CN Tower, and show me where it talks about the observation deck."
             default: "Okay, stop the music."
             }
             provider?.send(["type": "response.item.create",
@@ -1079,6 +1122,7 @@ final class VoiceSessionController: ObservableObject {
         screenObservers.forEach(NotificationCenter.default.removeObserver)
         screenObservers = []
         screenSent = nil
+        browserSent = nil
         #if DEBUG
         if let last = transcript.last { log("transcript \(last.speaker): \(last.text)") }
         log("server_events " + serverEventCounts.sorted { $0.key < $1.key }.map { "\($0.key)=\($0.value)" }.joined(separator: " "))

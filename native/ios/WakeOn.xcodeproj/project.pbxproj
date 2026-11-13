@@ -1337,6 +1337,17 @@
 			<key>remoteInfo</key>
 			<string>ChatLab</string>
 		</dict>
+		<key>694224480C1EF786AF578D9C</key>
+		<dict>
+			<key>isa</key>
+			<string>PBXFileReference</string>
+			<key>lastKnownFileType</key>
+			<string>sourcecode.swift</string>
+			<key>path</key>
+			<string>Tests/BrowserDriverTests.swift</string>
+			<key>sourceTree</key>
+			<string>&lt;group&gt;</string>
+		</dict>
 		<key>694D8611755A10832F2AF78C</key>
 		<dict>
 			<key>isa</key>
@@ -1368,6 +1379,7 @@
 			<integer>2147483647</integer>
 			<key>files</key>
 			<array>
+				<string>EE72E66061F34F35D9E2A154</string>
 				<string>5BEA58C43D2321DE0F5E9EB9</string>
 				<string>5655D4377A320893D7964C00</string>
 				<string>2E25DF7EB50C6B90D3C76346</string>
@@ -2303,6 +2315,7 @@
 				<string>1DA5A8F982B7C161E74C041E</string>
 				<string>F29E91B590F34040D4912AA5</string>
 				<string>206BA2F968C3FC3C92318888</string>
+				<string>C170634DA1A6B0CED1531197</string>
 				<string>73EBC91632FFC7BE6836AC90</string>
 				<string>8B4F35E544C3FC6DABF208A7</string>
 				<string>B99C26864023D73F5AD560E0</string>
@@ -2401,6 +2414,13 @@
 		<dict>
 			<key>fileRef</key>
 			<string>DCE26BF595E449F720C1CEAD</string>
+			<key>isa</key>
+			<string>PBXBuildFile</string>
+		</dict>
+		<key>C170634DA1A6B0CED1531197</key>
+		<dict>
+			<key>fileRef</key>
+			<string>FFC08981B78C2D2A377CF391</string>
 			<key>isa</key>
 			<string>PBXBuildFile</string>
 		</dict>
@@ -2755,6 +2775,7 @@
 				<string>B29C300FCD297635482D352B</string>
 				<string>E8B8A81C6CA1C88BC84CAD95</string>
 				<string>BAA884D912E3425D1C2D1458</string>
+				<string>FFC08981B78C2D2A377CF391</string>
 				<string>1E722BEC8B659EE2E8F6A27B</string>
 				<string>FA3366121A5DEA92723FCBB5</string>
 				<string>CC176C17FF9F49D4A917C518</string>
@@ -2791,6 +2812,7 @@
 				<string>38534BB08E9D76D11C587E49</string>
 				<string>EA887A74159053229BB4FA1B</string>
 				<string>B81F7C4987416DEB2976F4B6</string>
+				<string>694224480C1EF786AF578D9C</string>
 				<string>4025FAD5BADBA37E3C524972</string>
 				<string>93421563D67A7CA1779FC6D5</string>
 				<string>BEE981B64F5E0E5875912826</string>
@@ -3240,6 +3262,13 @@
 			<key>sourceTree</key>
 			<string>&lt;group&gt;</string>
 		</dict>
+		<key>EE72E66061F34F35D9E2A154</key>
+		<dict>
+			<key>fileRef</key>
+			<string>694224480C1EF786AF578D9C</string>
+			<key>isa</key>
+			<string>PBXBuildFile</string>
+		</dict>
 		<key>F29E91B590F34040D4912AA5</key>
 		<dict>
 			<key>fileRef</key>
@@ -3419,6 +3448,17 @@
 			<string>PBXBuildFile</string>
 			<key>productRef</key>
 			<string>47790152C955D33B94ED573F</string>
+		</dict>
+		<key>FFC08981B78C2D2A377CF391</key>
+		<dict>
+			<key>isa</key>
+			<string>PBXFileReference</string>
+			<key>lastKnownFileType</key>
+			<string>sourcecode.swift</string>
+			<key>path</key>
+			<string>WakeOn/BrowserDriver.swift</string>
+			<key>sourceTree</key>
+			<string>&lt;group&gt;</string>
 		</dict>
 	</dict>
 	<key>rootObject</key>

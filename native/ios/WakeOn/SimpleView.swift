@@ -11,6 +11,7 @@ struct SimpleView: View {
     @AppStorage(LiveVoiceConfig.voiceKey) private var voiceName = "marin"
     @AppStorage(ListenerSettings.Key.talkOnWake) private var talkOnWake = false
     @AppStorage(ScreenAwake.key) private var awakeWhileCharging = true
+    @AppStorage(BrowserTool.enabledKey) private var browserEnabled = true
     @State private var keyDraft = ""
     /// Screenshot/debug launch argument: open straight to the chat logs.
     @State private var openLogs = ProcessInfo.processInfo.arguments.contains("-chat-logs")
@@ -128,6 +129,14 @@ struct SimpleView: View {
                     .accessibilityIdentifier("simple-awake-charging")
                 } footer: {
                     Text("While charging, the screen stays on as long as Wake On is open, like on a stand.")
+                }
+                Section {
+                    Button("Open Browser") { BrowserSession.shared.show() }
+                        .accessibilityIdentifier("simple-browser")
+                    Toggle("Lobby can use the browser", isOn: $browserEnabled)
+                        .accessibilityIdentifier("simple-browser-enabled")
+                } footer: {
+                    Text("Ask Lobby to open a website, search it, or find something on the page. The browser is private: sign-ins and cookies aren't kept.")
                 }
             }
     }

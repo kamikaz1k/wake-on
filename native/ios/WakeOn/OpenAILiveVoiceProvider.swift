@@ -52,6 +52,8 @@ struct LiveVoiceConfig {
     var maps = true
     /// The show_visual tool: an HTML page shown in the chat (see ShowVisual).
     var visuals = true
+    /// The browser tool: an in-app browser Lobby can drive (see BrowserTool).
+    var browser = true
     /// Host candidates are enough: OpenAI's media servers are publicly reachable.
     var iceGatheringTimeout: Duration = .seconds(3)
     /// Send the offer once no new candidate has appeared for this long.
@@ -59,25 +61,27 @@ struct LiveVoiceConfig {
     var statsInterval: Duration = .milliseconds(50)
 
     /// The backend's instructions; with `screen`, a last line saying whether the user can see it.
-    func backendInstructions(screen: ScreenPresence? = nil) -> String {
+    func backendInstructions(screen: ScreenPresence? = nil, browser browserLine: String? = nil) -> String {
         var text = delegationInstructions
         if spotify { text += " " + SpotifyPlayer.delegationInstructions }
         if mediaControl { text += " " + MediaControl.delegationInstructions }
         if maps { text += " " + MapsOpener.delegationInstructions }
         if visuals { text += " " + ShowVisual.delegationInstructions }
-        if visuals || maps {
+        if browser { text += " " + BrowserTool.delegationInstructions }
+        if visuals || maps || browser {
             text += " " + ScreenPresence.backendGuidance
             if let screen { text += "\n" + screen.backendLine }
         }
+        if browser, let browserLine { text += "\n" + browserLine }
         return text
     }
 
     /// Mid-call update for the backend when the screen comes into view or goes away. The
     /// voice model is told with `session.thinking.append` (see `ScreenPresence.thinking`).
-    func screenUpdate(_ screen: ScreenPresence) -> [String: Any] {
+    func screenUpdate(_ screen: ScreenPresence, browser: String? = nil) -> [String: Any] {
         ["type": "session.update",
          "session": ["delegation": ["type": "responses",
-                                    "responses": ["instructions": backendInstructions(screen: screen)]]]]
+                                    "responses": ["instructions": backendInstructions(screen: screen, browser: browser)]]]]
     }
 
     func requestBody(sdp: String) -> [String: Any] {
@@ -90,12 +94,14 @@ struct LiveVoiceConfig {
         if mediaControl { tools.append(MediaControl.tool) }
         if maps { tools.append(MapsOpener.tool) }
         if visuals { tools.append(ShowVisual.tool) }
+        if browser { tools.append(BrowserTool.tool) }
         if !tools.isEmpty {
             responses["tools"] = tools
             responses["tool_choice"] = "auto"
         }
         if let effort = delegationReasoningEffort { responses["reasoning"] = ["effort": effort] }
-        var session: [String: Any] = ["model": model, "instructions": instructions,
+        let voiceInstructions = browser ? instructions + " " + BrowserTool.voiceInstructions : instructions
+        var session: [String: Any] = ["model": model, "instructions": voiceInstructions,
                                       "audio": ["output": ["voice": voice]]]
         if delegation { session["delegation"] = ["type": "responses", "responses": responses] }
         return ["session": session, "transport": ["type": "webrtc", "sdp": sdp]]
@@ -441,9 +447,12 @@ final class OpenAILiveVoiceProvider: NSObject {
     func requestClose() { send(["type": "session.close"]) }
 
     /// Tells both models whether the user can see the screen (see `ScreenPresence`).
-    func sendScreen(_ screen: ScreenPresence) {
-        send(config.screenUpdate(screen))
-        send(["type": "session.thinking.append", "delegation_id": NSNull(), "content": screen.thinking])
+    /// `notes`: what the voice model should hear about (the screen and/or the browser changed).
+    func sendScreen(_ screen: ScreenPresence, browser: String?, notes: [String]) {
+        send(config.screenUpdate(screen, browser: browser))
+        if !notes.isEmpty {
+            send(["type": "session.thinking.append", "delegation_id": NSNull(), "content": notes.joined(separator: " ")])
+        }
     }
 
     /// Gives the Live model something to say to the user now (`session.commentary.append`).

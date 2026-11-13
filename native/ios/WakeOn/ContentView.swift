@@ -6,6 +6,8 @@ struct ContentView: View {
     enum Mode: String { case advanced, simple }
     @ObservedObject var controller: WakeController
     @AppStorage("ui.tab") private var mode: Mode = .simple
+    @ObservedObject private var browser = BrowserSession.shared
+    @State private var browserDetent: PresentationDetent = .large
     /// Debug screenshots of the visualizer gallery (Advanced) open that tab.
     static let galleryRequested = ProcessInfo.processInfo.arguments.contains("-visualizer-gallery")
 
@@ -18,6 +20,26 @@ struct ContentView: View {
                 .tabItem { Label("Simple", systemImage: "waveform") }
                 .tag(Mode.simple)
         }
+        // Lobby's browser, or yours from the Simple page. At half height the call stays usable.
+        .sheet(isPresented: $browser.isOpen) {
+            BrowserSheet(browser: browser)
+                .presentationDetents([.medium, .large], selection: $browserDetent)
+                .presentationBackgroundInteraction(.enabled(upThrough: .medium))
+        }
+        #if DEBUG
+        // `-browser <address or words>`, then `-browser-step <action> <text>` (repeatable):
+        // Lobby's browser steps without a call, results in the voice log.
+        .task {
+            let args = ProcessInfo.processInfo.arguments
+            guard let index = args.firstIndex(of: "-browser"), index + 1 < args.count else { return }
+            BrowserSession.shared.show(args[index + 1])
+            for (i, arg) in args.enumerated() where arg == "-browser-step" && i + 2 < args.count {
+                try? await Task.sleep(for: .seconds(2))
+                let result = await BrowserSession.shared.perform(action: args[i + 1], text: args[i + 2])
+                VoiceSessionController.appLog("browser_step \(args[i + 1]) \(args[i + 2]) → \(result.replacingOccurrences(of: "\n", with: " | "))")
+            }
+        }
+        #endif
     }
 }
 
