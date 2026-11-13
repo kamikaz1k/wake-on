@@ -432,6 +432,8 @@ struct BrowserSheet: View {
     @State private var address = ""
     @FocusState private var editing: Bool
     @Environment(\.colorScheme) private var systemScheme
+    @AppStorage(VoiceVisualizerSettings.styleKey) private var visualizerStyle: VoiceVisualizerStyle = .skyOrb
+    @AppStorage(VoiceVisualizerSettings.paletteKey) private var visualizerPalette = VoicePalette.default.name
 
     var body: some View {
         BrowserWebView(webView: browser.webView)
@@ -559,25 +561,21 @@ struct BrowserSheet: View {
         return 0.299 * r + 0.587 * g + 0.114 * b < 0.55 ? .dark : .light
     }
 
-    /// Lobby in the browser. No call: Ask Lobby, which starts a call that knows this page is
+    /// Lobby in the browser. No call: the orb, which starts a call that knows this page is
     /// open. During a call: what Lobby is doing (or that it's listening) and End.
     @ViewBuilder private var lobbyBar: some View {
         switch voice.phase {
         case .idle:
             Button { voice.start(trigger: "browser") } label: {
-                Label("Ask Lobby", systemImage: "waveform")
-                    .font(.headline)
-                    .padding(.horizontal, 6)
-                    .padding(.vertical, 4)
+                orb(64)
+                    .shadow(color: .black.opacity(0.25), radius: 8, y: 3)
             }
-            .buttonStyle(.borderedProminent)
-            .buttonBorderShape(.capsule)
+            .buttonStyle(.plain)
+            .accessibilityLabel("Ask Lobby")
             .accessibilityIdentifier("browser-ask-lobby")
         case .connecting, .live, .ending:
             HStack(spacing: 10) {
-                Image(systemName: "waveform")
-                    .foregroundStyle(.tint)
-                    .symbolEffect(.variableColor.iterative, isActive: voice.phase == .live)
+                orb(32).accessibilityHidden(true)
                 Text(lobbyStatus)
                     .font(.subheadline.weight(.medium))
                     .lineLimit(1)
@@ -591,11 +589,23 @@ struct BrowserSheet: View {
                     .disabled(voice.phase == .ending)
                     .accessibilityIdentifier("browser-end-lobby")
             }
-            .padding(.leading, 16)
+            .padding(.leading, 6)
             .padding(.trailing, 6)
             .padding(.vertical, 6)
             .background(.regularMaterial, in: Capsule())
         }
+    }
+
+    /// The visualizer picked in settings, as on the call screen, in a circle `size` wide. The
+    /// two orbs draw their sphere at 60% of the frame, so for them the frame is larger than the
+    /// circle and the sphere fills it.
+    private func orb(_ size: CGFloat) -> some View {
+        let frame = [.skyOrb, .waveOrb].contains(visualizerStyle) ? size / 0.62 : size
+        return VoiceVisualizer(style: visualizerStyle, palette: .named(visualizerPalette))
+            .frame(width: frame, height: frame)
+            .frame(width: size, height: size)
+            .background(.black)
+            .clipShape(Circle())
     }
 
     private var lobbyStatus: String {
