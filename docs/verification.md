@@ -43,4 +43,4 @@ When a check is redone, add a new row rather than editing the old one.
 | 2026-11-12 | Action Button time to mic live, with more samples | One cold start so far (543 ms, at the top of the earlier range); warm starts not measured yet |
 | 2026-11-12 | show_visual: links opening in Safari, pages loading from the web | Not tried in a real call yet |
 | 2026-11-12 | open_map in a real call: Google Maps opening by its link (no prompt), from the background via the notification | Installed on the phone (4a4871c); the `--talk map` test call was refused because the phone was locked |
-| 2026-11-12 | The embedded map in a real call: whether Lobby picks show for "where is" questions, and the link opening the Google Maps app | Installed on the phone (6185d52); not tried in a call yet |
+| 2026-11-12 | The embedded map in a real call: whether Lobby picks show for "where is" questions, and the link opening the Google Maps app | Installed on the phone by cable (6185d52) and it launches; not tried in a call yet |
