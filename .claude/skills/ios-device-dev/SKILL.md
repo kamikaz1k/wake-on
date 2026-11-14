@@ -99,6 +99,16 @@ xcrun devicectl device install app --device 5976CF6D-0FD6-5A57-9711-AA29F94404E7
   `localNetwork`, still channel 44). The Mac's signal there was weak (−69 dBm, MCS 1).
   Try this before the cable; leaving and rejoining on the phone alone didn't help before.
 - Bonjour records have a 75-minute TTL, so `dns-sd` can show stale instances. tcpdump needs root.
+- **Tailscale (tested 2026-11-14):** the phone's pairing service (`_remotepairing._tcp`, port
+  49152 that day) answers on its tailnet address (its `100.x` address) **while the phone is on
+  Wi-Fi**. With the phone's Wi-Fi off (cellular, Tailscale relayed via DERP) no port answers
+  (49152-49170, 62078 closed): iOS only runs it on Wi-Fi, so the tailnet can't deploy over
+  cellular. CoreDevice finds phones only by Bonjour, which doesn't cross the tailnet, and
+  `devicectl list devices` can still say "available (paired)" with `tunnelState: disconnected`.
+  Untested idea for the REACH failure (both on Wi-Fi, LAN unicast broken): publish the phone's
+  record at its tailnet address with `dns-sd -P <identifier> _remotepairing._tcp local 49152
+  <name>-ts.local <tailnet IP> identifier=… authTag=… ver=24 minVer=8 flags=0` (copy the TXT
+  from `dns-sd -L`; `authTag` may rotate).
 - **Practical fix: plug in the cable.** Pull logs before plugging in if you want to study a
   live Wi-Fi failure (plugging in tends to clear it).
 - An earlier wrong theory ("Wi-Fi dozing") was rejected by the user. Measure before blaming.
