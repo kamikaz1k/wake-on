@@ -48,6 +48,10 @@ xcrun devicectl device install app --device 5976CF6D-0FD6-5A57-9711-AA29F94404E7
 - Nov 11 2026: a CLI build with `-allowProvisioningUpdates` created the new Chat Lab profile
   itself, expiring Nov 2027. So the team now seems able to make 1-year profiles from the CLI;
   check a profile's ExpirationDate before assuming the 7-day rule.
+- 2026-11-14: wrong for Wake On. Its profiles (created Nov 7) still expired after 7 days, and a
+  CLI build with `-allowProvisioningUpdates` failed with "No Accounts" / "No profiles for
+  'dev.wakeon.ios'". Renewing still needs one build in the Xcode GUI. Symptom on the phone:
+  "App not available".
 
 ## Wireless installs (Wi-Fi) and why they fail
 
