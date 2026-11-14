@@ -50,8 +50,12 @@ xcrun devicectl device install app --device 5976CF6D-0FD6-5A57-9711-AA29F94404E7
   check a profile's ExpirationDate before assuming the 7-day rule.
 - 2026-11-14: wrong for Wake On. Its profiles (created Nov 7) still expired after 7 days, and a
   CLI build with `-allowProvisioningUpdates` failed with "No Accounts" / "No profiles for
-  'dev.wakeon.ios'". Renewing still needs one build in the Xcode GUI. Symptom on the phone:
-  "App not available".
+  'dev.wakeon.ios'". Symptom on the phone: "App not available". Fixed by opening the project
+  in the Xcode app (`osascript`: `tell application "Xcode" to open ".../WakeOn.xcodeproj"`,
+  then `build`); Xcode made **1-year** profiles for the app and the Live Activity (until
+  2027-11-14). The first AppleScript to Xcode triggers macOS's "claude wants to control
+  Xcode" prompt (Privacy & Security › Automation); only the user can allow it, and it may come
+  back after a Claude Code update. AppleScript calls time out (-1712) while the prompt waits.
 
 ## Wireless installs (Wi-Fi) and why they fail
 
