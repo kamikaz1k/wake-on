@@ -13,6 +13,7 @@ When a check is redone, add a new row rather than editing the old one.
 
 | Date | SHA | Check | How | Where | Result | Files |
 | --- | --- | --- | --- | --- | --- | --- |
+| 2026-11-14 | 9072253 | Headless signing: with both Wake On profiles removed, `deploy-phone.py` built using only the App Store Connect key and fetched new 365-day profiles, no Xcode app, no prompt | script run | Mac | Works; install then failed because the phone was unreachable over Wi-Fi (REACH), not signing | `native/ios/scripts/deploy-phone.py` |
 | 2026-11-13 | 829bba6 | Tab bar icons: gear for Advanced, mic for Simple | screenshot | sim | As described | `native/ios/WakeOn/ContentView.swift` |
 | 2026-11-14 | ca01f50 | "Wake On" as the inline bar title on both tabs; Simple settings merged into one Settings section, Chat logs and Open Browser in their own section | 84 unit tests, screenshots | sim | As described | `native/ios/WakeOn/ContentView.swift`, `native/ios/WakeOn/SimpleView.swift` |
 | 2026-11-14 | 27b2b7b | OpenAI API key on its own page linked from Settings (Not set shown); Chat logs renamed Chat history | screenshots (temporary UI test) | sim | As described | `native/ios/WakeOn/SimpleView.swift`, `native/ios/WakeOn/VoiceSectionView.swift`, `native/ios/WakeOn/ChatLogsView.swift` |
