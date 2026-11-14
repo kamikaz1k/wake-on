@@ -27,6 +27,7 @@ struct SimpleView: View {
                 }
             }
             .navigationTitle("Wake On")
+            .navigationBarTitleDisplayMode(.inline)
             .navigationDestination(isPresented: $openLogs) { ChatLogsView() }
         }
     }
@@ -84,6 +85,21 @@ struct SimpleView: View {
                 }
 
                 Section {
+                    NavigationLink {
+                        ChatLogsView()
+                    } label: {
+                        LabeledContent {
+                            Text("\(logs.logs.count)")
+                        } label: {
+                            Text("Chat logs")
+                        }
+                    }
+                    .accessibilityIdentifier("simple-chat-logs")
+                    Button("Open Browser") { BrowserSession.shared.show() }
+                        .accessibilityIdentifier("simple-browser")
+                }
+
+                Section {
                     // One switch: background listening that starts a conversation on "Hey Lobby".
                     // (Advanced keeps the listener's separate options, including notify-only.)
                     Toggle(isOn: Binding(get: { (wake.enabled || wake.busy) && talkOnWake },
@@ -99,21 +115,10 @@ struct SimpleView: View {
                     }
                     .disabled(wake.busy)
                     .accessibilityIdentifier("simple-hands-free")
-                } header: { Text("Hands-free") } footer: {
-                    Text("Listens for “Hey Lobby”, even with the phone locked. Say it and your request in one go. When off, start a conversation with the button above or the Action Button.")
-                }
-
-                Section {
-                    NavigationLink {
-                        ChatLogsView()
-                    } label: {
-                        LabeledContent {
-                            Text("\(logs.logs.count)")
-                        } label: {
-                            Text("Chat logs")
-                        }
-                    }
-                    .accessibilityIdentifier("simple-chat-logs")
+                    Toggle("Lobby can use the browser", isOn: $browserEnabled)
+                        .accessibilityIdentifier("simple-browser-enabled")
+                    Toggle("Keep screen on while charging", isOn: $awakeWhileCharging)
+                        .accessibilityIdentifier("simple-awake-charging")
                     Picker(selection: $voiceName) {
                         ForEach(LiveVoiceConfig.voices, id: \.self) { Text($0.capitalized).tag($0) }
                     } label: {
@@ -125,18 +130,8 @@ struct SimpleView: View {
                         LabeledContent("Visualizer", value: visualizerStyle.title)
                     }
                     .accessibilityIdentifier("simple-visualizer")
-                    Toggle("Keep screen on while charging", isOn: $awakeWhileCharging)
-                    .accessibilityIdentifier("simple-awake-charging")
-                } footer: {
-                    Text("While charging, the screen stays on as long as Wake On is open, like on a stand.")
-                }
-                Section {
-                    Button("Open Browser") { BrowserSession.shared.show() }
-                        .accessibilityIdentifier("simple-browser")
-                    Toggle("Lobby can use the browser", isOn: $browserEnabled)
-                        .accessibilityIdentifier("simple-browser-enabled")
-                } footer: {
-                    Text("Ask Lobby to open a website, search it, or find something on the page. The browser is private: sign-ins and cookies aren't kept.")
+                } header: { Text("Settings") } footer: {
+                    Text("Background listening hears “Hey Lobby”, even with the phone locked: say it and your request in one go. With the browser on, Lobby can open, search and read websites; sign-ins and cookies aren't kept. While charging, the screen stays on as long as Wake On is open.")
                 }
             }
     }

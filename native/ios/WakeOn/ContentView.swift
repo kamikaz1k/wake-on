@@ -121,6 +121,7 @@ struct AdvancedView: View {
                 #endif
             }
             .navigationTitle("Wake On")
+            .navigationBarTitleDisplayMode(.inline)
             #if DEBUG
             .navigationDestination(isPresented: $openGallery) {
                 VoiceVisualizerGallery(autoplay: ProcessInfo.processInfo.arguments.contains("-visualizer-autoplay"))
