@@ -13,10 +13,13 @@ Learned the hard way in Oct–Nov 2026. Check facts still hold before relying on
 `python3 -I native/ios/scripts/deploy-phone.py [--check] [--launch] [--no-install]`.
 It reports profile expiry, builds, renews signing if the build fails on signing, and installs.
 Renewal order: an App Store Connect API key in `~/.appstoreconnect/wakeon.env` (Apple's
-headless method, the CI standard; none set up yet), then Xcode's saved account
+headless method, the CI standard; **set up 2026-11-14**, key `B77NR3GVQF` "MBP xcode", Admin
+role, file in `~/.appstoreconnect/private_keys/`, never in the repo), then Xcode's saved account
 (`-allowProvisioningUpdates`), then the running Xcode app over AppleScript (open + build; Xcode
-renews with the account it holds). Tested 2026-11-14: normal deploy and the Xcode-app path both
-ran with no prompts.
+renews with the account it holds). Tested 2026-11-14: with both Wake On profiles moved away,
+a build using only the key fetched new 365-day profiles with no Xcode app and no prompt. If the
+key is revoked, make a new Team Key (Users and Access › Integrations › App Store Connect API ›
+Team Keys, Admin) and update `wakeon.env`.
 
 Why command-line builds said "No Accounts" (2026-11-14): Xcode's saved account list
 (`defaults read com.apple.dt.Xcode DVTDeveloperAccountManagerAppleIDLists`) is **empty**, while

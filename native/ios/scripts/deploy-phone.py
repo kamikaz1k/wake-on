@@ -157,7 +157,8 @@ def install(launch: bool) -> bool:
     result = subprocess.run(["xcrun", "devicectl", "device", "install", "app", "--device", DEVICE,
                              str(APP)], capture_output=True, text=True, env=ENV)
     if result.returncode != 0:
-        log((result.stderr or result.stdout).strip().splitlines()[-1] if (result.stderr or result.stdout) else "install failed")
+        lines = (result.stderr + result.stdout).strip().splitlines()
+        log(next((l.strip() for l in lines if "ERROR" in l), lines[-1].strip() if lines else "install failed"))
         log("If the phone is unreachable: native/ios/scripts/device-link-check.py, "
             "restart Wi-Fi on both ends, or plug in the cable.")
         return False
