@@ -928,6 +928,17 @@
 			<key>isa</key>
 			<string>PBXBuildFile</string>
 		</dict>
+		<key>53FAE4E46E6EFCF5C9195C9E</key>
+		<dict>
+			<key>isa</key>
+			<string>PBXFileReference</string>
+			<key>lastKnownFileType</key>
+			<string>sourcecode.swift</string>
+			<key>path</key>
+			<string>WakeOn/BrowserSignIns.swift</string>
+			<key>sourceTree</key>
+			<string>&lt;group&gt;</string>
+		</dict>
 		<key>548E5C94CE6D3460317BB2D5</key>
 		<dict>
 			<key>isa</key>
@@ -938,6 +949,13 @@
 			<string>Tests/SpotifyPlayerTests.swift</string>
 			<key>sourceTree</key>
 			<string>&lt;group&gt;</string>
+		</dict>
+		<key>54E6F8E04DB6AA195B183226</key>
+		<dict>
+			<key>fileRef</key>
+			<string>53FAE4E46E6EFCF5C9195C9E</string>
+			<key>isa</key>
+			<string>PBXBuildFile</string>
 		</dict>
 		<key>5573545089CC3AD4A52EBCEF</key>
 		<dict>
@@ -2316,6 +2334,7 @@
 				<string>F29E91B590F34040D4912AA5</string>
 				<string>206BA2F968C3FC3C92318888</string>
 				<string>C170634DA1A6B0CED1531197</string>
+				<string>54E6F8E04DB6AA195B183226</string>
 				<string>73EBC91632FFC7BE6836AC90</string>
 				<string>8B4F35E544C3FC6DABF208A7</string>
 				<string>B99C26864023D73F5AD560E0</string>
@@ -2776,6 +2795,7 @@
 				<string>E8B8A81C6CA1C88BC84CAD95</string>
 				<string>BAA884D912E3425D1C2D1458</string>
 				<string>FFC08981B78C2D2A377CF391</string>
+				<string>53FAE4E46E6EFCF5C9195C9E</string>
 				<string>1E722BEC8B659EE2E8F6A27B</string>
 				<string>FA3366121A5DEA92723FCBB5</string>
 				<string>CC176C17FF9F49D4A917C518</string>

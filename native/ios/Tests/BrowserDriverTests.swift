@@ -1,4 +1,5 @@
 import XCTest
+import WebKit
 @testable import WakeOn
 
 /// The browser tool: what gets loaded for spoken input, the tool offered to the backend, and
@@ -14,6 +15,39 @@ final class BrowserDriverTests: XCTestCase {
         XCTAssertNil(BrowserTool.destination(for: "  "))
         // Other apps' links are never "addresses".
         XCTAssertEqual(BrowserTool.destination(for: "tel:5551234")?.host, "www.google.com")
+    }
+
+    func testSignInDomainsAreNormalized() {
+        XCTAssertEqual(BrowserSignIns.normalize("https://www.Spotify.com/login?x=1"), "spotify.com")
+        XCTAssertEqual(BrowserSignIns.normalize(" accounts.spotify.com "), "accounts.spotify.com")
+        XCTAssertEqual(BrowserSignIns.normalize("github.com:443"), "github.com")
+        XCTAssertNil(BrowserSignIns.normalize("spotify"))
+        XCTAssertNil(BrowserSignIns.normalize("not a site.com"))
+        XCTAssertNil(BrowserSignIns.normalize(""))
+        XCTAssertEqual(BrowserSignIns.decode(BrowserSignIns.encode(["a.com", "b.org"])), ["a.com", "b.org"])
+    }
+
+    func testOnlyAllowedSitesAreKept() {
+        let allowed = ["spotify.com", "accounts.google.com"]
+        XCTAssertTrue(BrowserSignIns.keeps("spotify.com", domains: allowed))
+        XCTAssertTrue(BrowserSignIns.keeps("open.spotify.com", domains: allowed))
+        // WebKit names records by site, so a subdomain entry keeps its site's record.
+        XCTAssertTrue(BrowserSignIns.keeps("google.com", domains: allowed))
+        XCTAssertFalse(BrowserSignIns.keeps("notspotify.com", domains: allowed))
+        XCTAssertFalse(BrowserSignIns.keeps("wikipedia.org", domains: allowed))
+        XCTAssertFalse(BrowserSignIns.keeps("spotify.com", domains: []))
+    }
+
+    func testPruneKeepsOnlyAllowedCookies() async throws {
+        let store = WKWebsiteDataStore.nonPersistent()
+        for domain in [".spotify.com", ".example.org"] {
+            let cookie = try XCTUnwrap(HTTPCookie(properties: [.domain: domain, .path: "/", .name: "sid", .value: "1",
+                                                              .expires: Date().addingTimeInterval(3600)]))
+            await store.httpCookieStore.setCookie(cookie)
+        }
+        await BrowserSignIns.prune(store, keeping: ["spotify.com"])
+        let left = await store.httpCookieStore.allCookies().map(\.domain)
+        XCTAssertEqual(left, [".spotify.com"])
     }
 
     func testToolIsOfferedOnlyWhenEnabled() throws {

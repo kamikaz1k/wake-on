@@ -14,6 +14,8 @@ struct SimpleView: View {
     @AppStorage(BrowserTool.enabledKey) private var browserEnabled = true
     /// Screenshot/debug launch argument: open straight to the chat logs.
     @State private var openLogs = ProcessInfo.processInfo.arguments.contains("-chat-logs")
+    /// Screenshot launch argument: open straight to the browser's sign-in sites.
+    @State private var openSignIns = ProcessInfo.processInfo.arguments.contains("-sign-ins")
 
     var body: some View {
         NavigationStack {
@@ -28,6 +30,7 @@ struct SimpleView: View {
             .navigationTitle("Wake On")
             .navigationBarTitleDisplayMode(.inline)
             .navigationDestination(isPresented: $openLogs) { ChatLogsView() }
+            .navigationDestination(isPresented: $openSignIns) { BrowserSignInsView() }
         }
     }
 
@@ -109,6 +112,7 @@ struct SimpleView: View {
                     .accessibilityIdentifier("simple-hands-free")
                     Toggle("Lobby can use the browser", isOn: $browserEnabled)
                         .accessibilityIdentifier("simple-browser-enabled")
+                    BrowserSignInsLink()
                     Toggle("Keep screen on while charging", isOn: $awakeWhileCharging)
                         .accessibilityIdentifier("simple-awake-charging")
                     Picker(selection: $voiceName) {
@@ -124,7 +128,7 @@ struct SimpleView: View {
                     .accessibilityIdentifier("simple-visualizer")
                     APIKeyLink(voice: voice)
                 } header: { Text("Settings") } footer: {
-                    Text("Background listening hears “Hey Lobby”, even with the phone locked: say it and your request in one go. With the browser on, Lobby can open, search and read websites; sign-ins and cookies aren't kept. While charging, the screen stays on as long as Wake On is open.")
+                    Text("Background listening hears “Hey Lobby”, even with the phone locked: say it and your request in one go. With the browser on, Lobby can open, search and read websites; it keeps you signed in only to the sites you choose. While charging, the screen stays on as long as Wake On is open.")
                 }
             }
     }
