@@ -9,6 +9,24 @@ Learned the hard way in Oct–Nov 2026. Check facts still hold before relying on
 
 ## Build and install (phone)
 
+**Use the deploy script** (needs `dangerouslyDisableSandbox`):
+`python3 -I native/ios/scripts/deploy-phone.py [--check] [--launch] [--no-install]`.
+It reports profile expiry, builds, renews signing if the build fails on signing, and installs.
+Renewal order: an App Store Connect API key in `~/.appstoreconnect/wakeon.env` (Apple's
+headless method, the CI standard; none set up yet), then Xcode's saved account
+(`-allowProvisioningUpdates`), then the running Xcode app over AppleScript (open + build; Xcode
+renews with the account it holds). Tested 2026-11-14: normal deploy and the Xcode-app path both
+ran with no prompts.
+
+Why command-line builds said "No Accounts" (2026-11-14): Xcode's saved account list
+(`defaults read com.apple.dt.Xcode DVTDeveloperAccountManagerAppleIDLists`) is **empty**, while
+the Xcode app (running since 2026-07-12) still holds the account in memory. If Xcode quits, the
+app path stops working too, until the user signs in again in Xcode › Settings › Accounts (or an
+App Store Connect key is configured). Profiles now last 365 days (TimeToLive 365), which
+suggests the team is in the paid program now; the old Personal Team profiles lasted 7.
+
+Manual commands:
+
 ```sh
 cd native/ios
 export DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer   # xcode-select points at CLT
