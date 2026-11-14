@@ -6,7 +6,6 @@ struct VoiceSectionView: View {
     enum Part { case controls, details }
     @ObservedObject var voice: VoiceSessionController
     var part: Part = .controls
-    @State private var keyDraft = ""
     @AppStorage(VoiceVisualizerSettings.styleKey) private var visualizerStyle: VoiceVisualizerStyle = .skyOrb
     @AppStorage(VoiceVisualizerSettings.paletteKey) private var visualizerPalette = VoicePalette.default.name
     @AppStorage(VoiceSessionController.idleSecondsKey) private var idleSeconds = 10.0
@@ -70,17 +69,11 @@ struct VoiceSectionView: View {
             .accessibilityIdentifier("voice-idle-seconds")
         } header: { Text("Voice assistant") } footer: {
             Text("Assign Talk to Lobby to the Action Button: Settings › Action Button › Shortcut › Wake On. "
-                 + "Press it again to hang up. After the silence time, Lobby asks if there is anything else; "
-                 + "the call ends 2 s after that question with no answer, or 2 s after Lobby says bye.")
+                 + "Press it again to hang up. Lobby asks if there is anything else after an answer, or after "
+                 + "the silence time; the call ends 4 s after that question with no answer, or 2 s after Lobby says bye.")
         }
 
-        if voice.keySource == "missing" {
-            Section("OpenAI API key") {
-                SecureField("sk-…", text: $keyDraft).textContentType(.password)
-                Button("Save to Keychain") { voice.saveKey(keyDraft); keyDraft = "" }
-                    .disabled(keyDraft.isEmpty)
-            }
-        }
+        Section { APIKeyLink(voice: voice) }
 
     }
 
@@ -132,4 +125,54 @@ struct VoiceSectionView: View {
     }
 
     private static func ms(_ value: Double) -> String { String(format: "%.0f ms", value) }
+}
+
+/// A settings row that opens the OpenAI API key page, showing whether a key is set.
+struct APIKeyLink: View {
+    @ObservedObject var voice: VoiceSessionController
+
+    var body: some View {
+        NavigationLink {
+            APIKeyView(voice: voice)
+        } label: {
+            LabeledContent("OpenAI API key", value: voice.keySource == "missing" ? "Not set" : "Saved")
+        }
+        .accessibilityIdentifier("api-key-link")
+    }
+}
+
+/// The OpenAI API key: enter or replace it (saved to the Keychain), or remove it.
+struct APIKeyView: View {
+    @ObservedObject var voice: VoiceSessionController
+    @State private var keyDraft = ""
+
+    var body: some View {
+        Form {
+            Section {
+                SecureField(voice.keySource == "missing" ? "sk-…" : "New key", text: $keyDraft)
+                    .textContentType(.password)
+                    .accessibilityIdentifier("api-key-field")
+                Button("Save to Keychain") { voice.saveKey(keyDraft); keyDraft = "" }
+                    .disabled(keyDraft.isEmpty)
+            } footer: {
+                Text(status)
+            }
+            if voice.keySource == "keychain" {
+                Section {
+                    Button("Remove Key", role: .destructive) { voice.forgetKey() }
+                }
+            }
+        }
+        .navigationTitle("OpenAI API key")
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar(.hidden, for: .tabBar)
+    }
+
+    private var status: String {
+        switch voice.keySource {
+        case "keychain": "A key is saved in this iPhone's Keychain. Lobby needs it to talk."
+        case "environment": "Using the key from the launch environment (debug builds)."
+        default: "Lobby needs an OpenAI API key to talk. It's kept in this iPhone's Keychain."
+        }
+    }
 }

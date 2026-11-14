@@ -12,7 +12,6 @@ struct SimpleView: View {
     @AppStorage(ListenerSettings.Key.talkOnWake) private var talkOnWake = false
     @AppStorage(ScreenAwake.key) private var awakeWhileCharging = true
     @AppStorage(BrowserTool.enabledKey) private var browserEnabled = true
-    @State private var keyDraft = ""
     /// Screenshot/debug launch argument: open straight to the chat logs.
     @State private var openLogs = ProcessInfo.processInfo.arguments.contains("-chat-logs")
 
@@ -76,13 +75,6 @@ struct SimpleView: View {
                     Text("Or press the Action Button. Say “bye” or press it again to hang up.")
                 }
 
-                if voice.keySource == "missing" {
-                    Section("OpenAI API key") {
-                        SecureField("sk-…", text: $keyDraft).textContentType(.password)
-                        Button("Save to Keychain") { voice.saveKey(keyDraft); keyDraft = "" }
-                            .disabled(keyDraft.isEmpty)
-                    }
-                }
 
                 Section {
                     NavigationLink {
@@ -91,7 +83,7 @@ struct SimpleView: View {
                         LabeledContent {
                             Text("\(logs.logs.count)")
                         } label: {
-                            Text("Chat logs")
+                            Text("Chat history")
                         }
                     }
                     .accessibilityIdentifier("simple-chat-logs")
@@ -130,6 +122,7 @@ struct SimpleView: View {
                         LabeledContent("Visualizer", value: visualizerStyle.title)
                     }
                     .accessibilityIdentifier("simple-visualizer")
+                    APIKeyLink(voice: voice)
                 } header: { Text("Settings") } footer: {
                     Text("Background listening hears “Hey Lobby”, even with the phone locked: say it and your request in one go. With the browser on, Lobby can open, search and read websites; sign-ins and cookies aren't kept. While charging, the screen stays on as long as Wake On is open.")
                 }

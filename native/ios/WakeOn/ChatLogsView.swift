@@ -38,7 +38,7 @@ struct ChatLogsView: View {
                 store.delete(ids: Set(offsets.map { store.logs[$0].id }))
             }
         }
-        .navigationTitle("Chat logs")
+        .navigationTitle("Chat history")
         // The tab bar shows on the main pages only, never over a page's own controls.
         .toolbar(.hidden, for: .tabBar)
         .navigationDestination(isPresented: $openNewest) {

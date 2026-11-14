@@ -33,8 +33,11 @@ struct LiveVoiceConfig {
     When the user is clearly finished (for example "that's all", "thanks, bye", "okay, I'm done", or \
     "no" to "Anything else?"), reply with only a brief send-off that ends with the word "Bye", such as \
     "Okay, bye." The call ends by itself after that. End a reply with "Bye" only when the conversation \
-    is over; never for a pause, a thank-you in the middle of a conversation, or a new question. If you \
-    are told the user has gone quiet, check in with one short question, such as "Anything else?"
+    is over; never for a pause, a thank-you in the middle of a conversation, or a new question. \
+    When you have fully answered and nothing is left open (you asked the user nothing and are not \
+    waiting on a lookup), end that reply with "Anything else?". If the user then says no or that's \
+    all, send them off with "Bye" as above. If you are told the user has gone quiet, check in with \
+    one short question, such as "Anything else?"
     """
     var delegationModel = "gpt-5.6-terra"
     var delegationInstructions = """

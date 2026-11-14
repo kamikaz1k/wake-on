@@ -70,8 +70,10 @@ final class VoiceSessionController: ObservableObject {
     private var lastStatsPublish: Double = 0
     private var lastLevelLog: Double = 0
     private var serverEventCounts: [String: Int] = [:]
-    /// Silence before hanging up after Lobby says "Bye", or after it asks "Anything else?".
+    /// Silence before hanging up after Lobby says "Bye".
     static let endSilenceSeconds = 2.0
+    /// Silence before hanging up after Lobby asks "Anything else?": a moment to think of more.
+    static let checkInSilenceSeconds = 4.0
     private var goodbyeHeard = false
     /// Quiet time (no speech, no lookup) before checking in, and again before ending the call.
     static let idleSecondsKey = "voice.idleSeconds"
@@ -614,6 +616,15 @@ final class VoiceSessionController: ObservableObject {
             tracker.noteAssistantTranscript(at: seconds)
             appendTranscript("Lobby", json["delta"] as? String ?? "")
             if nudgedAt != nil { checkInSpoken = true }
+            // Lobby ends a finished answer with "Anything else?": the same as the idle check-in,
+            // so silence after it ends the call and an answer keeps it going.
+            if nudgedAt == nil, let line = transcript.last, line.speaker == "Lobby",
+               Self.endsWithCheckIn(line.text) {
+                nudgedAt = seconds
+                checkInSpoken = true
+                record("check_in_heard", at: time)
+                log("check-in heard: hanging up after \(Int(Self.checkInSilenceSeconds)) s of silence")
+            }
             // Follows Lobby's latest line: a reply that goes on after "bye", or a new reply to
             // something the user said after the goodbye, cancels the hang-up.
             let bye = transcript.last.map { $0.speaker == "Lobby" && Self.endsWithBye($0.text) } ?? false
@@ -1033,7 +1044,7 @@ final class VoiceSessionController: ObservableObject {
         if let nudged = nudgedAt {
             // Checked in and still no answer: end shortly after the question, or after the
             // full silence time if Lobby never asked it.
-            let answered = checkInSpoken ? quiet >= Self.endSilenceSeconds : time - nudged >= idle && quiet >= idle
+            let answered = checkInSpoken ? quiet >= Self.checkInSilenceSeconds : time - nudged >= idle && quiet >= idle
             guard answered else { return }
             log(String(format: "ending after no answer to check-in quietMs=%.0f", quiet * 1000))
             stop(reason: "idle")
@@ -1057,6 +1068,14 @@ final class VoiceSessionController: ObservableObject {
     }
     private var lastLobbyActive: Double?
     private var lastUserWordsAt: Double?
+
+    /// True when an assistant line ends by asking "Anything else?" (or "anything more").
+    nonisolated static func endsWithCheckIn(_ text: String) -> Bool {
+        let trimmed = text.lowercased().trimmingCharacters(in: .whitespacesAndNewlines)
+        guard trimmed.hasSuffix("?") else { return false }
+        let last = trimmed.split(whereSeparator: { ".!?".contains($0) }).last.map(String.init) ?? trimmed
+        return ["anything else", "anything more", "something else"].contains { last.contains($0) }
+    }
 
     /// True when an assistant line ends with the word "bye" ("Okay, bye.", "Bye-bye!").
     nonisolated static func endsWithBye(_ text: String) -> Bool {

@@ -27,4 +27,14 @@ final class GoodbyeTests: XCTestCase {
         XCTAssertTrue(VoiceSessionController.endsWithBye("Okay, bye!"))
         XCTAssertFalse(VoiceSessionController.endsWithBye("Bye now, but first: anything else?"))
     }
+
+    /// Lobby's check-in after an answer counts as the idle check-in; other questions don't.
+    func testCheckInQuestionIsRecognised() {
+        XCTAssertTrue(VoiceSessionController.endsWithCheckIn("It's 3 pm in Lagos. Anything else?"))
+        XCTAssertTrue(VoiceSessionController.endsWithCheckIn("Is there anything else I can help with?"))
+        XCTAssertFalse(VoiceSessionController.endsWithCheckIn("Anything else? Okay, which city?"))
+        XCTAssertFalse(VoiceSessionController.endsWithCheckIn("Which city do you mean?"))
+        XCTAssertFalse(VoiceSessionController.endsWithCheckIn("Anything else, just ask."))
+        XCTAssertGreaterThan(VoiceSessionController.checkInSilenceSeconds, VoiceSessionController.endSilenceSeconds)
+    }
 }

@@ -127,7 +127,11 @@ the log and run `native/ios/scripts/check-wake-handover.py <log>` (exit 1 = brok
   (room noise kept resetting it) and kept transcribing a side conversation. Only the user's
   transcribed words delay it; Lobby answering something new cancels it.
 - Idle check-in: after the configured silence Lobby asks "Anything else?", and the call ends
-  2 s after that with no answer.
+  4 s after that with no answer (`checkInSilenceSeconds`).
+- Since 2026-11-14 Lobby also ends a finished answer with "Anything else?" (instructions). The
+  app spots it (`endsWithCheckIn`, log `check-in heard`) and treats it as the idle check-in:
+  4 s of silence ends the call, any words keep it going. There is no end-call tool; ending
+  relies on these two phrases. Not tested on the phone yet.
 - A second Action Button press hangs up.
 
 ## Bluetooth, AirPods, routes
