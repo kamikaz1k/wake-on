@@ -65,6 +65,10 @@ xcrun devicectl device install app --device 5976CF6D-0FD6-5A57-9711-AA29F94404E7
   Wi-Fi didn't fix it. Both devices were on 5 GHz. The Mac moves between channels 44 and 149,
   and failures were ~2× likelier on 44, but the problem also happens on 149. Root cause
   unproven; the hub's device list (needs the admin login) showed stale band info for the Mac.
+- 2026-11-14: REACH/DISCOVERY failures all night (02:34 to at least 08:54, Mac on channel 44).
+  Turning Wi-Fi off and on **on both the phone and the Mac** fixed it at once (09:49, OK over
+  `localNetwork`, still channel 44). The Mac's signal there was weak (−69 dBm, MCS 1).
+  Try this before the cable; leaving and rejoining on the phone alone didn't help before.
 - Bonjour records have a 75-minute TTL, so `dns-sd` can show stale instances. tcpdump needs root.
 - **Practical fix: plug in the cable.** Pull logs before plugging in if you want to study a
   live Wi-Fi failure (plugging in tends to clear it).
