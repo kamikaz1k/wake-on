@@ -108,8 +108,7 @@ struct ChatLogRow: View {
         VStack(alignment: .leading, spacing: 3) {
             Text(log.title).lineLimit(2)
             HStack(spacing: 4) {
-                Text("\(log.started.formatted(date: .abbreviated, time: .shortened)) · \(log.source) · \(ChatTokens.label(tokens))"
-                     + (log.lookupTokens.map { " · lookup \(ChatTokens.label($0).dropFirst())" } ?? ""))
+                Text("\(log.started.formatted(.dateTime.month(.abbreviated).day().hour().minute())) · \(ChatTokens.label(tokens))")
                 if ChatTokens.level(tokens) != .ok {
                     Image(systemName: "exclamationmark.triangle.fill")
                         .symbolRenderingMode(.multicolor)

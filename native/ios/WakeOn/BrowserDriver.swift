@@ -442,6 +442,10 @@ struct BrowserSheet: View {
     @ObservedObject var browser: BrowserSession
     @ObservedObject var voice: VoiceSessionController = .shared
     @State private var address = ""
+    /// DEBUG `-lobby-demo`: cycles the Lobby control through its states without a call, for
+    /// recording the transitions (idle → live → working → paused → live → idle, 1.5 s apart).
+    @State private var demoMode: LobbyMode?
+    @State private var demoWorking = false
     @FocusState private var editing: Bool
     @Environment(\.colorScheme) private var systemScheme
     @AppStorage(VoiceVisualizerSettings.styleKey) private var visualizerStyle: VoiceVisualizerStyle = .skyOrb
@@ -454,10 +458,25 @@ struct BrowserSheet: View {
             .safeAreaInset(edge: .bottom) {
                 lobbyBar.padding(.bottom, 8)
             }
-            .animation(.default, value: browser.activity)
-            .animation(.default, value: voice.phase)
             .animation(.snappy(duration: 0.25), value: editing)
             .onChange(of: browser.url) { _, url in if !editing { address = url?.absoluteString ?? "" } }
+            #if DEBUG
+            .task {
+                guard ProcessInfo.processInfo.arguments.contains("-lobby-demo") else { return }
+                demoMode = .idle
+                let steps: [(LobbyMode, Bool, String)] = [(.live, true, "live+working"), (.live, false, "live"),
+                                                          (.paused, false, "paused"), (.live, false, "resumed"),
+                                                          (.idle, false, "idle")]
+                for round in 0..<2 {
+                    for (mode, working, name) in steps {
+                        try? await Task.sleep(for: .seconds(1.5))
+                        demoMode = mode
+                        demoWorking = working
+                        print("ACTION \(round) \(name) t=\(Date().timeIntervalSince1970)")
+                    }
+                }
+            }
+            #endif
     }
 
     /// Like Chrome's and Safari's: the bar takes the page's colour and runs up behind the status
@@ -573,77 +592,39 @@ struct BrowserSheet: View {
         return 0.299 * r + 0.587 * g + 0.114 * b < 0.55 ? .dark : .light
     }
 
-    /// Lobby in the browser. No call: the orb, which starts a call that knows this page is
-    /// open. During a call: what Lobby is doing (or that it's listening) and End.
-    @ViewBuilder private var lobbyBar: some View {
-        switch voice.phase {
-        case .idle where voice.pausedThread != nil:
-            // Paused: the call is over (nothing is billed) but the chat is kept.
-            HStack(spacing: 10) {
-                orb(32).accessibilityHidden(true)
-                Text("Lobby paused")
-                    .font(.subheadline.weight(.medium))
-                    .lineLimit(1)
-                    .accessibilityIdentifier("browser-paused")
-                if ChatTokens.level(voice.pausedTokens) != .ok {
-                    // Resuming will leave out (or soon leave out) the oldest parts.
-                    Image(systemName: "exclamationmark.triangle.fill")
-                        .symbolRenderingMode(.multicolor)
-                        .accessibilityLabel(ChatTokens.warning(voice.pausedTokens) ?? "Long chat")
-                }
-                Button("Resume", systemImage: "play.fill") {
-                    if let thread = voice.pausedThread { voice.resume(thread, trigger: "browser") }
-                }
-                .buttonStyle(.borderedProminent)
-                .buttonBorderShape(.capsule)
-                .controlSize(.small)
-                .accessibilityIdentifier("browser-resume-lobby")
-                Button("Start Over", systemImage: "xmark") { voice.forgetPause() }
-                    .labelStyle(.iconOnly)
-                    .buttonStyle(.bordered)
-                    .buttonBorderShape(.circle)
-                    .controlSize(.small)
-                    .accessibilityIdentifier("browser-forget-pause")
-            }
-            .padding(6)
-            .background(.regularMaterial, in: Capsule())
-        case .idle:
-            Button { voice.start(trigger: "browser") } label: {
-                orb(64)
-                    .shadow(color: .black.opacity(0.25), radius: 8, y: 3)
-            }
-            .buttonStyle(.plain)
-            .accessibilityLabel("Ask Lobby")
-            .accessibilityIdentifier("browser-ask-lobby")
-        case .connecting, .live, .ending:
-            HStack(spacing: 10) {
-                orb(32).accessibilityHidden(true)
-                Text(lobbyStatus)
-                    .font(.subheadline.weight(.medium))
-                    .lineLimit(1)
-                    .contentTransition(.opacity)
-                    .accessibilityIdentifier("browser-activity")
-                // Pause hangs up but keeps the chat, so a long read costs nothing.
-                Button("Pause", systemImage: "pause.fill") { voice.pause() }
-                    .labelStyle(.iconOnly)
-                    .buttonStyle(.bordered)
-                    .buttonBorderShape(.circle)
-                    .controlSize(.small)
-                    .disabled(voice.phase == .ending)
-                    .accessibilityIdentifier("browser-pause-lobby")
-                Button("End", systemImage: "xmark") { voice.stop() }
-                    .labelStyle(.iconOnly)
-                    .buttonStyle(.bordered)
-                    .buttonBorderShape(.circle)
-                    .controlSize(.small)
-                    .disabled(voice.phase == .ending)
-                    .accessibilityIdentifier("browser-end-lobby")
-            }
-            .padding(.leading, 6)
-            .padding(.trailing, 6)
-            .padding(.vertical, 6)
-            .background(.regularMaterial, in: Capsule())
+    /// Lobby in the browser, one state for the whole control (see `LobbyControl`).
+    private var lobbyMode: LobbyMode {
+        if let demoMode { return demoMode }
+        return switch voice.phase {
+        case .idle: voice.pausedThread == nil ? .idle : .paused
+        case .connecting, .live, .ending: .live
         }
+    }
+
+    /// Lobby in the browser: the orb alone, which starts a call that knows this page is open;
+    /// during a call it shrinks to the left of a capsule that grows out of it with Pause and
+    /// Stop; paused, Pause flips over to Resume. No labels: the orb moves with Lobby's voice,
+    /// and a spinner on it means Lobby is connecting or working on the page.
+    private var lobbyBar: some View {
+        let mode = lobbyMode
+        let working = demoWorking || voice.phase == .connecting || voice.phase == .ending
+            || (voice.phase == .live && browser.activity != nil)
+        return LobbyControl(mode: mode, working: working, orb: { orb($0) },
+                            tapOrb: {
+                                switch mode {
+                                case .idle: voice.start(trigger: "browser")
+                                case .paused: if let thread = voice.pausedThread { voice.resume(thread, trigger: "browser") }
+                                case .live: break
+                                }
+                            },
+                            pauseOrResume: {
+                                if mode == .paused, let thread = voice.pausedThread { voice.resume(thread, trigger: "browser") }
+                                else { voice.pause() }
+                            },
+                            stop: { mode == .paused ? voice.forgetPause() : voice.stop() },
+                            disabled: voice.phase == .ending,
+                            longChat: mode == .paused && ChatTokens.level(voice.pausedTokens) != .ok)
+            .accessibilityValue(lobbyStatus)
     }
 
     /// The visualizer picked in settings, as on the call screen, in a circle `size` wide. The
@@ -658,11 +639,13 @@ struct BrowserSheet: View {
             .clipShape(Circle())
     }
 
+    /// For VoiceOver only; the control itself has no text.
     private var lobbyStatus: String {
         switch voice.phase {
-        case .connecting: "Connecting to Lobby…"
-        case .ending: "Ending…"
-        default: browser.activity ?? "Lobby is listening"
+        case .connecting: "Connecting to Lobby"
+        case .ending: "Ending"
+        case .live: browser.activity ?? "Lobby is listening"
+        case .idle: voice.pausedThread == nil ? "" : "Lobby paused"
         }
     }
 }
@@ -671,4 +654,124 @@ private struct BrowserWebView: UIViewRepresentable {
     let webView: WKWebView
     func makeUIView(context: Context) -> WKWebView { webView }
     func updateUIView(_ view: WKWebView, context: Context) {}
+}
+
+/// The floating Lobby control in the browser. One value (`mode`) drives one spring:
+/// - idle: the orb alone, large;
+/// - live: the orb shrinks to the left and the capsule grows out of it, uncovering Pause and
+///   Stop (they're clipped by the capsule, never faded);
+/// - paused: Pause flips over (a card turn) to Resume.
+enum LobbyMode { case idle, live, paused }
+
+/// Sizes of the floating Lobby control, in points.
+private enum LobbyMetrics {
+    static let idleSize: CGFloat = 64
+    static let orbSize: CGFloat = 40
+    static let buttonSize: CGFloat = 40
+    static let gap: CGFloat = 8
+    static let inset: CGFloat = 6
+    /// Concrete widths at both ends, so the capsule interpolates between two numbers.
+    static let openWidth: CGFloat = inset + orbSize + gap + buttonSize + gap + buttonSize + inset
+}
+
+struct LobbyControl<Orb: View>: View {
+    let mode: LobbyMode
+    /// Lobby is connecting, ending or acting on the page: a spinner on the orb.
+    let working: Bool
+    @ViewBuilder let orb: (CGFloat) -> Orb
+    let tapOrb: () -> Void
+    let pauseOrResume: () -> Void
+    let stop: () -> Void
+    var disabled = false
+    /// Resuming would leave out the oldest parts: the orb gets a warning badge.
+    var longChat = false
+
+    private var open: Bool { mode != .idle }
+
+    var body: some View {
+        HStack(spacing: LobbyMetrics.gap) {
+            Button(action: tapOrb) {
+                orb(open ? LobbyMetrics.orbSize : LobbyMetrics.idleSize)
+                    .overlay {
+                        if working { ProgressView().tint(.white).transaction { $0.animation = nil } }
+                    }
+                    .overlay(alignment: .topTrailing) {
+                        if longChat {
+                            Image(systemName: "exclamationmark.triangle.fill")
+                                .symbolRenderingMode(.multicolor)
+                                .font(.caption2)
+                                .accessibilityLabel(ChatTokens.warning(ChatTokens.limit + 1) ?? "Long chat")
+                        }
+                    }
+            }
+            .buttonStyle(.plain)
+            .disabled(mode == .live)
+            .accessibilityLabel(mode == .paused ? "Resume Lobby" : "Ask Lobby")
+            .accessibilityIdentifier("browser-ask-lobby")
+            // Always laid out; the capsule's width uncovers them.
+            FlipButton(flipped: mode == .paused, action: pauseOrResume)
+                .disabled(disabled || !open)
+            Button(action: stop) {
+                Image(systemName: "xmark").font(.body.weight(.semibold)).frame(width: LobbyMetrics.buttonSize, height: LobbyMetrics.buttonSize)
+            }
+            .buttonStyle(.plain)
+            .background(.fill.secondary, in: Circle())
+            .disabled(disabled || !open)
+            .accessibilityLabel(mode == .paused ? "Start Over" : "Stop")
+            .accessibilityIdentifier(mode == .paused ? "browser-forget-pause" : "browser-end-lobby")
+        }
+        .accessibilityElement(children: open ? .contain : .ignore)
+        .accessibilityAddTraits(open ? [] : .isButton)
+        .accessibilityLabel(open ? "" : "Ask Lobby")
+        .padding(open ? LobbyMetrics.inset : 0)
+        .frame(width: open ? LobbyMetrics.openWidth : LobbyMetrics.idleSize, alignment: .leading)
+        .clipShape(Capsule())
+        .background(Capsule().fill(.regularMaterial))
+        .shadow(color: .black.opacity(0.25), radius: 8, y: 3)
+        .animation(.spring(duration: 0.45, bounce: 0.25), value: mode)
+    }
+}
+
+/// Pause on the front, Resume on the back; changing `flipped` turns it over like a card.
+private struct FlipButton: View {
+    let flipped: Bool
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            ZStack {
+                face("pause.fill").modifier(FlipFace(angle: flipped ? 180 : 0, back: false))
+                face("play.fill").modifier(FlipFace(angle: flipped ? 180 : 0, back: true))
+            }
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(flipped ? "Resume" : "Pause")
+        .accessibilityIdentifier(flipped ? "browser-resume-lobby" : "browser-pause-lobby")
+    }
+
+    private func face(_ symbol: String) -> some View {
+        Image(systemName: symbol)
+            .font(.body.weight(.semibold))
+            .frame(width: LobbyMetrics.buttonSize, height: LobbyMetrics.buttonSize)
+            .background(.fill.secondary, in: Circle())
+    }
+}
+
+/// One side of a card turning around its horizontal axis. Animatable, so each frame knows
+/// the angle and shows only the side facing the viewer (no cross-fade).
+private struct FlipFace: ViewModifier, Animatable {
+    var angle: Double
+    let back: Bool
+    var animatableData: Double {
+        get { angle }
+        set { angle = newValue }
+    }
+
+    func body(content: Content) -> some View {
+        let facing = back ? angle >= 90 : angle < 90
+        content
+            .rotation3DEffect(.degrees(back ? angle - 180 : angle), axis: (x: 1, y: 0, z: 0), perspective: 0.5)
+            .opacity(facing ? 1 : 0)
+            .allowsHitTesting(facing)
+    }
 }
