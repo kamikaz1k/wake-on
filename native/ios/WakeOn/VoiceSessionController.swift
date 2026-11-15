@@ -17,7 +17,7 @@ final class VoiceSessionController: ObservableObject {
     static let shared = VoiceSessionController()
 
     enum Phase: Equatable { case idle, connecting, live, ending }
-    enum Probe: String { case greeting, search, spotify, youtube, remember, recall, pause, visual, map, place, browser }
+    enum Probe: String { case greeting, search, spotify, youtube, remember, recall, volume, pause, visual, map, place, browser }
 
     struct TimelineRow: Identifiable { let id = UUID(); let name: String; let ms: Double }
     struct TranscriptLine: Identifiable { let id = UUID(); let speaker: String; var text: String }
@@ -776,6 +776,12 @@ final class VoiceSessionController: ObservableObject {
             result = "Sent \(command.rawValue) to whatever is playing; the call is ending."
             pendingMedia = command
             action = ["kind": "media", "command": command.rawValue]
+        } else if name == VolumeControl.toolName,
+                  let request = VolumeControl.request(change: arguments["change"] as? String ?? "",
+                                                      level: arguments["level"] as? Int ?? 0) {
+            result = "Turning the volume \(request.description); the call is ending."
+            pendingVolume = request
+            action = ["kind": "volume", "change": request.change.rawValue, "level": request.level]
         } else if name == MapsOpener.toolName,
                   let request = MapsOpener.request(place: arguments["place"] as? String ?? "",
                                                    address: arguments["address"] as? String ?? "",
@@ -823,6 +829,8 @@ final class VoiceSessionController: ObservableObject {
         if pendingSpotify != nil { stop(reason: "spotify") }
         if pendingYouTube != nil { stop(reason: "youtube") }
         if pendingMedia != nil { stop(reason: "media") }
+        // During a call the volume is the call's; set it once the call is over.
+        if pendingVolume != nil { stop(reason: "volume") }
         // Leaving for Google Maps: hang up first, as for Spotify, then open it (finishCall).
         if pendingMap != nil { stop(reason: "maps") }
     }
@@ -883,6 +891,8 @@ final class VoiceSessionController: ObservableObject {
     /// Sent once the call has ended. An exclusive (foreground) call pauses other apps, which may
     /// resume by themselves when it ends, so the command waits for that to settle.
     private var pendingMedia: MediaControl.Command?
+    /// Applied once the call has ended, when the volume is media volume again.
+    private var pendingVolume: VolumeControl.Request?
 
     private func appendTranscript(_ speaker: String, _ delta: String) {
         guard !delta.isEmpty else { return }
@@ -1035,13 +1045,14 @@ final class VoiceSessionController: ObservableObject {
         case .greeting:
             provider?.send(["type": "session.commentary.append", "delegation_id": NSNull(),
                             "content": "Greet the user in five words or fewer."])
-        case .search, .spotify, .youtube, .remember, .recall, .pause, .visual, .map, .place, .browser:
+        case .search, .spotify, .youtube, .remember, .recall, .volume, .pause, .visual, .map, .place, .browser:
             let text = switch probe {
             case .search: "Search the web: what is the current weather in Toronto?"
             case .spotify: "Play Blinding Lights by The Weeknd on Spotify."
             case .youtube: "Play the official Never Gonna Give You Up video on YouTube."
             case .remember: "Remember this code word for later: pineapple. Just say okay."
             case .recall: "What was the code word I told you earlier?"
+            case .volume: "Set the music volume to 30 percent."
             case .visual: "Show me a chart of the forecast high in Toronto for the next five days."
             case .map: "Give me directions to the CN Tower in Google Maps."
             case .place: "Where is the CN Tower?"
@@ -1213,6 +1224,7 @@ final class VoiceSessionController: ObservableObject {
                                     "spotify_pending": pendingSpotify != nil,
                                     "youtube_pending": pendingYouTube != nil,
                                     "media_pending": pendingMedia?.rawValue ?? NSNull(),
+                                    "volume_pending": pendingVolume?.description ?? NSNull(),
                                     "map_pending": pendingMap != nil])
         let chatLog = ChatLog(id: capture?.id ?? UUID(), started: callStartedAt, ended: Date(), trigger: callTrigger,
                               lines: lines, resumes: resuming?.id,
@@ -1281,6 +1293,18 @@ final class VoiceSessionController: ObservableObject {
                 try? await Task.sleep(for: .milliseconds(1000))
                 MediaControl.run(command)
                 laterCapture?.app("media_command", ["command": command.rawValue, "repeat": true])
+            }
+        }
+        if let volume = pendingVolume {
+            pendingVolume = nil
+            Task {
+                // Let the call's audio session go (its volume is the call's) before setting it.
+                try? await Task.sleep(for: .milliseconds(800))
+                VolumeControl.apply(volume) { change in
+                    laterCapture?.app("volume_set", ["request": volume.description,
+                                                     "before": change.map { Double($0.0) } ?? NSNull(),
+                                                     "after": change.map { Double($0.1) } ?? NSNull()])
+                }
             }
         }
         if let spotify = pendingSpotify {

@@ -97,7 +97,14 @@ struct WakeOnApp: App {
                     if let index = args.firstIndex(of: "--voice"), index + 1 < args.count {
                         UserDefaults.standard.set(args[index + 1], forKey: LiveVoiceConfig.voiceKey)
                     }
-                    if let index = args.firstIndex(of: "--media"), index + 1 < args.count {
+                    if let index = args.firstIndex(of: "--volume"), index + 1 < args.count, let level = Int(args[index + 1]) {
+                        // --volume N [--media-delay S] [--autostart]: set the volume without a call.
+                        let delay = args.firstIndex(of: "--media-delay").flatMap { $0 + 1 < args.count ? Double(args[$0 + 1]) : nil } ?? 1
+                        if args.contains("--autostart") { controller.start() }
+                        DispatchQueue.main.asyncAfter(deadline: .now() + delay) {
+                            if let request = VolumeControl.request(change: "set", level: level) { VolumeControl.apply(request) }
+                        }
+                    } else if let index = args.firstIndex(of: "--media"), index + 1 < args.count {
                         // --media pause|play|next|previous: send it without a call (MediaControl).
                         let delay = args.firstIndex(of: "--media-delay").flatMap { $0 + 1 < args.count ? Double(args[$0 + 1]) : nil } ?? 0
                         // With the listener on, the app keeps running in the background, so the

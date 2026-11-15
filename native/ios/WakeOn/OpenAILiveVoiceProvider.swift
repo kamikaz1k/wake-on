@@ -55,6 +55,8 @@ struct LiveVoiceConfig {
     var youtube = true
     /// The control_media tool: pause, resume, skip whatever is playing (see MediaControl).
     var mediaControl = true
+    /// The set_volume tool (see VolumeControl).
+    var volume = true
     /// The open_map tool: directions or a place in Google Maps (see MapsOpener).
     var maps = true
     /// The show_visual tool: an HTML page shown in the chat (see ShowVisual).
@@ -73,6 +75,7 @@ struct LiveVoiceConfig {
         if spotify { text += " " + SpotifyPlayer.delegationInstructions }
         if youtube { text += " " + YouTubePlayer.delegationInstructions }
         if mediaControl { text += " " + MediaControl.delegationInstructions }
+        if volume { text += " " + VolumeControl.delegationInstructions }
         if maps { text += " " + MapsOpener.delegationInstructions }
         if visuals { text += " " + ShowVisual.delegationInstructions }
         if browser { text += " " + BrowserTool.delegationInstructions }
@@ -121,6 +124,7 @@ struct LiveVoiceConfig {
         if spotify { tools.append(SpotifyPlayer.tool) }
         if youtube { tools.append(YouTubePlayer.tool) }
         if mediaControl { tools.append(MediaControl.tool) }
+        if volume { tools.append(VolumeControl.tool) }
         if maps { tools.append(MapsOpener.tool) }
         if visuals { tools.append(ShowVisual.tool) }
         if browser { tools.append(BrowserTool.tool) }

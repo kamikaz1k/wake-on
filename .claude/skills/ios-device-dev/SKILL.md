@@ -152,6 +152,13 @@ xcrun devicectl device install app --device 5976CF6D-0FD6-5A57-9711-AA29F94404E7
   opening `spotify:track:<id>` starts playback right away. Test without speaking:
   `devicectl device process launch --terminate-existing dev.wakeon.ios --talk spotify`.
   The `spotify_open` log line may be missing because the app is suspended as Spotify opens.
+- **Volume (built 2026-11-15):** `set_volume` (`VolumeControl.swift`) moves the slider of a
+  hidden `MPVolumeView` (off screen, alpha 0.01, in the key window; it builds its slider a
+  layout pass later), the only way to set system volume. Applied 0.8 s after the call hangs
+  up, since during a call the volume is the call's. Read the current volume from the slider:
+  `AVAudioSession.outputVolume` was stale on a fresh launch (0.55 right after setting 0.30)
+  and right after a call. Verified on the phone in the foreground (`--volume N`,
+  `--talk volume`); from the background (Hey Lobby, locked) not tried.
 - **YouTube (built 2026-11-15):** `play_youtube` works like `play_spotify`
   (`YouTubePlayer.swift`): the backend finds the youtube.com link, the app hangs up and opens
   `https://www.youtube.com/watch?v=<id>` as a universal link (the YouTube app, no prompt;

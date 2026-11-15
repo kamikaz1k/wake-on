@@ -245,6 +245,17 @@
 			<key>isa</key>
 			<string>PBXBuildFile</string>
 		</dict>
+		<key>142B9894125D9D38AEB912D4</key>
+		<dict>
+			<key>isa</key>
+			<string>PBXFileReference</string>
+			<key>lastKnownFileType</key>
+			<string>sourcecode.swift</string>
+			<key>path</key>
+			<string>WakeOn/VolumeControl.swift</string>
+			<key>sourceTree</key>
+			<string>&lt;group&gt;</string>
+		</dict>
 		<key>16D192099562F3F2D2F00BAC</key>
 		<dict>
 			<key>isa</key>
@@ -540,6 +551,17 @@
 			<string>BEE981B64F5E0E5875912826</string>
 			<key>isa</key>
 			<string>PBXBuildFile</string>
+		</dict>
+		<key>2E545DB2B33544DCA737631F</key>
+		<dict>
+			<key>isa</key>
+			<string>PBXFileReference</string>
+			<key>lastKnownFileType</key>
+			<string>sourcecode.swift</string>
+			<key>path</key>
+			<string>Tests/VolumeControlTests.swift</string>
+			<key>sourceTree</key>
+			<string>&lt;group&gt;</string>
 		</dict>
 		<key>2F254AB562BEFDB66262B1D5</key>
 		<dict>
@@ -1464,6 +1486,7 @@
 				<string>D20988A742E8A10B39F7CB23</string>
 				<string>5D951E7614C0C6E073261858</string>
 				<string>0F3BF8A23D1FDE6611CE4A9A</string>
+				<string>90753FC2075A845797E6B92C</string>
 				<string>06EC84C75A1861F3AB6AD29C</string>
 				<string>FAE36BAEF99FF63E87FE6598</string>
 				<string>7EF1F34084C4FEA92F209E15</string>
@@ -1715,6 +1738,13 @@
 			<string>38A007151ABE87CC01A5B6E9</string>
 			<key>productType</key>
 			<string>com.apple.product-type.application</string>
+		</dict>
+		<key>7E62AF77FBD937977C52507A</key>
+		<dict>
+			<key>fileRef</key>
+			<string>142B9894125D9D38AEB912D4</string>
+			<key>isa</key>
+			<string>PBXBuildFile</string>
 		</dict>
 		<key>7EF1F34084C4FEA92F209E15</key>
 		<dict>
@@ -2002,6 +2032,13 @@
 			<string>Resources/encoder.onnx</string>
 			<key>sourceTree</key>
 			<string>&lt;group&gt;</string>
+		</dict>
+		<key>90753FC2075A845797E6B92C</key>
+		<dict>
+			<key>fileRef</key>
+			<string>2E545DB2B33544DCA737631F</string>
+			<key>isa</key>
+			<string>PBXBuildFile</string>
 		</dict>
 		<key>9110FBD39FF0D78D02E3C2CA</key>
 		<dict>
@@ -2466,6 +2503,7 @@
 				<string>B25C341EA2F712E25C458EC9</string>
 				<string>5D69C6E58D4481C84AD14096</string>
 				<string>C1A248E97250536E9457FB6A</string>
+				<string>7E62AF77FBD937977C52507A</string>
 				<string>DDB2574CFA5C25FCC5D10F1B</string>
 				<string>92404B1FF440E3A7B6630303</string>
 				<string>2F254AB562BEFDB66262B1D5</string>
@@ -2948,6 +2986,7 @@
 				<string>CA35135A887A9C332D00398C</string>
 				<string>CFBEB6CB84730A0BF5F268E7</string>
 				<string>524F3925915545FFD660FF3F</string>
+				<string>142B9894125D9D38AEB912D4</string>
 				<string>5F8D1447DF26309D45C4CBCF</string>
 				<string>F36E746150097572D76CB5C2</string>
 				<string>43916129615D067FEEB4464D</string>
@@ -2975,6 +3014,7 @@
 				<string>D9C92472F248312173947DD4</string>
 				<string>52D89FA008323E37BA1BDF3D</string>
 				<string>4F39308818B726E435B8F2A1</string>
+				<string>2E545DB2B33544DCA737631F</string>
 				<string>579F4EE51E22157FC1503151</string>
 				<string>E131C259A818D1A0E21BDDCC</string>
 				<string>824423B4466B91132C7B051F</string>
