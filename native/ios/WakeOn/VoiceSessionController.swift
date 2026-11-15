@@ -716,8 +716,9 @@ final class VoiceSessionController: ObservableObject {
             provider?.close(reason: reason)
         case "error":
             let message = ((json["error"] as? [String: Any])?["message"] as? String) ?? "Unknown error"
-            log("server error \(message)")
-            error = message
+            let shown = Self.userFacingError(message, hangingUp: phase == .ending || stopReason != nil)
+            log("server error \(message)" + (shown == nil ? " (after hang-up, not shown)" : ""))
+            if let shown { error = shown }
         case "info":
             log("info \(json["code"] as? String ?? "") \(json["message"] as? String ?? "")")
         default:
@@ -1115,6 +1116,17 @@ final class VoiceSessionController: ObservableObject {
             provider?.sendCommentary("The user has been quiet for \(Int(idle)) seconds. "
                 + "Check in with one short question, such as \"Anything else?\"")
         }
+    }
+
+    /// What to show for a server error, or nil to only log it. Once the app has hung up,
+    /// errors are about the session closing early (hanging up within a second gives "The session
+    /// closed before the estimated context injection completed."): nothing the user can act on.
+    nonisolated static func userFacingError(_ message: String, hangingUp: Bool) -> String? {
+        guard !hangingUp else { return nil }
+        if message.localizedCaseInsensitiveContains("context injection") {
+            return "Lobby was still getting ready when the call ended. Try again."
+        }
+        return message
     }
 
     // MARK: - Pause and resume

@@ -78,6 +78,16 @@ final class ResumeChatTests: XCTestCase {
         XCTAssertNil(VoiceSessionController.inputTokens(["type": "response.event", "event": ["type": "response.completed"]]))
     }
 
+    func testErrorsAfterHangingUpAreNotShown() {
+        let early = "The session closed before the estimated context injection completed."
+        XCTAssertNil(VoiceSessionController.userFacingError(early, hangingUp: true))
+        XCTAssertNil(VoiceSessionController.userFacingError("Anything", hangingUp: true))
+        // If the server closes it by itself: a plain explanation instead of the raw message.
+        XCTAssertEqual(VoiceSessionController.userFacingError(early, hangingUp: false),
+                       "Lobby was still getting ready when the call ended. Try again.")
+        XCTAssertEqual(VoiceSessionController.userFacingError("Invalid API key", hangingUp: false), "Invalid API key")
+    }
+
     func testOnlyPauseAndIdleInTheBrowserKeepTheChat() {
         XCTAssertTrue(VoiceSessionController.pausesThread(reason: "paused", browserOpen: true))
         XCTAssertTrue(VoiceSessionController.pausesThread(reason: "idle", browserOpen: true))
