@@ -5,73 +5,13 @@ import SwiftUI
 /// cards, live status). Each renderer places these wherever its library accepts a custom
 /// view, so differences between pages come from the libraries, not from our styling.
 
+/// One tool call on its own (Chat Lab's library pages place rows one by one): a chain of one
+/// step, collapsed once it's done. Lobby's own view groups a turn's calls (`ChatToolChain`).
 struct ChatToolRow: View {
     let tool: ChatItem.Tool
-    @State private var expanded = false
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            Button {
-                withAnimation(.snappy) { expanded.toggle() }
-            } label: {
-                HStack(spacing: 8) {
-                    stateIcon
-                    Text(title).font(.subheadline.weight(.medium))
-                        .shimmering(tool.state == .running || tool.state == .requested)
-                    Spacer()
-                    Image(systemName: "chevron.right").font(.caption.weight(.semibold))
-                        .rotationEffect(.degrees(expanded ? 90 : 0))
-                        .foregroundStyle(.tertiary)
-                }
-                .contentShape(Rectangle())
-            }
-            .buttonStyle(.plain)
-            if expanded {
-                LabeledContent("Arguments") { Text(tool.arguments).font(.caption.monospaced()).textSelection(.enabled) }
-                    .font(.caption)
-                if let result = tool.result {
-                    LabeledContent("Result") { Text(result).font(.caption.monospaced()).textSelection(.enabled) }
-                        .font(.caption)
-                }
-            }
-            if !tool.sources.isEmpty {
-                ScrollView(.horizontal, showsIndicators: false) {
-                    HStack {
-                        ForEach(tool.sources, id: \.self) { source in
-                            if let url = URL(string: source.url) {
-                                Link(destination: url) {
-                                    Label(source.title, systemImage: "link").font(.caption)
-                                        .padding(.horizontal, 8).padding(.vertical, 4)
-                                        .background(.thinMaterial, in: Capsule())
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
-        .padding(10)
-        .background(Color(.secondarySystemBackground), in: RoundedRectangle(cornerRadius: 12))
-        .accessibilityElement(children: .combine)
-    }
-
-    private var title: String {
-        let name = tool.name.replacingOccurrences(of: "_", with: " ")
-        switch tool.state {
-        case .requested: return "Asking to \(name)…"
-        case .running: return "Running \(name)…"
-        case .done: return "\(name.capitalized(with: nil)) · done"
-        case .failed: return "\(name.capitalized(with: nil)) · failed"
-        }
-    }
-
-    @ViewBuilder private var stateIcon: some View {
-        switch tool.state {
-        case .requested: Image(systemName: "clock").foregroundStyle(.secondary)
-        case .running: ProgressView().controlSize(.mini)
-        case .done: Image(systemName: "checkmark.circle.fill").foregroundStyle(.green)
-        case .failed: Image(systemName: "exclamationmark.triangle.fill").foregroundStyle(.orange)
-        }
+        ChatToolChain(tools: [tool], finished: tool.state == .done || tool.state == .failed)
     }
 }
 

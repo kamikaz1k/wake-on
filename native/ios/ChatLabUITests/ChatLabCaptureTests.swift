@@ -13,9 +13,11 @@ final class ChatLabCaptureTests: XCTestCase {
         }
         XCTAssertTrue(shows("Play Come Sail Away by Styx."), "your words")
         XCTAssertTrue(shows("One moment."), "Lobby's filler")
-        XCTAssertTrue(shows("Web Search · done"), "web search row")
-        XCTAssertTrue(shows("Play Spotify · done"), "play_spotify row with our result")
-        XCTAssertTrue(shows("Open In Spotify · done"), "the app opening Spotify, as a tool row")
+        // Finished tool calls collapse to one quiet summary line each (ChatToolChain).
+        XCTAssertTrue(shows("Searched the web"), "web search row")
+        XCTAssertTrue(shows("Opened Spotify"), "play_spotify row")
+        let spotifyRows = app.descendants(matching: .any).matching(NSPredicate(format: "label CONTAINS %@", "Opened Spotify"))
+        XCTAssertGreaterThanOrEqual(spotifyRows.count, 2, "play_spotify and the app opening Spotify, each a row")
         XCTAssertTrue(shows("ended to play on Spotify"), "why the call ended")
     }
 

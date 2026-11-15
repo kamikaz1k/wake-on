@@ -253,13 +253,68 @@ private struct TurnView: View {
     let status: String?
 
     var body: some View {
+        let segments = ChatToolGrouping.segments(turn.items, live: status != nil)
         VStack(alignment: .leading, spacing: 12) {
-            ForEach(Array(turn.items.enumerated()), id: \.element.id) { index, item in
-                let startsLobbyRun = item.speaker == .lobby && (index == 0 || turn.items[index - 1].speaker != .lobby)
-                PlainRow(item: item, showName: startsLobbyRun)
+            ForEach(segments) { segment in
+                switch segment.content {
+                case let .item(index):
+                    let item = turn.items[index]
+                    let startsLobbyRun = item.speaker == .lobby
+                        && (index == 0 || turn.items[index - 1].speaker != .lobby)
+                    PlainRow(item: item, showName: startsLobbyRun)
+                case let .tools(tools, finished):
+                    ChatToolChain(tools: tools, finished: finished).padding(.horizontal, 4)
+                }
             }
-            if let status { ChatStatusLine(text: status).padding(.leading, 4) }
+            // A running chain already shows what Lobby is doing; the status line would repeat it.
+            if let status, !ChatToolGrouping.endsWithRunningChain(segments) {
+                ChatStatusLine(text: status).padding(.leading, 4)
+            }
         }
+    }
+}
+
+/// Runs of plain tool calls (not visuals or maps, which show their own content) become one
+/// chain. A chain is finished once all its steps are and the turn has moved on past it
+/// (something follows it, or the turn isn't live).
+enum ChatToolGrouping {
+    struct Segment: Identifiable {
+        enum Content { case item(Int), tools([ChatItem.Tool], finished: Bool) }
+        let id: String
+        let content: Content
+    }
+
+    static func isChainable(_ item: ChatItem) -> ChatItem.Tool? {
+        guard case let .tool(tool) = item.kind, tool.visual == nil, tool.place == nil else { return nil }
+        return tool
+    }
+
+    static func endsWithRunningChain(_ segments: [Segment]) -> Bool {
+        if case let .tools(_, finished) = segments.last?.content { return !finished }
+        return false
+    }
+
+    static func segments(_ items: [ChatItem], live: Bool) -> [Segment] {
+        var result: [Segment] = []
+        var index = 0
+        while index < items.count {
+            guard isChainable(items[index]) != nil else {
+                result.append(Segment(id: items[index].id, content: .item(index)))
+                index += 1
+                continue
+            }
+            let start = index
+            var tools: [ChatItem.Tool] = []
+            while index < items.count, let tool = isChainable(items[index]) {
+                tools.append(tool)
+                index += 1
+            }
+            let allDone = tools.allSatisfy { $0.state == .done || $0.state == .failed }
+            let movedOn = index < items.count || !live
+            // Keyed by its first step, so the chain keeps its state as steps are added.
+            result.append(Segment(id: "chain-" + items[start].id, content: .tools(tools, finished: allDone && movedOn)))
+        }
+        return result
     }
 }
 

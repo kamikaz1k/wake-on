@@ -173,6 +173,23 @@ struct CaptureReplay {
             default: "Spotify didn't open"
             }
             updateTool("spotify-open") { $0.result = result; $0.state = outcome == "failed" ? .failed : .done }
+        case "app.youtube_open":
+            let title = e["title"] as? String ?? "YouTube"
+            var tool = ChatItem.Tool(name: "open_in_youtube",
+                                    arguments: [title, e["web_url"] as? String].compactMap { $0 }.joined(separator: "\n"),
+                                    result: nil, state: .running)
+            if let web = e["web_url"] as? String { tool.sources = [.init(title: title, url: web)] }
+            addTool("youtube-open", tool)
+        case "app.youtube_opened":
+            let outcome = e["outcome"] as? String ?? ""
+            let result = switch outcome {
+            case "universal_link": "Opened in YouTube (youtube.com link)"
+            case "app_link": "Opened in YouTube (youtube: link)"
+            case "safari": "YouTube isn't installed: opened it in Safari"
+            case "notification": "Wake On was in the background: posted a notification to tap"
+            default: "YouTube didn't open"
+            }
+            updateTool("youtube-open") { $0.result = result; $0.state = outcome == "failed" ? .failed : .done }
         case "app.map_open":
             let title = e["title"] as? String ?? "Google Maps"
             let directions = e["mode"] as? String == "directions"
