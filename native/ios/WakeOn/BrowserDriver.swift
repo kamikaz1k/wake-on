@@ -670,6 +670,9 @@ private enum LobbyMetrics {
     static let buttonSize: CGFloat = 40
     static let gap: CGFloat = 8
     static let inset: CGFloat = 6
+    static let openHeight: CGFloat = inset + orbSize + inset
+    /// Buttons on the black pill: a faint white disc, as on the Dynamic Island's controls.
+    static let buttonFill = Color.white.opacity(0.16)
     /// Concrete widths at both ends, so the capsule interpolates between two numbers.
     static let openWidth: CGFloat = inset + orbSize + gap + buttonSize + gap + buttonSize + inset
 }
@@ -708,27 +711,36 @@ struct LobbyControl<Orb: View>: View {
             .disabled(mode == .live)
             .accessibilityLabel(mode == .paused ? "Resume Lobby" : "Ask Lobby")
             .accessibilityIdentifier("browser-ask-lobby")
-            // Always laid out; the capsule's width uncovers them.
-            FlipButton(flipped: mode == .paused, action: pauseOrResume)
-                .disabled(disabled || !open)
-            Button(action: stop) {
-                Image(systemName: "xmark").font(.body.weight(.semibold)).frame(width: LobbyMetrics.buttonSize, height: LobbyMetrics.buttonSize)
+            // Always laid out; the pill's width uncovers them while they grow out of it with a
+            // little blur, as Dynamic Island content does (never an opacity fade).
+            HStack(spacing: LobbyMetrics.gap) {
+                FlipButton(flipped: mode == .paused, action: pauseOrResume)
+                Button(action: stop) {
+                    Image(systemName: "xmark").font(.body.weight(.semibold))
+                        .frame(width: LobbyMetrics.buttonSize, height: LobbyMetrics.buttonSize)
+                        .background(LobbyMetrics.buttonFill, in: Circle())
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel(mode == .paused ? "Start Over" : "Stop")
+                .accessibilityIdentifier(mode == .paused ? "browser-forget-pause" : "browser-end-lobby")
             }
-            .buttonStyle(.plain)
-            .background(.fill.secondary, in: Circle())
+            .foregroundStyle(.white)
             .disabled(disabled || !open)
-            .accessibilityLabel(mode == .paused ? "Start Over" : "Stop")
-            .accessibilityIdentifier(mode == .paused ? "browser-forget-pause" : "browser-end-lobby")
+            .scaleEffect(open ? 1 : 0.5, anchor: .leading)
+            .blur(radius: open ? 0 : 8)
         }
         .accessibilityElement(children: open ? .contain : .ignore)
         .accessibilityAddTraits(open ? [] : .isButton)
         .accessibilityLabel(open ? "" : "Ask Lobby")
         .padding(open ? LobbyMetrics.inset : 0)
-        .frame(width: open ? LobbyMetrics.openWidth : LobbyMetrics.idleSize, alignment: .leading)
+        // Both sides concrete, in width and height: the pill stretches both ways like the island.
+        .frame(width: open ? LobbyMetrics.openWidth : LobbyMetrics.idleSize,
+               height: open ? LobbyMetrics.openHeight : LobbyMetrics.idleSize, alignment: .leading)
         .clipShape(Capsule())
-        .background(Capsule().fill(.regularMaterial))
-        .shadow(color: .black.opacity(0.25), radius: 8, y: 3)
-        .animation(.spring(duration: 0.45, bounce: 0.25), value: mode)
+        // Solid black like the Dynamic Island, so the orb's black circle melts into it.
+        .background(Capsule().fill(.black))
+        .shadow(color: .black.opacity(0.3), radius: 10, y: 4)
+        .animation(.spring(duration: 0.5, bounce: 0.32), value: mode)
     }
 }
 
@@ -753,7 +765,7 @@ private struct FlipButton: View {
         Image(systemName: symbol)
             .font(.body.weight(.semibold))
             .frame(width: LobbyMetrics.buttonSize, height: LobbyMetrics.buttonSize)
-            .background(.fill.secondary, in: Circle())
+            .background(LobbyMetrics.buttonFill, in: Circle())
     }
 }
 
