@@ -137,6 +137,8 @@ enum ChatToolSteps {
         case "open_map", "open_in_google_maps": "map"
         case "control_media", "media_control": "playpause"
         case "browser": "globe"
+        case "save_note": "note.text"
+        case "set_volume": "speaker.wave.2"
         default: "wrench.and.screwdriver"
         }
     }
@@ -164,6 +166,9 @@ enum ChatToolSteps {
             ((args["action"] as? String) ?? firstLine).isEmpty ? (done ? "Controlled playback" : "Controlling playback")
                 : (done ? "Sent \((args["action"] as? String) ?? firstLine)" : "Sending \((args["action"] as? String) ?? firstLine)")
         case "browser": browser(args["action"] as? String ?? "", args["text"] as? String ?? "", done: done)
+        case "save_note":
+            (args["title"] as? String).flatMap { $0.isEmpty ? nil : $0 }
+                .map { done ? "Added to \($0)" : "Adding to \($0)" } ?? (done ? "Saved a note" : "Saving a note")
         default:
             done ? readable(tool.name).capitalizedFirst : "Running \(readable(tool.name))"
         }
@@ -181,6 +186,7 @@ enum ChatToolSteps {
             case "open_map", "open_in_google_maps": "opened Maps"
             case "control_media", "media_control": "controlled playback"
             case "browser": "used the browser"
+            case "save_note": "saved a note"
             default: readable(tool.name)
             }
             if !parts.contains(part) { parts.append(part) }

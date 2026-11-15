@@ -97,6 +97,14 @@ struct WakeOnApp: App {
                     if let index = args.firstIndex(of: "--voice"), index + 1 < args.count {
                         UserDefaults.standard.set(args[index + 1], forKey: LiveVoiceConfig.voiceKey)
                     }
+                    if let index = args.firstIndex(of: "--note"), index + 1 < args.count {
+                        // --note "text" [--note-title T]: save a note without a call (ObsidianNotes).
+                        let title = args.firstIndex(of: "--note-title").flatMap { $0 + 1 < args.count ? args[$0 + 1] : nil } ?? ""
+                        if let request = ObsidianNotes.request(title: title, text: args[index + 1]) {
+                            do { VoiceSessionController.appLog("note_saved path=\(try ObsidianNotes.save(request))") }
+                            catch { VoiceSessionController.appLog("note_failed \(error)") }
+                        }
+                    }
                     if let index = args.firstIndex(of: "--volume"), index + 1 < args.count, let level = Int(args[index + 1]) {
                         // --volume N [--media-delay S] [--autostart]: set the volume without a call.
                         let delay = args.firstIndex(of: "--media-delay").flatMap { $0 + 1 < args.count ? Double(args[$0 + 1]) : nil } ?? 1

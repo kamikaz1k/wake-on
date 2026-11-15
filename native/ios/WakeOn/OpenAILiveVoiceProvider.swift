@@ -57,6 +57,9 @@ struct LiveVoiceConfig {
     var mediaControl = true
     /// The set_volume tool (see VolumeControl).
     var volume = true
+    /// The save_note tool: notes in the user's Obsidian vault (see ObsidianNotes). Only once a
+    /// vault is picked in Settings.
+    var notes = false
     /// The open_map tool: directions or a place in Google Maps (see MapsOpener).
     var maps = true
     /// The show_visual tool: an HTML page shown in the chat (see ShowVisual).
@@ -76,6 +79,7 @@ struct LiveVoiceConfig {
         if youtube { text += " " + YouTubePlayer.delegationInstructions }
         if mediaControl { text += " " + MediaControl.delegationInstructions }
         if volume { text += " " + VolumeControl.delegationInstructions }
+        if notes { text += " " + ObsidianNotes.delegationInstructions }
         if maps { text += " " + MapsOpener.delegationInstructions }
         if visuals { text += " " + ShowVisual.delegationInstructions }
         if browser { text += " " + BrowserTool.delegationInstructions }
@@ -125,6 +129,7 @@ struct LiveVoiceConfig {
         if youtube { tools.append(YouTubePlayer.tool) }
         if mediaControl { tools.append(MediaControl.tool) }
         if volume { tools.append(VolumeControl.tool) }
+        if notes { tools.append(ObsidianNotes.tool) }
         if maps { tools.append(MapsOpener.tool) }
         if visuals { tools.append(ShowVisual.tool) }
         if browser { tools.append(BrowserTool.tool) }
@@ -193,7 +198,7 @@ final class OpenAILiveVoiceProvider: NSObject {
 
     var onEvent: ((LiveVoiceEvent) -> Void)?
     private(set) var sessionID: String?
-    private let config: LiveVoiceConfig
+    let config: LiveVoiceConfig
     private var peer: RTCPeerConnection?
     private var channel: RTCDataChannel?
     private var track: RTCAudioTrack?

@@ -445,6 +445,13 @@
 			<key>name</key>
 			<string>Release</string>
 		</dict>
+		<key>228F6AE0E1CDC199DB05907A</key>
+		<dict>
+			<key>fileRef</key>
+			<string>3991EFA05A0804753136AF7A</string>
+			<key>isa</key>
+			<string>PBXBuildFile</string>
+		</dict>
 		<key>23302364766C959F3F1FECD5</key>
 		<dict>
 			<key>isa</key>
@@ -646,6 +653,17 @@
 			<string>C5B168124450AD2BB493BFA4</string>
 			<key>targetProxy</key>
 			<string>6913CD13B977ECDA17D4242F</string>
+		</dict>
+		<key>3991EFA05A0804753136AF7A</key>
+		<dict>
+			<key>isa</key>
+			<string>PBXFileReference</string>
+			<key>lastKnownFileType</key>
+			<string>sourcecode.swift</string>
+			<key>path</key>
+			<string>WakeOn/ObsidianNotes.swift</string>
+			<key>sourceTree</key>
+			<string>&lt;group&gt;</string>
 		</dict>
 		<key>3A7271DD402160791BE63A46</key>
 		<dict>
@@ -1478,6 +1496,7 @@
 				<string>44DA201589CF3D2915F60C94</string>
 				<string>1FD4FDDD07AD5BF53127D39B</string>
 				<string>34BE19A39DA587EA5BC45054</string>
+				<string>D4BEC05ED2BC17564EE79126</string>
 				<string>439F94BF03BAD287A08A7828</string>
 				<string>53100DED70B6793C84D0EFE9</string>
 				<string>34DA8C221A8B8B9D3F76A912</string>
@@ -2486,6 +2505,7 @@
 				<string>FBC965F89A87825EA3D43EDB</string>
 				<string>8122B136745D748BA8B26D6C</string>
 				<string>DAFE12478B484E6833DABDF8</string>
+				<string>228F6AE0E1CDC199DB05907A</string>
 				<string>89707B9627501A6CC5C878D6</string>
 				<string>C096918F71FEAB2E9FC49F58</string>
 				<string>5373CC8CC3E0F75852F1F863</string>
@@ -2818,6 +2838,13 @@
 			<key>isa</key>
 			<string>PBXBuildFile</string>
 		</dict>
+		<key>D4BEC05ED2BC17564EE79126</key>
+		<dict>
+			<key>fileRef</key>
+			<string>FFF61139551575BA89978FB7</string>
+			<key>isa</key>
+			<string>PBXBuildFile</string>
+		</dict>
 		<key>D510BDB133AEB16F89091ED0</key>
 		<dict>
 			<key>fileRef</key>
@@ -2969,6 +2996,7 @@
 				<string>427734F696037F60000C4197</string>
 				<string>5FBF5422A42236CB15FFB899</string>
 				<string>DA19DAC196A1C96922A56FB4</string>
+				<string>3991EFA05A0804753136AF7A</string>
 				<string>1CB063FB3A6A99A499006954</string>
 				<string>DCE26BF595E449F720C1CEAD</string>
 				<string>BE46A50C7DB40B32F9FB5D05</string>
@@ -3006,6 +3034,7 @@
 				<string>7208E077BFADA885CC025FBD</string>
 				<string>1C6E6C00672E94914095F8DB</string>
 				<string>E176221F59CDA0010ED929FE</string>
+				<string>FFF61139551575BA89978FB7</string>
 				<string>1999E7A9CC91E081498BE9D8</string>
 				<string>89B55F3E600130F57D0DF153</string>
 				<string>7C0049C4258514821473C407</string>
@@ -3645,6 +3674,17 @@
 			<string>sourcecode.swift</string>
 			<key>path</key>
 			<string>WakeOn/BrowserDriver.swift</string>
+			<key>sourceTree</key>
+			<string>&lt;group&gt;</string>
+		</dict>
+		<key>FFF61139551575BA89978FB7</key>
+		<dict>
+			<key>isa</key>
+			<string>PBXFileReference</string>
+			<key>lastKnownFileType</key>
+			<string>sourcecode.swift</string>
+			<key>path</key>
+			<string>Tests/ObsidianNotesTests.swift</string>
 			<key>sourceTree</key>
 			<string>&lt;group&gt;</string>
 		</dict>

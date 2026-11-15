@@ -123,6 +123,7 @@ struct SimpleView: View {
                     Toggle("Lobby can use the browser", isOn: $browserEnabled)
                         .accessibilityIdentifier("simple-browser-enabled")
                     BrowserSignInsLink()
+                    ObsidianVaultRow()
                     Toggle("Keep screen on while charging", isOn: $awakeWhileCharging)
                         .accessibilityIdentifier("simple-awake-charging")
                     Picker(selection: $voiceName) {

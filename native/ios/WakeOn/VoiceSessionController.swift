@@ -17,7 +17,7 @@ final class VoiceSessionController: ObservableObject {
     static let shared = VoiceSessionController()
 
     enum Phase: Equatable { case idle, connecting, live, ending }
-    enum Probe: String { case greeting, search, spotify, youtube, remember, recall, volume, pause, visual, map, place, browser }
+    enum Probe: String { case greeting, search, spotify, youtube, remember, recall, volume, note, pause, visual, map, place, browser }
 
     struct TimelineRow: Identifiable { let id = UUID(); let name: String; let ms: Double }
     struct TranscriptLine: Identifiable { let id = UUID(); let speaker: String; var text: String }
@@ -516,7 +516,9 @@ final class VoiceSessionController: ObservableObject {
 
     private func takePrepared() -> OpenAILiveVoiceProvider? {
         defer { prepared = nil }
-        guard let prepared, DispatchTime.now().uptimeNanoseconds - preparedSince < Self.preparedMaxAge else {
+        // A setting that changes the tools (vault picked, browser switched) makes it stale too.
+        guard let prepared, DispatchTime.now().uptimeNanoseconds - preparedSince < Self.preparedMaxAge,
+              prepared.config.notes == ObsidianVault.isSet, prepared.config.browser == BrowserTool.enabled else {
             prepared?.close(reason: "stale")
             return nil
         }
@@ -527,6 +529,7 @@ final class VoiceSessionController: ObservableObject {
         var config = LiveVoiceConfig()
         config.history = history
         config.browser = BrowserTool.enabled
+        config.notes = ObsidianVault.isSet
         #if DEBUG
         let args = ProcessInfo.processInfo.arguments
         if args.contains("--no-delegation") { config.delegation = false }
@@ -782,6 +785,22 @@ final class VoiceSessionController: ObservableObject {
             result = "Turning the volume \(request.description); the call is ending."
             pendingVolume = request
             action = ["kind": "volume", "change": request.change.rawValue, "level": request.level]
+        } else if name == ObsidianNotes.toolName {
+            // Written now: no other app opens, so the call goes on.
+            if let request = ObsidianNotes.request(title: arguments["title"] as? String ?? "",
+                                                   text: arguments["text"] as? String ?? "") {
+                do {
+                    let path = try ObsidianNotes.save(request)
+                    result = "Saved to \(path) in the user's Obsidian vault. The call goes on."
+                    action = ["kind": "note", "path": path]
+                    log("note_saved path=\(path) chars=\(request.text.count)")
+                } catch {
+                    result = "Couldn't save the note (\(error)). The user may need to pick the vault again in Settings."
+                    log("note_failed \(error)")
+                }
+            } else {
+                result = "Nothing to save: the text was empty."
+            }
         } else if name == MapsOpener.toolName,
                   let request = MapsOpener.request(place: arguments["place"] as? String ?? "",
                                                    address: arguments["address"] as? String ?? "",
@@ -1045,7 +1064,7 @@ final class VoiceSessionController: ObservableObject {
         case .greeting:
             provider?.send(["type": "session.commentary.append", "delegation_id": NSNull(),
                             "content": "Greet the user in five words or fewer."])
-        case .search, .spotify, .youtube, .remember, .recall, .volume, .pause, .visual, .map, .place, .browser:
+        case .search, .spotify, .youtube, .remember, .recall, .volume, .note, .pause, .visual, .map, .place, .browser:
             let text = switch probe {
             case .search: "Search the web: what is the current weather in Toronto?"
             case .spotify: "Play Blinding Lights by The Weeknd on Spotify."
@@ -1053,6 +1072,7 @@ final class VoiceSessionController: ObservableObject {
             case .remember: "Remember this code word for later: pineapple. Just say okay."
             case .recall: "What was the code word I told you earlier?"
             case .volume: "Set the music volume to 30 percent."
+            case .note: "Add oat milk and coffee beans to my shopping list."
             case .visual: "Show me a chart of the forecast high in Toronto for the next five days."
             case .map: "Give me directions to the CN Tower in Google Maps."
             case .place: "Where is the CN Tower?"
