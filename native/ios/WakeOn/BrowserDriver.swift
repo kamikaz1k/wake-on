@@ -585,6 +585,12 @@ struct BrowserSheet: View {
                     .font(.subheadline.weight(.medium))
                     .lineLimit(1)
                     .accessibilityIdentifier("browser-paused")
+                if ChatTokens.level(voice.pausedTokens) != .ok {
+                    // Resuming will leave out (or soon leave out) the oldest parts.
+                    Image(systemName: "exclamationmark.triangle.fill")
+                        .symbolRenderingMode(.multicolor)
+                        .accessibilityLabel(ChatTokens.warning(voice.pausedTokens) ?? "Long chat")
+                }
                 Button("Resume", systemImage: "play.fill") {
                     if let thread = voice.pausedThread { voice.resume(thread, trigger: "browser") }
                 }

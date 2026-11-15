@@ -28,6 +28,24 @@ final class VoiceSessionController: ObservableObject {
     @Published private(set) var pausedThread: ChatLog?
     /// The chat this call resumes, if any (its log links back to it).
     private var resuming: ChatLog?
+    /// Estimated tokens of the chats this call resumes.
+    private var historyTokens = 0
+    /// The whole chat so far in tokens (resumed chats plus this call), for the length warning.
+    var threadTokens: Int { historyTokens + ChatTokens.estimate(fullTranscript) }
+    /// The largest lookup request this call, measured by OpenAI (instructions, tools and
+    /// transcript). The voice model itself only reports seconds.
+    private var lookupInputTokens = 0
+
+    /// `input_tokens` from a backend `response.completed` event.
+    nonisolated static func inputTokens(_ json: [String: Any]) -> Int? {
+        let usage = ((json["event"] as? [String: Any])?["response"] as? [String: Any])?["usage"] as? [String: Any]
+        return usage?["input_tokens"] as? Int
+    }
+
+    /// The paused chat's length in tokens.
+    var pausedTokens: Int {
+        pausedThread.map { ChatTokens.estimate(ChatLogStore.shared.thread(endingWith: $0).flatMap(\.lines)) } ?? 0
+    }
     /// Why the app hung up (`stop`); the session's own end reason is the server's.
     private var stopReason: String?
     @Published private(set) var status = "Not connected"
@@ -204,6 +222,8 @@ final class VoiceSessionController: ObservableObject {
         let provider = (resuming == nil ? takePrepared() : nil)
             ?? OpenAILiveVoiceProvider(config: Self.makeConfig(history: history))
         self.resuming = resuming
+        historyTokens = ChatTokens.estimate(history)
+        lookupInputTokens = 0
         pausedThread = nil
         stopReason = nil
         self.provider = provider
@@ -684,6 +704,9 @@ final class VoiceSessionController: ObservableObject {
                 lookingUpSince = nil
             }
             if nested == "response.completed", phase == .live { status = "Live · speak now" }
+            if nested == "response.completed", let tokens = Self.inputTokens(json) {
+                lookupInputTokens = max(lookupInputTokens, tokens)
+            }
         case "session.usage.updated":
             usageSeconds = (json["usage"] as? [String: Any])?["seconds"] as? Double
         case "session.closed":
@@ -1184,7 +1207,8 @@ final class VoiceSessionController: ObservableObject {
                                     "media_pending": pendingMedia?.rawValue ?? NSNull(),
                                     "map_pending": pendingMap != nil])
         let chatLog = ChatLog(id: capture?.id ?? UUID(), started: callStartedAt, ended: Date(), trigger: callTrigger,
-                              lines: lines, resumes: resuming?.id)
+                              lines: lines, resumes: resuming?.id,
+                              lookupTokens: lookupInputTokens > 0 ? lookupInputTokens : nil)
         // Kept only with its log; the Spotify and media steps below append to it afterwards.
         let kept = ChatLogStore.shared.add(chatLog, capture: capture)
         // In the browser, pausing or going quiet ends the call (no tokens while you read) but

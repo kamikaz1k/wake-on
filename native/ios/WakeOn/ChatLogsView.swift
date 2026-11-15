@@ -25,7 +25,9 @@ struct ChatLogsView: View {
                                        description: Text("Each conversation with Lobby is saved here, on this iPhone."))
             }
             ForEach(store.logs) { log in
-                NavigationLink { ChatLogDetailView(log: log) } label: { ChatLogRow(log: log) }
+                NavigationLink { ChatLogDetailView(log: log) } label: {
+                    ChatLogRow(log: log, tokens: ChatTokens.estimate(store.thread(endingWith: log).flatMap(\.lines)))
+                }
                     // Edit mode is for multi-select; swipe handles single deletes.
                     .deleteDisabled(editMode.isEditing)
                     .contextMenu {
@@ -100,12 +102,22 @@ struct ChatLogsView: View {
 
 struct ChatLogRow: View {
     let log: ChatLog
+    /// The whole thread's length (this chat and the ones it resumed).
+    var tokens = 0
     var body: some View {
         VStack(alignment: .leading, spacing: 3) {
             Text(log.title).lineLimit(2)
-            Text("\(log.started.formatted(date: .abbreviated, time: .shortened)) · \(log.source)")
-                .font(.caption)
-                .foregroundStyle(.secondary)
+            HStack(spacing: 4) {
+                Text("\(log.started.formatted(date: .abbreviated, time: .shortened)) · \(log.source) · \(ChatTokens.label(tokens))"
+                     + (log.lookupTokens.map { " · lookup \(ChatTokens.label($0).dropFirst())" } ?? ""))
+                if ChatTokens.level(tokens) != .ok {
+                    Image(systemName: "exclamationmark.triangle.fill")
+                        .symbolRenderingMode(.multicolor)
+                        .accessibilityLabel("Long chat")
+                }
+            }
+            .font(.caption)
+            .foregroundStyle(.secondary)
         }
     }
 }
@@ -124,6 +136,9 @@ struct ChatLogDetailView: View {
             } else {
                 lineList
             }
+        }
+        .safeAreaInset(edge: .top, spacing: 0) {
+            ChatLengthWarning(tokens: ChatTokens.estimate(store.thread(endingWith: log).flatMap(\.lines)))
         }
         .navigationTitle(log.started.formatted(date: .abbreviated, time: .shortened))
         // The tab bar shows on the main pages only, never over a page's own controls.

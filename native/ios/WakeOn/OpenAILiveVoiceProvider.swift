@@ -93,19 +93,17 @@ struct LiveVoiceConfig {
                                     "responses": ["instructions": backendInstructions(screen: screen, browser: browser)]]]]
     }
 
-    /// Longest transcript a resumed chat carries; older lines are dropped first.
-    static let historyLimit = 6000
-
     /// The earlier conversation for a resumed chat, newest lines kept when it's long.
     static func historyNote(_ lines: [ChatLog.Line]) -> String? {
         guard !lines.isEmpty else { return nil }
+        // Newest lines first, up to the token limit (see ChatTokens).
         var kept: [String] = []
-        var size = 0
+        var tokens = 0
         for line in lines.reversed() {
-            let text = "\(line.speaker == "You" ? "User" : "Lobby"): \(line.text)"
-            if size + text.count > historyLimit, !kept.isEmpty { break }
+            let text = ChatTokens.line(line)
+            if tokens + ChatTokens.estimate(text) > ChatTokens.limit, !kept.isEmpty { break }
             kept.insert(text, at: 0)
-            size += text.count + 1
+            tokens += ChatTokens.estimate(text)
         }
         let cut = kept.count < lines.count ? "(Earlier lines left out.)\n" : ""
         return "This call resumes an earlier conversation with the same user. What was said so far:\n"

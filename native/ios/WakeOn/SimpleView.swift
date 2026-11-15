@@ -161,6 +161,7 @@ private struct LiveCallScreen: View {
                 .padding(.horizontal)
             ChatTranscriptView(items: transcript.items, call: transcript.call, showsHeader: false)
                 .accessibilityIdentifier("live-chat")
+            ChatLengthWarning(tokens: voice.threadTokens)
             controls
         }
         .navigationBarTitleDisplayMode(.inline)

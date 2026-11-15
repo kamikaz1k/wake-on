@@ -38,7 +38,7 @@ final class ResumeChatTests: XCTestCase {
         XCTAssertTrue(note.contains("left out"))
         XCTAssertTrue(note.contains("line 399 "))
         XCTAssertFalse(note.contains("line 0 "))
-        XCTAssertLessThan(note.count, LiveVoiceConfig.historyLimit + 600)
+        XCTAssertLessThan(ChatTokens.estimate(note), ChatTokens.limit + 150)
     }
 
     func testResumedCallCarriesHistoryToBothModels() throws {
@@ -53,6 +53,29 @@ final class ResumeChatTests: XCTestCase {
         let updated = (((update["session"] as? [String: Any])?["delegation"] as? [String: Any])?["responses"] as? [String: Any])?["instructions"] as? String
         XCTAssertTrue(updated?.contains("code word pineapple") == true)
         XCTAssertFalse(LiveVoiceConfig().backendInstructions().contains("resumes an earlier conversation"))
+    }
+
+    func testTokenEstimatesAndWarnings() {
+        XCTAssertEqual(ChatTokens.estimate("abcd"), 1)
+        XCTAssertEqual(ChatTokens.estimate("abcde"), 2)
+        // "User: hi" is 8 characters, 2 tokens.
+        XCTAssertEqual(ChatTokens.estimate([.init(speaker: "You", text: "hi")]), 2)
+        XCTAssertEqual(ChatTokens.label(850), "~850 tokens")
+        XCTAssertEqual(ChatTokens.label(1420), "~1.4k tokens")
+        XCTAssertEqual(ChatTokens.level(ChatTokens.warnAt - 1), .ok)
+        XCTAssertEqual(ChatTokens.level(ChatTokens.warnAt), .long)
+        XCTAssertEqual(ChatTokens.level(ChatTokens.limit + 1), .truncated)
+        XCTAssertNil(ChatTokens.warning(100))
+        XCTAssertTrue(ChatTokens.warning(1300)?.contains("getting long") == true)
+        XCTAssertTrue(ChatTokens.warning(2100)?.contains("keeps only the newest") == true)
+    }
+
+    func testLookupTokensComeFromTheBackendUsage() {
+        let event: [String: Any] = ["type": "response.event",
+                                    "event": ["type": "response.completed",
+                                              "response": ["usage": ["input_tokens": 7464, "output_tokens": 11]]]]
+        XCTAssertEqual(VoiceSessionController.inputTokens(event), 7464)
+        XCTAssertNil(VoiceSessionController.inputTokens(["type": "response.event", "event": ["type": "response.completed"]]))
     }
 
     func testOnlyPauseAndIdleInTheBrowserKeepTheChat() {

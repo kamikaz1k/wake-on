@@ -2289,6 +2289,13 @@
 			<key>sourceTree</key>
 			<string>&lt;group&gt;</string>
 		</dict>
+		<key>B54125122EED1782DCF9B206</key>
+		<dict>
+			<key>fileRef</key>
+			<string>C81A61E9307DAAB1D29A09A0</string>
+			<key>isa</key>
+			<string>PBXBuildFile</string>
+		</dict>
 		<key>B5F49A876DFB272FACBDF1EB</key>
 		<dict>
 			<key>isa</key>
@@ -2394,6 +2401,7 @@
 				<string>73EBC91632FFC7BE6836AC90</string>
 				<string>8B4F35E544C3FC6DABF208A7</string>
 				<string>B99C26864023D73F5AD560E0</string>
+				<string>B54125122EED1782DCF9B206</string>
 				<string>141FC4B68CEA3CBAC086E734</string>
 				<string>71A29599834994135DF78497</string>
 				<string>190FC281175A458411477DAD</string>
@@ -2572,6 +2580,17 @@
 			<string>sourcecode.swift</string>
 			<key>path</key>
 			<string>ChatLab/LabPlayer.swift</string>
+			<key>sourceTree</key>
+			<string>&lt;group&gt;</string>
+		</dict>
+		<key>C81A61E9307DAAB1D29A09A0</key>
+		<dict>
+			<key>isa</key>
+			<string>PBXFileReference</string>
+			<key>lastKnownFileType</key>
+			<string>sourcecode.swift</string>
+			<key>path</key>
+			<string>WakeOn/ChatTokens.swift</string>
 			<key>sourceTree</key>
 			<string>&lt;group&gt;</string>
 		</dict>
@@ -2856,6 +2875,7 @@
 				<string>1E722BEC8B659EE2E8F6A27B</string>
 				<string>FA3366121A5DEA92723FCBB5</string>
 				<string>CC176C17FF9F49D4A917C518</string>
+				<string>C81A61E9307DAAB1D29A09A0</string>
 				<string>1DC5C0769628AED0F89639D8</string>
 				<string>E823720E1997284D87C9BE0D</string>
 				<string>D51D6D61BE2D40D10969555F</string>

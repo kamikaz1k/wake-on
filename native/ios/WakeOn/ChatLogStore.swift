@@ -14,6 +14,9 @@ struct ChatLog: Codable, Identifiable, Equatable {
     var lines: [Line]
     /// The earlier call this one picked up from (a resumed chat), if any.
     var resumes: UUID?
+    /// The largest lookup request in the call, in tokens as OpenAI counted them (instructions,
+    /// tools and transcript). Nil when nothing was looked up, or for older logs.
+    var lookupTokens: Int?
 
     /// The first thing the user said, for the list.
     var title: String {

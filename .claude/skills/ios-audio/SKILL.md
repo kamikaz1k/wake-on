@@ -135,7 +135,7 @@ the log and run `native/ios/scripts/check-wake-handover.py <log>` (exit 1 = brok
 - A second Action Button press hangs up.
 - In the browser, Pause and the idle hang-up keep the chat (`pausedThread`): the session ends
   (nothing billed while reading), and Resume starts a new call whose instructions carry the
-  transcript (`LiveVoiceConfig.history`, newest 6,000 characters). A resumed call can't use the
+  transcript (`LiveVoiceConfig.history`, newest ~1,500 tokens, `ChatTokens`; warned from 1,200). The voice model reports only seconds; lookups report real `input_tokens` (~7.3k, mostly fixed instructions and tools), saved as `ChatLog.lookupTokens`. A resumed call can't use the
   prepared offer. Goodbye and End finish the chat. Sessions bill at least 15 s each (8–13 s calls
   showed `usageSeconds=15.0`, 2026-11-15).
 
