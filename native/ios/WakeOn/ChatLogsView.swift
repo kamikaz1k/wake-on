@@ -113,6 +113,7 @@ struct ChatLogRow: View {
 struct ChatLogDetailView: View {
     let log: ChatLog
     @ObservedObject var store: ChatLogStore = .shared
+    @ObservedObject var voice: VoiceSessionController = .shared
     @Environment(\.dismiss) private var dismiss
     @State private var confirmDelete = false
 
@@ -136,9 +137,16 @@ struct ChatLogDetailView: View {
                         .accessibilityIdentifier("chat-log-share-capture")
                 }
             }
-            ToolbarItem(placement: .bottomBar) {
+            ToolbarItemGroup(placement: .bottomBar) {
                 Button("Delete", systemImage: "trash", role: .destructive) { confirmDelete = true }
                     .accessibilityIdentifier("chat-log-delete")
+                Spacer()
+                // A new call that knows everything said here (and in the chats this one resumed).
+                Button { voice.resume(log) } label: {
+                    Label("Resume Chat", systemImage: "phone.fill").labelStyle(.titleAndIcon)
+                }
+                .disabled(voice.phase != .idle || voice.keySource == "missing")
+                .accessibilityIdentifier("chat-log-resume")
             }
         }
         .confirmationDialog("Delete this chat log?", isPresented: $confirmDelete, titleVisibility: .visible) {

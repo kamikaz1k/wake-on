@@ -111,8 +111,15 @@ struct WakeOnApp: App {
                         VoiceSessionController.shared.demoCall(capture: URL(fileURLWithPath: args[index + 1]))
                     } else if let index = args.firstIndex(of: "--talk") {
                         let next = args.indices.contains(index + 1) ? args[index + 1] : ""
+                        // --resume: carry on the newest saved chat (resumed-chat test).
+                        let resuming = args.contains("--resume") ? ChatLogStore.shared.logs.first : nil
                         VoiceSessionController.shared.start(trigger: "launch_argument",
-                                                            probe: VoiceSessionController.Probe(rawValue: next))
+                                                            probe: VoiceSessionController.Probe(rawValue: next),
+                                                            resuming: resuming)
+                        // --pause-after N: press Pause N seconds in (the browser pause test).
+                        if let at = args.firstIndex(of: "--pause-after"), at + 1 < args.count, let seconds = Double(args[at + 1]) {
+                            DispatchQueue.main.asyncAfter(deadline: .now() + seconds) { VoiceSessionController.shared.pause() }
+                        }
                     } else if args.contains("--intent-test") {
                         Task {
                             do {

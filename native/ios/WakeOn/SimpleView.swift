@@ -17,8 +17,11 @@ struct SimpleView: View {
     /// Screenshot launch argument: open straight to the browser's sign-in sites.
     @State private var openSignIns = ProcessInfo.processInfo.arguments.contains("-sign-ins")
 
+    /// Emptied when a call starts, so a call resumed from a saved chat shows the call screen.
+    @State private var path = NavigationPath()
+
     var body: some View {
-        NavigationStack {
+        NavigationStack(path: $path) {
             Group {
                 if #available(iOS 18.0, *), voice.phase != .idle, let chat = voice.liveChat {
                     LiveCallScreen(voice: voice, transcript: chat.transcript,
@@ -31,6 +34,13 @@ struct SimpleView: View {
             .navigationBarTitleDisplayMode(.inline)
             .navigationDestination(isPresented: $openLogs) { ChatLogsView() }
             .navigationDestination(isPresented: $openSignIns) { BrowserSignInsView() }
+            .onChange(of: voice.phase) { old, new in
+                if old == .idle, new != .idle {
+                    path = NavigationPath()
+                    openLogs = false
+                    openSignIns = false
+                }
+            }
         }
     }
 

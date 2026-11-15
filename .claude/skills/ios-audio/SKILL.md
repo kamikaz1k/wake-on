@@ -133,6 +133,11 @@ the log and run `native/ios/scripts/check-wake-handover.py <log>` (exit 1 = brok
   4 s of silence ends the call, any words keep it going. There is no end-call tool; ending
   relies on these two phrases. Not tested on the phone yet.
 - A second Action Button press hangs up.
+- In the browser, Pause and the idle hang-up keep the chat (`pausedThread`): the session ends
+  (nothing billed while reading), and Resume starts a new call whose instructions carry the
+  transcript (`LiveVoiceConfig.history`, newest 6,000 characters). A resumed call can't use the
+  prepared offer. Goodbye and End finish the chat. Sessions bill at least 15 s each (8–13 s calls
+  showed `usageSeconds=15.0`, 2026-11-15).
 
 ## Bluetooth, AirPods, routes
 

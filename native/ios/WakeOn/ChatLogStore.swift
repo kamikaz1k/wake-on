@@ -12,6 +12,8 @@ struct ChatLog: Codable, Identifiable, Equatable {
     /// How the call started: "wake_word", "app_intent_fast" (Action Button), "in_app"…
     var trigger: String
     var lines: [Line]
+    /// The earlier call this one picked up from (a resumed chat), if any.
+    var resumes: UUID?
 
     /// The first thing the user said, for the list.
     var title: String {
@@ -30,6 +32,8 @@ struct ChatLog: Codable, Identifiable, Equatable {
         case "wake_word": "Hey Lobby"
         case "app_intent_fast", "app_intent": "Action Button"
         case "in_app": "In app"
+        case "resume": "Resumed"
+        case "browser": "Browser"
         default: trigger
         }
     }
@@ -76,6 +80,23 @@ final class ChatLogStore: ObservableObject {
         logs.removeAll { ids.contains($0.id) }
         save()
         for id in ids { try? FileManager.default.removeItem(at: CallCapture.url(for: id, in: capturesFolder)) }
+    }
+
+    /// The whole thread a log belongs to, oldest first: the calls it resumed, then itself.
+    /// Deleted parts are skipped.
+    func thread(endingWith log: ChatLog) -> [ChatLog] {
+        Self.thread(endingWith: log, in: logs)
+    }
+
+    nonisolated static func thread(endingWith log: ChatLog, in logs: [ChatLog]) -> [ChatLog] {
+        var chain = [log]
+        var seen: Set<UUID> = [log.id]
+        while let previous = chain.first?.resumes, !seen.contains(previous),
+              let earlier = logs.first(where: { $0.id == previous }) {
+            chain.insert(earlier, at: 0)
+            seen.insert(previous)
+        }
+        return chain
     }
 
     /// The log's call capture file, if it has one (calls from before captures don't).

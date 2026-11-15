@@ -216,7 +216,10 @@ final class BrowserSession: NSObject, ObservableObject, WKNavigationDelegate, WK
             guard isOpen != oldValue else { return }
             notify()
             // Closing wipes every site you haven't allowed to keep you signed in.
-            if !isOpen { Task { await BrowserSignIns.prune(webView.configuration.websiteDataStore) } }
+            if !isOpen {
+                Task { await BrowserSignIns.prune(webView.configuration.websiteDataStore) }
+                VoiceSessionController.shared.forgetPause()
+            }
         }
     }
     @Published private(set) var title = ""
@@ -433,7 +436,7 @@ final class BrowserSession: NSObject, ObservableObject, WKNavigationDelegate, WK
 }
 
 /// The browser sheet: the page, an address field, Done, back and forward, Open in Safari, and
-/// a Lobby button to start a call about the page (or end it). While Lobby acts on the page, a
+/// a Lobby button to start a call about the page (pause, resume or end it). While Lobby acts on the page, a
 /// label over it says what it's doing.
 struct BrowserSheet: View {
     @ObservedObject var browser: BrowserSession
@@ -574,6 +577,30 @@ struct BrowserSheet: View {
     /// open. During a call: what Lobby is doing (or that it's listening) and End.
     @ViewBuilder private var lobbyBar: some View {
         switch voice.phase {
+        case .idle where voice.pausedThread != nil:
+            // Paused: the call is over (nothing is billed) but the chat is kept.
+            HStack(spacing: 10) {
+                orb(32).accessibilityHidden(true)
+                Text("Lobby paused")
+                    .font(.subheadline.weight(.medium))
+                    .lineLimit(1)
+                    .accessibilityIdentifier("browser-paused")
+                Button("Resume", systemImage: "play.fill") {
+                    if let thread = voice.pausedThread { voice.resume(thread, trigger: "browser") }
+                }
+                .buttonStyle(.borderedProminent)
+                .buttonBorderShape(.capsule)
+                .controlSize(.small)
+                .accessibilityIdentifier("browser-resume-lobby")
+                Button("Start Over", systemImage: "xmark") { voice.forgetPause() }
+                    .labelStyle(.iconOnly)
+                    .buttonStyle(.bordered)
+                    .buttonBorderShape(.circle)
+                    .controlSize(.small)
+                    .accessibilityIdentifier("browser-forget-pause")
+            }
+            .padding(6)
+            .background(.regularMaterial, in: Capsule())
         case .idle:
             Button { voice.start(trigger: "browser") } label: {
                 orb(64)
@@ -590,6 +617,14 @@ struct BrowserSheet: View {
                     .lineLimit(1)
                     .contentTransition(.opacity)
                     .accessibilityIdentifier("browser-activity")
+                // Pause hangs up but keeps the chat, so a long read costs nothing.
+                Button("Pause", systemImage: "pause.fill") { voice.pause() }
+                    .labelStyle(.iconOnly)
+                    .buttonStyle(.bordered)
+                    .buttonBorderShape(.circle)
+                    .controlSize(.small)
+                    .disabled(voice.phase == .ending)
+                    .accessibilityIdentifier("browser-pause-lobby")
                 Button("End", systemImage: "xmark") { voice.stop() }
                     .labelStyle(.iconOnly)
                     .buttonStyle(.bordered)

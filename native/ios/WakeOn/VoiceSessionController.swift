@@ -17,12 +17,19 @@ final class VoiceSessionController: ObservableObject {
     static let shared = VoiceSessionController()
 
     enum Phase: Equatable { case idle, connecting, live, ending }
-    enum Probe: String { case greeting, search, spotify, youtube, pause, visual, map, place, browser }
+    enum Probe: String { case greeting, search, spotify, youtube, remember, recall, pause, visual, map, place, browser }
 
     struct TimelineRow: Identifiable { let id = UUID(); let name: String; let ms: Double }
     struct TranscriptLine: Identifiable { let id = UUID(); let speaker: String; var text: String }
 
     @Published private(set) var phase: Phase = .idle
+    /// A chat paused in the browser (Pause, or quiet until the idle hang-up): Resume picks it
+    /// up with its transcript. Cleared when the browser closes or a call starts.
+    @Published private(set) var pausedThread: ChatLog?
+    /// The chat this call resumes, if any (its log links back to it).
+    private var resuming: ChatLog?
+    /// Why the app hung up (`stop`); the session's own end reason is the server's.
+    private var stopReason: String?
     @Published private(set) var status = "Not connected"
     @Published private(set) var timeline: [TimelineRow] = []
     @Published private(set) var transcript: [TranscriptLine] = []
@@ -94,7 +101,8 @@ final class VoiceSessionController: ObservableObject {
     // MARK: - Control
 
     /// Starts a call. `origin` is when the trigger happened (an Action Button press, a tap).
-    func start(trigger: String, origin: UInt64 = DispatchTime.now().uptimeNanoseconds, probe: Probe? = nil) {
+    func start(trigger: String, origin: UInt64 = DispatchTime.now().uptimeNanoseconds, probe: Probe? = nil,
+               resuming: ChatLog? = nil) {
         if phase != .idle {
             WakeController.shared.cancelHandover()
             if phase == .live, let probe { runProbe(probe); return }
@@ -190,7 +198,14 @@ final class VoiceSessionController: ObservableObject {
         }
         let credentials = OpenAIKeyStore.load()
         let permitted = AVAudioApplication.shared.recordPermission == .granted
-        let provider = takePrepared() ?? OpenAILiveVoiceProvider(config: Self.makeConfig())
+        // A resumed chat carries its transcript in the session's instructions, so it can't use
+        // the offer prepared ahead of time; that one stays for the next new call.
+        let history = resuming.map { ChatLogStore.shared.thread(endingWith: $0).flatMap(\.lines) } ?? []
+        let provider = (resuming == nil ? takePrepared() : nil)
+            ?? OpenAILiveVoiceProvider(config: Self.makeConfig(history: history))
+        self.resuming = resuming
+        pausedThread = nil
+        stopReason = nil
         self.provider = provider
         provider.onEvent = { [weak self, weak provider] event in
             guard let self, let provider, self.provider === provider else { return }
@@ -417,6 +432,7 @@ final class VoiceSessionController: ObservableObject {
         guard let provider, phase == .connecting || phase == .live else { return }
         phase = .ending
         status = "Ending…"
+        stopReason = reason
         log("stop reason=\(reason)")
         var chimeDelay: Duration = .zero
         if OpenAILiveVoiceProvider.useHotAudio {
@@ -487,8 +503,9 @@ final class VoiceSessionController: ObservableObject {
         return prepared
     }
 
-    static func makeConfig() -> LiveVoiceConfig {
+    static func makeConfig(history: [ChatLog.Line] = []) -> LiveVoiceConfig {
         var config = LiveVoiceConfig()
+        config.history = history
         config.browser = BrowserTool.enabled
         #if DEBUG
         let args = ProcessInfo.processInfo.arguments
@@ -994,11 +1011,13 @@ final class VoiceSessionController: ObservableObject {
         case .greeting:
             provider?.send(["type": "session.commentary.append", "delegation_id": NSNull(),
                             "content": "Greet the user in five words or fewer."])
-        case .search, .spotify, .youtube, .pause, .visual, .map, .place, .browser:
+        case .search, .spotify, .youtube, .remember, .recall, .pause, .visual, .map, .place, .browser:
             let text = switch probe {
             case .search: "Search the web: what is the current weather in Toronto?"
             case .spotify: "Play Blinding Lights by The Weeknd on Spotify."
             case .youtube: "Play the official Never Gonna Give You Up video on YouTube."
+            case .remember: "Remember this code word for later: pineapple. Just say okay."
+            case .recall: "What was the code word I told you earlier?"
             case .visual: "Show me a chart of the forecast high in Toronto for the next five days."
             case .map: "Give me directions to the CN Tower in Google Maps."
             case .place: "Where is the CN Tower?"
@@ -1009,6 +1028,9 @@ final class VoiceSessionController: ObservableObject {
                             "item": ["type": "message", "role": "user",
                                      "content": [["type": "input_text", "text": text]]]])
             provider?.send(["type": "response.create"])
+            // The test prompt stands in for the user's words, so the saved chat (and a resumed
+            // call) has it.
+            appendTranscript("You", text)
         }
         exchange.trace.mark("probe_sent")
         log("probe \(probe.rawValue) sent")
@@ -1070,6 +1092,28 @@ final class VoiceSessionController: ObservableObject {
             provider?.sendCommentary("The user has been quiet for \(Int(idle)) seconds. "
                 + "Check in with one short question, such as \"Anything else?\"")
         }
+    }
+
+    // MARK: - Pause and resume
+
+    /// Ends the call but keeps the chat to resume (browser Pause button).
+    func pause() {
+        guard phase == .connecting || phase == .live else { return }
+        stop(reason: "paused")
+    }
+
+    /// Starts a call that carries on `log`'s chat (and everything it resumed).
+    func resume(_ log: ChatLog, trigger: String = "resume") {
+        start(trigger: trigger, resuming: log)
+    }
+
+    /// Drops the paused chat (the browser closed, or the user dismissed it).
+    func forgetPause() { pausedThread = nil }
+
+    /// Which hang-ups keep the chat paused: only in the browser, after Pause or the idle
+    /// hang-up. A goodbye or End finishes it.
+    nonisolated static func pausesThread(reason: String, browserOpen: Bool) -> Bool {
+        browserOpen && (reason == "paused" || reason == "idle")
     }
 
     /// After Lobby's goodbye: hang up once Lobby has been quiet and the user has said no words
@@ -1139,9 +1183,18 @@ final class VoiceSessionController: ObservableObject {
                                     "youtube_pending": pendingYouTube != nil,
                                     "media_pending": pendingMedia?.rawValue ?? NSNull(),
                                     "map_pending": pendingMap != nil])
-        let chatLog = ChatLog(id: capture?.id ?? UUID(), started: callStartedAt, ended: Date(), trigger: callTrigger, lines: lines)
+        let chatLog = ChatLog(id: capture?.id ?? UUID(), started: callStartedAt, ended: Date(), trigger: callTrigger,
+                              lines: lines, resumes: resuming?.id)
         // Kept only with its log; the Spotify and media steps below append to it afterwards.
         let kept = ChatLogStore.shared.add(chatLog, capture: capture)
+        // In the browser, pausing or going quiet ends the call (no tokens while you read) but
+        // keeps the chat to resume. A call with nothing said keeps the one it resumed.
+        if Self.pausesThread(reason: stopReason ?? reason, browserOpen: BrowserSession.shared.isOpen) {
+            pausedThread = kept ? chatLog : resuming
+            log("thread paused id=\(pausedThread?.id.uuidString ?? "none") resumes=\(resuming?.id.uuidString ?? "none")")
+        }
+        resuming = nil
+        stopReason = nil
         let laterCapture = kept ? capture : nil
         fullTranscript = []
         setupTrace?.finish("failed:\(reason)")
@@ -1260,6 +1313,8 @@ final class VoiceSessionController: ObservableObject {
 
     private func fail(_ message: String) {
         log("failed \(message)")
+        // A resume that couldn't connect stays paused, so Resume can try again.
+        if let resuming, BrowserSession.shared.isOpen { pausedThread = resuming }
         error = localListening ? message + " Anything you said was not sent." : message
         status = "Not connected"
         timeline = pendingTimeline

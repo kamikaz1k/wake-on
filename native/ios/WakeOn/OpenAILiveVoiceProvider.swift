@@ -47,6 +47,8 @@ struct LiveVoiceConfig {
     var delegationReasoningEffort: String? = "low"
     var delegation = true
     var webSearch = true
+    /// What was said earlier in a resumed chat, oldest first (empty for a new chat).
+    var history: [ChatLog.Line] = []
     /// The play_spotify tool (see SpotifyPlayer).
     var spotify = true
     /// The play_youtube tool (see YouTubePlayer).
@@ -79,6 +81,7 @@ struct LiveVoiceConfig {
             if let screen { text += "\n" + screen.backendLine }
         }
         if browser, let browserLine { text += "\n" + browserLine }
+        if let earlier = Self.historyNote(history) { text += "\n\n" + earlier }
         return text
     }
 
@@ -88,6 +91,27 @@ struct LiveVoiceConfig {
         ["type": "session.update",
          "session": ["delegation": ["type": "responses",
                                     "responses": ["instructions": backendInstructions(screen: screen, browser: browser)]]]]
+    }
+
+    /// Longest transcript a resumed chat carries; older lines are dropped first.
+    static let historyLimit = 6000
+
+    /// The earlier conversation for a resumed chat, newest lines kept when it's long.
+    static func historyNote(_ lines: [ChatLog.Line]) -> String? {
+        guard !lines.isEmpty else { return nil }
+        var kept: [String] = []
+        var size = 0
+        for line in lines.reversed() {
+            let text = "\(line.speaker == "You" ? "User" : "Lobby"): \(line.text)"
+            if size + text.count > historyLimit, !kept.isEmpty { break }
+            kept.insert(text, at: 0)
+            size += text.count + 1
+        }
+        let cut = kept.count < lines.count ? "(Earlier lines left out.)\n" : ""
+        return "This call resumes an earlier conversation with the same user. What was said so far:\n"
+            + cut + kept.joined(separator: "\n")
+            + "\nCarry on from there: don't greet or introduce yourself again, and use what was said "
+            + "when the user refers back to it."
     }
 
     func requestBody(sdp: String) -> [String: Any] {
@@ -107,7 +131,8 @@ struct LiveVoiceConfig {
             responses["tool_choice"] = "auto"
         }
         if let effort = delegationReasoningEffort { responses["reasoning"] = ["effort": effort] }
-        let voiceInstructions = browser ? instructions + " " + BrowserTool.voiceInstructions : instructions
+        var voiceInstructions = browser ? instructions + " " + BrowserTool.voiceInstructions : instructions
+        if let earlier = Self.historyNote(history) { voiceInstructions += "\n\n" + earlier }
         var session: [String: Any] = ["model": model, "instructions": voiceInstructions,
                                       "audio": ["output": ["voice": voice]]]
         if delegation { session["delegation"] = ["type": "responses", "responses": responses] }

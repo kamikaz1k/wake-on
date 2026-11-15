@@ -270,6 +270,17 @@
 			<key>isa</key>
 			<string>PBXBuildFile</string>
 		</dict>
+		<key>1999E7A9CC91E081498BE9D8</key>
+		<dict>
+			<key>isa</key>
+			<string>PBXFileReference</string>
+			<key>lastKnownFileType</key>
+			<string>sourcecode.swift</string>
+			<key>path</key>
+			<string>Tests/ResumeChatTests.swift</string>
+			<key>sourceTree</key>
+			<string>&lt;group&gt;</string>
+		</dict>
 		<key>1ABF84E55BD30AC2CEF8FC42</key>
 		<dict>
 			<key>buildActionMask</key>
@@ -717,6 +728,13 @@
 			<string>WakeOn/WakeOnApp.swift</string>
 			<key>sourceTree</key>
 			<string>&lt;group&gt;</string>
+		</dict>
+		<key>439F94BF03BAD287A08A7828</key>
+		<dict>
+			<key>fileRef</key>
+			<string>1999E7A9CC91E081498BE9D8</string>
+			<key>isa</key>
+			<string>PBXBuildFile</string>
 		</dict>
 		<key>43CB3CBA4DC90E5CC737B05C</key>
 		<dict>
@@ -1418,6 +1436,7 @@
 				<string>44DA201589CF3D2915F60C94</string>
 				<string>1FD4FDDD07AD5BF53127D39B</string>
 				<string>34BE19A39DA587EA5BC45054</string>
+				<string>439F94BF03BAD287A08A7828</string>
 				<string>53100DED70B6793C84D0EFE9</string>
 				<string>34DA8C221A8B8B9D3F76A912</string>
 				<string>923E56ABEC4022D54E7A5068</string>
@@ -2881,6 +2900,7 @@
 				<string>7208E077BFADA885CC025FBD</string>
 				<string>1C6E6C00672E94914095F8DB</string>
 				<string>E176221F59CDA0010ED929FE</string>
+				<string>1999E7A9CC91E081498BE9D8</string>
 				<string>89B55F3E600130F57D0DF153</string>
 				<string>7C0049C4258514821473C407</string>
 				<string>23E37AFC95566DEAD09FBB7F</string>
