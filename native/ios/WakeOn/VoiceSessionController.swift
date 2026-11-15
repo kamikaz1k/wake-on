@@ -1122,11 +1122,7 @@ final class VoiceSessionController: ObservableObject {
     /// errors are about the session closing early (hanging up within a second gives "The session
     /// closed before the estimated context injection completed."): nothing the user can act on.
     nonisolated static func userFacingError(_ message: String, hangingUp: Bool) -> String? {
-        guard !hangingUp else { return nil }
-        if message.localizedCaseInsensitiveContains("context injection") {
-            return "Lobby was still getting ready when the call ended. Try again."
-        }
-        return message
+        CallErrors.userFacing(message, hangingUp: hangingUp)
     }
 
     // MARK: - Pause and resume

@@ -88,6 +88,26 @@ final class ResumeChatTests: XCTestCase {
         XCTAssertEqual(VoiceSessionController.userFacingError("Invalid API key", hangingUp: false), "Invalid API key")
     }
 
+    /// The transcript (live and saved) leaves out the error once the app has asked to close;
+    /// it used to show the raw "context injection" message in red.
+    @MainActor func testTranscriptHidesErrorsAfterClose() throws {
+        func replay(_ lines: [String]) throws -> [ChatItem] {
+            let url = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString + ".jsonl")
+            try lines.joined(separator: "\n").write(to: url, atomically: true, encoding: .utf8)
+            let call = try XCTUnwrap(CapturedCall.load(url))
+            let transcript = ChatTranscript(steps: CaptureReplay(lines: call.lines, rawEvents: false).steps, startedAt: Date())
+            return transcript.items
+        }
+        let error = #"{"t_ms": 1600, "source": "server", "event": {"type": "error", "error": {"message": "The session closed before the estimated context injection completed."}}}"#
+        let start = [#"{"t_ms": 0, "source": "app", "event": {"type": "app.call_started"}}"#,
+                     #"{"t_ms": 900, "source": "server", "event": {"type": "session.started"}}"#]
+        let close = #"{"t_ms": 1500, "source": "client", "event": {"type": "session.close"}}"#
+        let afterClose = try replay(start + [close, error]).map(\.text)
+        XCTAssertFalse(afterClose.contains { $0.contains("context injection") || $0.contains("getting ready") })
+        let serverClosed = try replay(start + [error]).map(\.text)
+        XCTAssertTrue(serverClosed.contains("Lobby was still getting ready when the call ended. Try again."))
+    }
+
     func testOnlyPauseAndIdleInTheBrowserKeepTheChat() {
         XCTAssertTrue(VoiceSessionController.pausesThread(reason: "paused", browserOpen: true))
         XCTAssertTrue(VoiceSessionController.pausesThread(reason: "idle", browserOpen: true))

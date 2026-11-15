@@ -77,6 +77,8 @@ struct CaptureReplay {
     private var lastUserWords: TimeInterval?
     private var replyTimingPending = false
     private var lastScreen: String?
+    /// The app asked the server to close the session; errors after that aren't shown.
+    private var closeSent = false
     private var answerArrived = false
     private var answerTimingPending = false
     private var tools: [String: (id: String, tool: ChatItem.Tool)] = [:]
@@ -135,9 +137,11 @@ struct CaptureReplay {
             backend(e["event"] as? [String: Any] ?? [:], delegation: e["delegation_id"] as? String ?? "")
         case "session.commentary.append" where line.source == "client":
             marker("You went quiet · Lobby checks in")
+        case "session.close" where line.source == "client":
+            closeSent = true
         case "error":
             let message = (e["error"] as? [String: Any])?["message"] as? String ?? "Error"
-            marker(message, .error)
+            if let shown = CallErrors.userFacing(message, hangingUp: closeSent) { marker(shown, .error) }
         case "session.closed":
             finishMessage()
             script.run { $0.call.phase = "Ended" }
@@ -428,5 +432,20 @@ final class LiveChat {
     func add(_ line: CapturedCall.Line) {
         replay.feed(line)
         for step in replay.takeNewSteps() { step.apply(transcript) }
+    }
+}
+
+/// Which server errors a person sees, shared by the call screen and the transcript.
+enum CallErrors {
+    /// What to show for a server error, or nil to leave it out. Once the app has hung up,
+    /// errors are about the session closing early (hanging up within a second or two gives
+    /// "The session closed before the estimated context injection completed."): nothing the
+    /// user can act on.
+    static func userFacing(_ message: String, hangingUp: Bool) -> String? {
+        guard !hangingUp else { return nil }
+        if message.localizedCaseInsensitiveContains("context injection") {
+            return "Lobby was still getting ready when the call ended. Try again."
+        }
+        return message
     }
 }
