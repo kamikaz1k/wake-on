@@ -152,6 +152,11 @@ xcrun devicectl device install app --device 5976CF6D-0FD6-5A57-9711-AA29F94404E7
   opening `spotify:track:<id>` starts playback right away. Test without speaking:
   `devicectl device process launch --terminate-existing dev.wakeon.ios --talk spotify`.
   The `spotify_open` log line may be missing because the app is suspended as Spotify opens.
+- **YouTube (built 2026-11-15):** `play_youtube` works like `play_spotify`
+  (`YouTubePlayer.swift`): the backend finds the youtube.com link, the app hangs up and opens
+  `https://www.youtube.com/watch?v=<id>` as a universal link (the YouTube app, no prompt;
+  verified on the phone), then `youtube://…`, then Safari. Any link form (youtu.be, shorts,
+  embed, m./music.) is turned into the canonical one. Test: `--talk youtube`.
 - **Controlling other apps' playback (verified 2026-11-07, iOS 26, sideloaded debug build):**
   the private `MediaRemote.framework` `MRMediaRemoteSendCommand(command, nil)` (play 0, pause 1,
   toggle 2, stop 3, next 4, previous 5, loaded with `dlopen`/`dlsym`) **works**. It paused and

@@ -49,6 +49,8 @@ struct LiveVoiceConfig {
     var webSearch = true
     /// The play_spotify tool (see SpotifyPlayer).
     var spotify = true
+    /// The play_youtube tool (see YouTubePlayer).
+    var youtube = true
     /// The control_media tool: pause, resume, skip whatever is playing (see MediaControl).
     var mediaControl = true
     /// The open_map tool: directions or a place in Google Maps (see MapsOpener).
@@ -67,6 +69,7 @@ struct LiveVoiceConfig {
     func backendInstructions(screen: ScreenPresence? = nil, browser browserLine: String? = nil) -> String {
         var text = delegationInstructions
         if spotify { text += " " + SpotifyPlayer.delegationInstructions }
+        if youtube { text += " " + YouTubePlayer.delegationInstructions }
         if mediaControl { text += " " + MediaControl.delegationInstructions }
         if maps { text += " " + MapsOpener.delegationInstructions }
         if visuals { text += " " + ShowVisual.delegationInstructions }
@@ -94,6 +97,7 @@ struct LiveVoiceConfig {
         var tools: [[String: Any]] = []
         if webSearch { tools.append(["type": "web_search"]) }
         if spotify { tools.append(SpotifyPlayer.tool) }
+        if youtube { tools.append(YouTubePlayer.tool) }
         if mediaControl { tools.append(MediaControl.tool) }
         if maps { tools.append(MapsOpener.tool) }
         if visuals { tools.append(ShowVisual.tool) }

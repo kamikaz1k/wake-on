@@ -152,6 +152,17 @@
 			<key>isa</key>
 			<string>PBXBuildFile</string>
 		</dict>
+		<key>0EDABCDB214C009CA4F06669</key>
+		<dict>
+			<key>isa</key>
+			<string>PBXFileReference</string>
+			<key>lastKnownFileType</key>
+			<string>sourcecode.swift</string>
+			<key>path</key>
+			<string>WakeOn/YouTubePlayer.swift</string>
+			<key>sourceTree</key>
+			<string>&lt;group&gt;</string>
+		</dict>
 		<key>0F3BF8A23D1FDE6611CE4A9A</key>
 		<dict>
 			<key>fileRef</key>
@@ -1416,6 +1427,7 @@
 				<string>0F3BF8A23D1FDE6611CE4A9A</string>
 				<string>06EC84C75A1861F3AB6AD29C</string>
 				<string>FAE36BAEF99FF63E87FE6598</string>
+				<string>7EF1F34084C4FEA92F209E15</string>
 			</array>
 			<key>isa</key>
 			<string>PBXSourcesBuildPhase</string>
@@ -1665,12 +1677,30 @@
 			<key>productType</key>
 			<string>com.apple.product-type.application</string>
 		</dict>
+		<key>7EF1F34084C4FEA92F209E15</key>
+		<dict>
+			<key>fileRef</key>
+			<string>824423B4466B91132C7B051F</string>
+			<key>isa</key>
+			<string>PBXBuildFile</string>
+		</dict>
 		<key>8122B136745D748BA8B26D6C</key>
 		<dict>
 			<key>fileRef</key>
 			<string>5FBF5422A42236CB15FFB899</string>
 			<key>isa</key>
 			<string>PBXBuildFile</string>
+		</dict>
+		<key>824423B4466B91132C7B051F</key>
+		<dict>
+			<key>isa</key>
+			<string>PBXFileReference</string>
+			<key>lastKnownFileType</key>
+			<string>sourcecode.swift</string>
+			<key>path</key>
+			<string>Tests/YouTubePlayerTests.swift</string>
+			<key>sourceTree</key>
+			<string>&lt;group&gt;</string>
 		</dict>
 		<key>83DA82C7C30EB912C8D47A04</key>
 		<dict>
@@ -1683,6 +1713,13 @@
 		<dict>
 			<key>fileRef</key>
 			<string>A8BE439C8003B02D5316B471</string>
+			<key>isa</key>
+			<string>PBXBuildFile</string>
+		</dict>
+		<key>85F55C2A13036BE8C516E159</key>
+		<dict>
+			<key>fileRef</key>
+			<string>0EDABCDB214C009CA4F06669</string>
 			<key>isa</key>
 			<string>PBXBuildFile</string>
 		</dict>
@@ -2367,6 +2404,7 @@
 				<string>DDB2574CFA5C25FCC5D10F1B</string>
 				<string>92404B1FF440E3A7B6630303</string>
 				<string>2F254AB562BEFDB66262B1D5</string>
+				<string>85F55C2A13036BE8C516E159</string>
 				<string>7C5A1951B4BEF1420051F995</string>
 				<string>3B8E250EBF1A2DB5C7F29222</string>
 				<string>3A7271DD402160791BE63A46</string>
@@ -2828,6 +2866,7 @@
 				<string>5F8D1447DF26309D45C4CBCF</string>
 				<string>F36E746150097572D76CB5C2</string>
 				<string>43916129615D067FEEB4464D</string>
+				<string>0EDABCDB214C009CA4F06669</string>
 				<string>E31B5919A1444094040D0A2C</string>
 				<string>38534BB08E9D76D11C587E49</string>
 				<string>EA887A74159053229BB4FA1B</string>
@@ -2851,6 +2890,7 @@
 				<string>4F39308818B726E435B8F2A1</string>
 				<string>579F4EE51E22157FC1503151</string>
 				<string>E131C259A818D1A0E21BDDCC</string>
+				<string>824423B4466B91132C7B051F</string>
 				<string>8F74F34C7B6E3E70FA09817C</string>
 				<string>62CCEF872899BA435086821E</string>
 				<string>5D1EA6ABA87368CF90FC5B8D</string>

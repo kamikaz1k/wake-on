@@ -17,7 +17,7 @@ final class VoiceSessionController: ObservableObject {
     static let shared = VoiceSessionController()
 
     enum Phase: Equatable { case idle, connecting, live, ending }
-    enum Probe: String { case greeting, search, spotify, pause, visual, map, place, browser }
+    enum Probe: String { case greeting, search, spotify, youtube, pause, visual, map, place, browser }
 
     struct TimelineRow: Identifiable { let id = UUID(); let name: String; let ms: Double }
     struct TranscriptLine: Identifiable { let id = UUID(); let speaker: String; var text: String }
@@ -685,7 +685,7 @@ final class VoiceSessionController: ObservableObject {
         }
     }
 
-    /// The backend model called one of the app's tools (play_spotify, control_media, open_map, show_visual).
+    /// The backend model called one of the app's tools (play_spotify, play_youtube, control_media, open_map, show_visual).
     private func handleFunctionCall(_ item: [String: Any]) {
         let name = item["name"] as? String ?? ""
         let callID = item["call_id"] as? String ?? ""
@@ -719,6 +719,16 @@ final class VoiceSessionController: ObservableObject {
             action = ["kind": "spotify", "title": request.title, "app_url": request.appURL.absoluteString,
                       "web_url": request.webURL?.absoluteString ?? NSNull()]
         } else if name == SpotifyPlayer.toolName {
+            result = "Nothing to play: no link and no query."
+        } else if name == YouTubePlayer.toolName,
+                  let request = YouTubePlayer.request(youtubeURL: arguments["youtube_url"] as? String ?? "",
+                                                      query: arguments["query"] as? String ?? "",
+                                                      title: arguments["title"] as? String ?? "") {
+            result = "Opening \(request.title) in YouTube; the call is ending."
+            pendingYouTube = request
+            action = ["kind": "youtube", "title": request.title, "web_url": request.webURL.absoluteString,
+                      "app_url": request.appURL.absoluteString]
+        } else if name == YouTubePlayer.toolName {
             result = "Nothing to play: no link and no query."
         } else if name == MediaControl.toolName,
                   let command = (arguments["action"] as? String).flatMap(MediaControl.Command.init) {
@@ -770,6 +780,7 @@ final class VoiceSessionController: ObservableObject {
         provider?.send(["type": "response.create"])
         // Spotify's playback would fight the call for audio: hang up, then open it (finishCall).
         if pendingSpotify != nil { stop(reason: "spotify") }
+        if pendingYouTube != nil { stop(reason: "youtube") }
         if pendingMedia != nil { stop(reason: "media") }
         // Leaving for Google Maps: hang up first, as for Spotify, then open it (finishCall).
         if pendingMap != nil { stop(reason: "maps") }
@@ -824,6 +835,8 @@ final class VoiceSessionController: ObservableObject {
 
     /// Opened once the call has ended and released the audio session.
     private var pendingSpotify: SpotifyPlayer.Request?
+    /// Opened once the call has ended, like Spotify.
+    private var pendingYouTube: YouTubePlayer.Request?
     /// Opened once the call has ended, like Spotify.
     private var pendingMap: MapsOpener.Request?
     /// Sent once the call has ended. An exclusive (foreground) call pauses other apps, which may
@@ -981,10 +994,11 @@ final class VoiceSessionController: ObservableObject {
         case .greeting:
             provider?.send(["type": "session.commentary.append", "delegation_id": NSNull(),
                             "content": "Greet the user in five words or fewer."])
-        case .search, .spotify, .pause, .visual, .map, .place, .browser:
+        case .search, .spotify, .youtube, .pause, .visual, .map, .place, .browser:
             let text = switch probe {
             case .search: "Search the web: what is the current weather in Toronto?"
             case .spotify: "Play Blinding Lights by The Weeknd on Spotify."
+            case .youtube: "Play the official Never Gonna Give You Up video on YouTube."
             case .visual: "Show me a chart of the forecast high in Toronto for the next five days."
             case .map: "Give me directions to the CN Tower in Google Maps."
             case .place: "Where is the CN Tower?"
@@ -1122,6 +1136,7 @@ final class VoiceSessionController: ObservableObject {
         self.capture = nil
         capture?.app("call_ended", ["reason": reason, "usage_seconds": usageSeconds ?? NSNull(),
                                     "spotify_pending": pendingSpotify != nil,
+                                    "youtube_pending": pendingYouTube != nil,
                                     "media_pending": pendingMedia?.rawValue ?? NSNull(),
                                     "map_pending": pendingMap != nil])
         let chatLog = ChatLog(id: capture?.id ?? UUID(), started: callStartedAt, ended: Date(), trigger: callTrigger, lines: lines)
@@ -1195,6 +1210,20 @@ final class VoiceSessionController: ObservableObject {
                                                    "web_url": spotify.webURL?.absoluteString ?? NSNull()])
                 SpotifyPlayer.open(spotify) { outcome in
                     laterCapture?.app("spotify_opened", ["outcome": outcome])
+                }
+            }
+        }
+        if let video = pendingYouTube {
+            pendingYouTube = nil
+            Task {
+                // As for Spotify: leave the screen only once the restarting listener runs.
+                let wake = WakeController.shared
+                for _ in 0..<60 where wake.busy && !wake.enabled { try? await Task.sleep(for: .milliseconds(50)) }
+                self.log("youtube_after_listener listening=\(wake.enabled)")
+                laterCapture?.app("youtube_open", ["title": video.title, "web_url": video.webURL.absoluteString,
+                                                   "app_url": video.appURL.absoluteString])
+                YouTubePlayer.open(video) { outcome in
+                    laterCapture?.app("youtube_opened", ["outcome": outcome])
                 }
             }
         }
