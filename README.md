@@ -47,6 +47,41 @@ press and OpenAI setting up the session. Method, raw traces and every experiment
 [iOS voice latency](docs/ios-voice-latency.md). What has been checked, and where:
 [verification log](docs/verification.md).
 
+### Chat Lab: picking the call's chat view
+
+Chat Lab (`native/ios/ChatLab`, scheme `ChatLab`) is a small companion app for choosing how
+a live call reads on screen. It replays the same call through four chat UIs side by side:
+our own SwiftUI view (following shadcn's streaming-chat scroll rules), exyte/Chat with
+MarkdownView, ConversationKit and LanguageModelChatUI. Each of the 41 scenarios (scrolling,
+streaming and barge-in, tool rows, sources, charts, wide tables, raw events, update rate) is
+scored 0 (fights the library), 1 (needs our code) or 2 (out of the box). The scenarios are
+listed in [chat UI scenarios](docs/research/chat-ui-scenarios.md). Our view won, and Wake On
+now uses it (`native/ios/ChatUI`).
+
+The same scenario (web search with sources) in each library: swipe sideways or use the
+arrows at the bottom to switch.
+
+<p>
+  <img src="docs/images/chatlab-ours.png" width="190" alt="Our SwiftUI view: user bubble, 'Searched the web' row, Lobby's reply, copy buttons, Live and Turns header">
+  <img src="docs/images/chatlab-exyte.png" width="190" alt="exyte/Chat: bubbles with timestamps and read ticks">
+  <img src="docs/images/chatlab-conversationkit.png" width="190" alt="ConversationKit: assistant replies with a sparkle icon and an always-on message box">
+  <img src="docs/images/chatlab-lmchatui.png" width="190" alt="LanguageModelChatUI: a green 'Tool call for web_search completed' banner">
+</p>
+
+Scenario list and scores, a recorded Wake On call replayed at its own timing, the same call
+with every sent and received event inline (tap one for its JSON), and dark mode:
+
+<p>
+  <img src="docs/images/chatlab-home.png" width="190" alt="Chat Lab home: scores per library, then real calls and scenarios">
+  <img src="docs/images/chatlab-replay.png" width="190" alt="A replayed call: 'One moment', 'Searched the web', then a Paris weather chart">
+  <img src="docs/images/chatlab-events.png" width="190" alt="The same call with raw events such as response.output_item.done and app.tool_call between the messages">
+  <img src="docs/images/chatlab-dark.png" width="190" alt="Dark mode: a hotel price bar chart inside the chat">
+</p>
+
+Real calls come from captures that Wake On records (`--lab` in
+`native/ios/scripts/pull-call-captures.sh`, or Share from a chat log). The three bundled
+samples are made up.
+
 The rest of this README covers the original macOS Python prototype.
 
 ## Architecture
