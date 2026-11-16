@@ -9,6 +9,46 @@ The first working vertical slice uses OpenAI Realtime over WebSocket for the
 conversation. A deterministic mock remains available for local wake-word
 testing without network usage.
 
+## iPhone app: Wake On
+
+The main client is now a native iPhone app (`native/ios`). Press the Action Button or say
+**"Hey Lobby"** and you're talking to `gpt-live-1` over WebRTC. A second model
+(`gpt-5.6-terra`) does web search and the app's tools: Spotify, YouTube, media controls,
+volume, Google Maps, an in-app browser, visuals and Obsidian notes.
+
+<p>
+  <img src="docs/images/ios-home.png" width="250" alt="Home screen: Start chat, chat history, settings">
+  <img src="docs/images/ios-call-spotify.png" width="250" alt="A call: 'Play Come Sail Away by Styx', the tool steps collapsed into 'Searched the web, opened Spotify'">
+  <img src="docs/images/ios-call-visual.png" width="250" alt="A call: the weather in Paris shown as a bar chart">
+</p>
+
+### Timing
+
+The goal is **trigger → listening**: how soon you can speak and be heard. Speech said
+before OpenAI is ready is buffered on the phone and sent once it is, so nothing is lost.
+Measured on an iPhone 17 Pro over Wi-Fi (round trip ≈ 54 ms):
+
+| Action Button (fast-start) | App closed | App in background |
+|---|---:|---:|
+| "Listening" on screen | ~105 ms | ~60 ms |
+| Microphone capturing (speech kept from here) | 250–370 ms | 265–300 ms |
+| Audio reaching OpenAI | 690–1,380 ms | 630–950 ms |
+| Same, normal App Intent (before fast-start) | 1,559–1,953 ms | 1,542–1,672 ms |
+
+| "Hey Lobby" (phone locked, app in background) | |
+|---|---:|
+| Wake word detected after the phrase ends | 250–360 ms |
+| Wake → call microphone live | 347–419 ms |
+| Wake → audio reaching OpenAI | 560–1,370 ms |
+| Listener power while locked | ~9 mW; under 1% battery in 73 min |
+
+The app's own share of the network path is about 3–5 ms; the rest is iOS handing off the
+press and OpenAI setting up the session. Method, raw traces and every experiment:
+[iOS voice latency](docs/ios-voice-latency.md). What has been checked, and where:
+[verification log](docs/verification.md).
+
+The rest of this README covers the original macOS Python prototype.
+
 ## Architecture
 
 ```text
