@@ -1,7 +1,7 @@
 #!/bin/sh
 # One-time setup of the Cloudflare Worker. Run from server/: scripts/setup.sh
-# Asks you to log in to Cloudflare in the browser and to paste the OpenAI key (it goes
-# straight to Cloudflare's encrypted secrets, never to a file).
+# Asks you to log in to Cloudflare in the browser. The OpenAI key comes from server/.env
+# (git-ignored) or is pasted; it goes to Cloudflare's encrypted secrets.
 set -eu
 cd "$(dirname "$0")/.."
 npm install --silent
@@ -12,7 +12,12 @@ if grep -q REPLACE_WITH_KV_ID wrangler.toml; then
   sed -i '' "s/REPLACE_WITH_KV_ID/$id/" wrangler.toml
   echo "KV namespace: $id"
 fi
-echo "Paste the OpenAI project key when asked (it isn't shown or saved locally):"
-npx wrangler secret put OPENAI_API_KEY
 npx wrangler deploy
+# The key: from server/.env (OPENAI_PROJECT_API_KEY=…, git-ignored) if it's there, else pasted.
+if [ -f .env ] && grep -q '^OPENAI_PROJECT_API_KEY=' .env; then
+  sed -n 's/^OPENAI_PROJECT_API_KEY=//p' .env | tr -d '"'"'"' \r\n' | npx wrangler secret put OPENAI_API_KEY
+else
+  echo "Paste the OpenAI project key when asked (it isn't shown or saved locally):"
+  npx wrangler secret put OPENAI_API_KEY
+fi
 echo "Done. Put the workers.dev URL above into LobbyServer.url in native/ios/WakeOn/LobbyServer.swift."

@@ -6,8 +6,8 @@ import Foundation
 /// same request as OpenAI, so only the address changes; the call's audio still goes straight
 /// to OpenAI.
 enum LobbyServer {
-    /// The deployed worker's address (`scripts/setup.sh` prints it). Nil until deployed.
-    static let url: URL? = nil
+    /// The deployed worker (`server/scripts/setup.sh` prints its address).
+    static let url: URL? = URL(string: "https://wake-on.kamikaz1k.workers.dev")
 
     /// OpenAI keys start with "sk-"; anything else saved in Settings is an invite code.
     static func isInviteCode(_ credential: String) -> Bool {

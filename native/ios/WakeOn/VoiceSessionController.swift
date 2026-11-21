@@ -214,7 +214,15 @@ final class VoiceSessionController: ObservableObject {
                 }
             } else if inBackground && !backgroundWake { armWhenActive() } else { armAudio() }
         }
-        let credentials = OpenAIKeyStore.load()
+        var credentials = OpenAIKeyStore.load()
+        #if DEBUG
+        // "--invite CODE": this call uses an invite code (through the Lobby server) without
+        // replacing the key saved in the Keychain (testing the server on the phone).
+        let args = ProcessInfo.processInfo.arguments
+        if let index = args.firstIndex(of: "--invite"), index + 1 < args.count {
+            credentials = (args[index + 1], .environment)
+        }
+        #endif
         let permitted = AVAudioApplication.shared.recordPermission == .granted
         // A resumed chat carries its transcript in the session's instructions, so it can't use
         // the offer prepared ahead of time; that one stays for the next new call.
