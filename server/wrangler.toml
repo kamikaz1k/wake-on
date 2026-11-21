@@ -1,0 +1,15 @@
+# Wake On's call server. See README.md; scripts/setup.sh fills in the KV id.
+name = "wake-on"
+main = "src/index.js"
+compatibility_date = "2026-11-01"
+workers_dev = true
+
+[vars]
+DAILY_CALLS = "40"
+GLOBAL_DAILY_CALLS = "300"
+ALLOWED_MODELS = "gpt-live-1.1,gpt-live-1"
+ALLOWED_BACKEND_MODELS = "gpt-5.6-terra"
+
+[[kv_namespaces]]
+binding = "USAGE"
+id = "REPLACE_WITH_KV_ID"

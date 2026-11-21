@@ -216,10 +216,13 @@ final class OpenAILiveVoiceProvider: NSObject {
         self.config = config
     }
 
-    /// Opens a TLS connection to api.openai.com ahead of time. Costs nothing on OpenAI's side.
+    /// Opens a TLS connection ahead of time to where the next call is set up (OpenAI, or the
+    /// Lobby server with an invite code). Costs nothing.
     static func prewarm() {
         _ = factory
-        var request = URLRequest(url: URL(string: "https://api.openai.com/v1/live/sessions")!)
+        let openAI = URL(string: "https://api.openai.com/v1/live/sessions")!
+        let target = OpenAIKeyStore.load().flatMap { try? LobbyServer.endpoint(for: $0.key, openAI: openAI) } ?? openAI
+        var request = URLRequest(url: target)
         request.httpMethod = "HEAD"
         http.dataTask(with: request).resume()
     }
@@ -528,7 +531,7 @@ final class OpenAILiveVoiceProvider: NSObject {
     // MARK: - Signalling
 
     private func makeRequest(sdp: String, apiKey: String) throws -> URLRequest {
-        var request = URLRequest(url: config.endpoint)
+        var request = URLRequest(url: try LobbyServer.endpoint(for: apiKey, openAI: config.endpoint))
         request.httpMethod = "POST"
         request.setValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")

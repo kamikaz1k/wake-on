@@ -127,7 +127,7 @@ struct VoiceSectionView: View {
     private static func ms(_ value: Double) -> String { String(format: "%.0f ms", value) }
 }
 
-/// A settings row that opens the OpenAI API key page, showing whether a key is set.
+/// A settings row that opens the invite code / OpenAI key page, showing whether one is set.
 struct APIKeyLink: View {
     @ObservedObject var voice: VoiceSessionController
 
@@ -135,13 +135,14 @@ struct APIKeyLink: View {
         NavigationLink {
             APIKeyView(voice: voice)
         } label: {
-            LabeledContent("OpenAI API key", value: voice.keySource == "missing" ? "Not set" : "Saved")
+            LabeledContent("Invite Code or Key", value: voice.keySource == "missing" ? "Not set" : "Saved")
         }
         .accessibilityIdentifier("api-key-link")
     }
 }
 
-/// The OpenAI API key: enter or replace it (saved to the Keychain), or remove it.
+/// An invite code (calls go through the Lobby server) or an OpenAI API key (calls go straight
+/// to OpenAI): enter or replace it (saved to the Keychain), or remove it.
 struct APIKeyView: View {
     @ObservedObject var voice: VoiceSessionController
     @State private var keyDraft = ""
@@ -149,7 +150,7 @@ struct APIKeyView: View {
     var body: some View {
         Form {
             Section {
-                SecureField(voice.keySource == "missing" ? "sk-…" : "New key", text: $keyDraft)
+                SecureField(voice.keySource == "missing" ? "Invite code or sk-…" : "New code or key", text: $keyDraft)
                     .textContentType(.password)
                     .accessibilityIdentifier("api-key-field")
                 Button("Save to Keychain") { voice.saveKey(keyDraft); keyDraft = "" }
@@ -159,20 +160,20 @@ struct APIKeyView: View {
             }
             if voice.keySource == "keychain" {
                 Section {
-                    Button("Remove Key", role: .destructive) { voice.forgetKey() }
+                    Button("Remove", role: .destructive) { voice.forgetKey() }
                 }
             }
         }
-        .navigationTitle("OpenAI API key")
+        .navigationTitle("Invite Code or Key")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar(.hidden, for: .tabBar)
     }
 
     private var status: String {
         switch voice.keySource {
-        case "keychain": "A key is saved in this iPhone's Keychain. Lobby needs it to talk."
+        case "keychain": "Saved in this iPhone's Keychain. Lobby needs it to talk."
         case "environment": "Using the key from the launch environment (debug builds)."
-        default: "Lobby needs an OpenAI API key to talk. It's kept in this iPhone's Keychain."
+        default: "Lobby needs an invite code, or your own OpenAI API key, to talk. It's kept in this iPhone's Keychain."
         }
     }
 }
