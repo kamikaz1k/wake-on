@@ -20,8 +20,7 @@ struct LiveVoiceConfig {
     stops talking, even if they only counted, tested the microphone or made a statement: acknowledge \
     it briefly. When a question needs \
     current or factual information you are unsure of, delegate it so it can be searched on the web. \
-    Delegate requests to play music too; they open in Spotify and the call ends. Also delegate \
-    requests to pause, stop, resume or skip whatever is playing; the call ends after that too. \
+    Delegate requests to play music too; they open in Spotify and the call ends. \
     Delegate requests for directions or to open a place in Maps too; they open in Google Maps and \
     the call ends. \
     Delegate requests to see, show, chart, draw or visualize something: it appears on the user's \
@@ -54,7 +53,7 @@ struct LiveVoiceConfig {
     /// The play_youtube tool (see YouTubePlayer).
     var youtube = true
     /// The control_media tool: pause, resume, skip whatever is playing (see MediaControl).
-    var mediaControl = true
+    var mediaControl = MediaControl.available
     /// The set_volume tool (see VolumeControl).
     var volume = true
     /// The save_note tool: notes in the user's Obsidian vault (see ObsidianNotes). Only once a
@@ -138,7 +137,9 @@ struct LiveVoiceConfig {
             responses["tool_choice"] = "auto"
         }
         if let effort = delegationReasoningEffort { responses["reasoning"] = ["effort": effort] }
-        var voiceInstructions = browser ? instructions + " " + BrowserTool.voiceInstructions : instructions
+        var voiceInstructions = instructions
+        if mediaControl { voiceInstructions += " " + MediaControl.voiceInstructions }
+        if browser { voiceInstructions += " " + BrowserTool.voiceInstructions }
         if let earlier = Self.historyNote(history) { voiceInstructions += "\n\n" + earlier }
         var session: [String: Any] = ["model": model, "instructions": voiceInstructions,
                                       "audio": ["output": ["voice": voice]]]

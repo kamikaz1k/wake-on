@@ -42,16 +42,35 @@ enum MediaControl {
         ] as [String: Any],
     ]
 
+    /// For the voice model (added to its instructions when the tool is offered).
+    static let voiceInstructions = """
+    Also delegate requests to pause, stop, resume or skip whatever is playing; the call ends \
+    after that too.
+    """
+
     static let delegationInstructions = """
     To pause or stop, resume, skip or go back in whatever is already playing, call control_media \
     instead of play_spotify.
     """
 
+    /// Only in Debug builds (sideloaded onto the user's phone). Release builds, which go to
+    /// TestFlight, leave the private framework out entirely: the tool isn't offered and the
+    /// framework's name isn't in the binary, since App Store Connect rejects private APIs.
+    #if DEBUG
+    static let available = true
+    #else
+    static let available = false
+    #endif
+
     private typealias SendCommand = @convention(c) (UInt32, CFDictionary?) -> Bool
     private static let send: SendCommand? = {
+        #if !DEBUG
+        return nil
+        #else
         guard let handle = dlopen("/System/Library/PrivateFrameworks/MediaRemote.framework/MediaRemote", RTLD_NOW),
               let symbol = dlsym(handle, "MRMediaRemoteSendCommand") else { return nil }
         return unsafeBitCast(symbol, to: SendCommand.self)
+        #endif
     }()
 
     static func run(_ command: Command) {
