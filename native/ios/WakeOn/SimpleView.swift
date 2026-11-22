@@ -83,7 +83,14 @@ struct SimpleView: View {
                     case .ending:
                         ProgressView("Ending…")
                     }
-                    if let error = voice.error { Text(error).foregroundStyle(.red) }
+                    if let error = voice.error {
+                        // No card: it shares a section with the clear button row, so a card would
+                        // get square top corners. Plain red text under the button instead.
+                        Text(error)
+                            .foregroundStyle(.red)
+                            .listRowBackground(Color.clear)
+                            .accessibilityIdentifier("simple-error")
+                    }
                 } footer: {
                     Text("Or press the Action Button. Say “bye” or press it again to hang up.")
                 }
