@@ -18,12 +18,17 @@ struct ConversationKitRenderer: View {
             // Fixed-height slot, so the transcript doesn't shift when the status comes and goes.
             ZStack(alignment: .leading) {
                 Text(" ").font(.footnote).hidden()
-                if let status = player.call.status { ChatStatusLine(text: status) }
+                // Hidden while a tool chain runs: the chain says the same (as in Pixie).
+                if let status = player.call.status, !ChatToolGrouping.endsWithRunningChain(rows) {
+                    ChatStatusLine(text: status)
+                }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(.horizontal).padding(.bottom, 4)
             ConversationView(messages: $messages) { message in
-                if let item = message.item, item.speaker == nil {
+                if let chain = message.chain {
+                    ChatToolChain(tools: chain.tools, finished: chain.finished)
+                } else if let item = message.item, item.speaker == nil {
                     ChatNonMessageRow(item: item)
                 } else {
                     MessageView(message: message.content, imageURL: message.imageURL,
@@ -49,8 +54,12 @@ struct ConversationKitRenderer: View {
         .onChange(of: player.revision) { sync() }
     }
 
+    private var rows: [ChatToolGrouping.Row] {
+        ChatToolGrouping.rows(player.items, live: player.call.status != nil)
+    }
+
     private func sync() {
-        messages = player.items.map(LabConvMessage.init(item:))
+        messages = rows.map(LabConvMessage.init(row:))
     }
 }
 
@@ -63,6 +72,21 @@ struct LabConvMessage: Message {
     let participant: Participant
     let error: (any Error)? = nil
     var item: ChatItem?
+    /// A run of tool calls drawn as Pixie's chain.
+    var chain: (tools: [ChatItem.Tool], finished: Bool)?
+
+    init(row: ChatToolGrouping.Row) {
+        switch row {
+        case let .item(item): self.init(item: item)
+        case let .chain(id, tools, finished, _): self.init(chainID: id, tools: tools, finished: finished)
+        }
+    }
+
+    private init(chainID: String, tools: [ChatItem.Tool], finished: Bool) {
+        id = chainID
+        participant = .other
+        chain = (tools, finished)
+    }
 
     init(item: ChatItem) {
         id = item.id
@@ -85,6 +109,7 @@ struct LabConvMessage: Message {
 
     static func == (lhs: Self, rhs: Self) -> Bool {
         lhs.id == rhs.id && lhs.content == rhs.content && lhs.participant == rhs.participant && lhs.item == rhs.item
+            && lhs.chain?.tools == rhs.chain?.tools && lhs.chain?.finished == rhs.chain?.finished
     }
 
     func hash(into hasher: inout Hasher) {

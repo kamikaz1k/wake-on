@@ -30,6 +30,24 @@ final class ChatToolChainTests: XCTestCase {
         XCTAssertFalse(ChatToolGrouping.endsWithRunningChain(ChatToolGrouping.segments(done, live: false)))
     }
 
+    /// Chat Lab's exyte and ConversationKit pages take one flat list: a tool run is one row.
+    func testFlatRowsPutOneChainInPlaceOfItsTools() {
+        var first = item("t1", .tool(tool("web_search", .done)))
+        first.time = Date(timeIntervalSince1970: 100)
+        let items = [item("u", .message(.user, text: "play", state: .done)), first,
+                     item("t2", .tool(tool("play_spotify", .running)))]
+        let rows = ChatToolGrouping.rows(items, live: true)
+        XCTAssertEqual(rows.map(\.id), ["u", "chain-t1"])
+        guard case let .chain(_, tools, finished, time) = rows[1] else { return XCTFail() }
+        XCTAssertEqual(tools.count, 2)
+        XCTAssertFalse(finished)
+        XCTAssertEqual(time, first.time, "Dated by its first call")
+        XCTAssertTrue(ChatToolGrouping.endsWithRunningChain(rows), "The status line hides meanwhile")
+        let saved = [first, item("t2", .tool(tool("play_spotify", .done)))]
+        XCTAssertFalse(ChatToolGrouping.endsWithRunningChain(ChatToolGrouping.rows(saved, live: false)),
+                       "A saved call's finished chain collapses")
+    }
+
     func testVisualsAndMapsAreNotChained() {
         var visual = tool("show_visual", .done)
         visual.visual = .init(title: "Chart", html: "<p>", complete: true)

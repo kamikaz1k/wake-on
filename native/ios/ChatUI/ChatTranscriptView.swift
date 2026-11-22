@@ -316,6 +316,38 @@ enum ChatToolGrouping {
         }
         return result
     }
+
+    /// For chat libraries that take one flat list (Chat Lab's exyte and ConversationKit pages):
+    /// each item, or a whole tool chain in place of its run of tool calls.
+    enum Row: Identifiable, Equatable {
+        case item(ChatItem)
+        /// `time` is the first call's.
+        case chain(id: String, tools: [ChatItem.Tool], finished: Bool, time: Date)
+
+        var id: String {
+            switch self {
+            case let .item(item): item.id
+            case let .chain(id, _, _, _): id
+            }
+        }
+    }
+
+    static func rows(_ items: [ChatItem], live: Bool) -> [Row] {
+        segments(items, live: live).map { segment in
+            switch segment.content {
+            case let .item(index): .item(items[index])
+            case let .tools(tools, finished):
+                .chain(id: segment.id, tools: tools, finished: finished,
+                       time: items.first { "chain-" + $0.id == segment.id }?.time ?? Date())
+            }
+        }
+    }
+
+    /// The status line repeats what a running chain shows, so it hides meanwhile.
+    static func endsWithRunningChain(_ rows: [Row]) -> Bool {
+        if case let .chain(_, _, finished, _) = rows.last { return !finished }
+        return false
+    }
 }
 
 /// Every turn, with search across all messages (A10). The current turn is checked.

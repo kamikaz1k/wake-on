@@ -16,6 +16,14 @@ struct ExyteRenderer: View {
     private static let lobby = User(id: "lobby", name: "Lobby", avatarURL: nil, isCurrentUser: false)
     private static let system = User(id: "system", name: "Call", avatarURL: nil, type: .system)
     static let itemKey = "labItem"
+    static let chainKey = "labChain"
+
+    /// A run of tool calls drawn as Pixie's chain (one exyte message for the whole run).
+    struct Chain { let tools: [ChatItem.Tool]; let finished: Bool }
+
+    private var rows: [ChatToolGrouping.Row] {
+        ChatToolGrouping.rows(player.items, live: player.call.status != nil)
+    }
 
     var body: some View {
         VStack(spacing: 0) {
@@ -23,7 +31,7 @@ struct ExyteRenderer: View {
             // scrolls away with the messages), so call phase and mute sit above the ChatView.
             ChatCallHeader(call: player.call)
             ChatView<AnyView, EmptyView, DefaultMessageMenuAction>(
-                messages: Self.messages(from: player.items),
+                messages: Self.messages(from: rows),
                 didSendMessage: { _ in }
             ) { params in
                 Self.row(params)
@@ -34,7 +42,8 @@ struct ExyteRenderer: View {
             // B6: the live status line sits between the list and the (empty) input view.
             .betweenListAndInputViewBuilder {
                 Group {
-                    if let status = player.call.status {
+                    // Hidden while a tool chain runs: the chain says the same (as in Pixie).
+                    if let status = player.call.status, !ChatToolGrouping.endsWithRunningChain(rows) {
                         ChatStatusLine(text: status)
                             .frame(maxWidth: .infinity, alignment: .leading)
                             .padding(.horizontal, 16).padding(.vertical, 6)
@@ -60,8 +69,20 @@ struct ExyteRenderer: View {
 
     // MARK: - Mapping
 
-    static func messages(from items: [ChatItem]) -> [Message] {
-        items.map { item in
+    static func messages(from rows: [ChatToolGrouping.Row]) -> [Message] {
+        rows.map { row in
+            let item: ChatItem
+            switch row {
+            case let .item(rowItem): item = rowItem
+            case let .chain(id, tools, finished, time):
+                var message = Message(id: id, user: system, createdAt: time, text: "",
+                                      customData: [chainKey: Chain(tools: tools, finished: finished)])
+                var hasher = Hasher()
+                hasher.combine(String(describing: tools))
+                hasher.combine(finished)
+                message.triggerRedraw = token(hasher.finalize())
+                return message
+            }
             let user: User
             var text = ""
             switch item.kind {
@@ -86,7 +107,11 @@ struct ExyteRenderer: View {
         var hasher = Hasher()
         hasher.combine(String(describing: item.kind))
         hasher.combine(item.timing)
-        let value = UInt64(bitPattern: Int64(hasher.finalize()))
+        return token(hasher.finalize())
+    }
+
+    private static func token(_ hash: Int) -> UUID {
+        let value = UInt64(bitPattern: Int64(hash))
         let hex = String(format: "%016llX", value)
         let tail = hex.dropFirst(4)
         return UUID(uuidString: "00000000-0000-0000-\(hex.prefix(4))-\(tail)") ?? UUID()
@@ -96,6 +121,12 @@ struct ExyteRenderer: View {
 
     @MainActor
     static func row(_ params: MessageBuilderParameters) -> AnyView {
+        if let chain = params.message.customData[chainKey] as? Chain {
+            return AnyView(
+                ChatToolChain(tools: chain.tools, finished: chain.finished)
+                    .padding(.horizontal, 16).padding(.vertical, 4)
+            )
+        }
         guard let item = params.message.customData[itemKey] as? ChatItem else {
             return AnyView(params.defaultMessageView())
         }
