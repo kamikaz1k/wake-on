@@ -77,10 +77,13 @@ struct OnboardingView: View {
     @State private var step: Step = OnboardingView.launchStep
     /// The current step's call happened (first call, Action Button press, "Hey Lobby").
     @State private var stepCallDone = false
-    @State private var listeningStarted = false
     /// The first call just ended: the next page opens with a "That's a call" line.
     @State private var firstCallDone = false
     @State private var settingsLinkFailed = false
+    @State private var practiceStarted = false
+    @State private var practiceHeard = false
+    @State private var dotSeen = false
+    @State private var chimePlayer: AVAudioPlayer?
 
     var body: some View {
         NavigationStack {
@@ -213,40 +216,55 @@ struct OnboardingView: View {
                 }
             }
         case .heyLobby:
+            // Practice first (listening on, no call): say it, hear the chime, find the orange dot.
+            // Then the main button turns on real background listening.
             OnboardingPage(note: firstCallDone ? callDoneNote : nil,
-                           icon: stepCallDone ? "checkmark.circle.fill" : "waveform",
-                           title: stepCallDone ? "Lobby heard you" : "Just say “Hey Lobby”",
-                           text: stepCallDone
-                               ? "Listening stays on until you turn it off in Settings."
-                               : "Say “Hey Lobby”, wait for the chime, then ask. It works even with the phone locked.") {
-                if !stepCallDone {
-                    if listeningStarted {
-                        HStack(spacing: 12) {
-                            ProgressView().frame(width: 28)
-                            Text("Try it: say “Hey Lobby”, wait for the chime, then “what time is it?”").foregroundStyle(.secondary)
-                        }
-                    } else {
-                        VStack(alignment: .leading, spacing: 10) {
-                            OnboardingRow(icon: "lock.iphone",
-                                          text: "Listening happens on your iPhone. Nothing is sent until you say “Hey Lobby”.")
-                            OnboardingRow(icon: "bell.fill",
-                                          text: "A chime means Lobby is listening. Words said during it are missed.")
-                            OnboardingRow(icon: "circle.fill", tint: .orange, small: true,
-                                          text: "The orange dot shows while the microphone is on.")
-                            OnboardingRow(icon: "battery.75percent", text: "Uses under 1% of battery an hour.")
+                           icon: "waveform", title: "Just say “Hey Lobby”",
+                           text: "Try it here first: nothing starts a call yet. Listening runs on your iPhone, and nothing is sent until you say it.") {
+                VStack(alignment: .leading, spacing: 18) {
+                    PracticeRow(number: 1, done: practiceHeard, active: !practiceHeard,
+                                title: "Say “Hey Lobby”",
+                                detail: practiceHeard ? "Heard you. That phrase is what starts a call."
+                                                      : "Listening…")
+                    PracticeRow(number: 2, done: practiceHeard, active: false,
+                                title: "Hear the chime",
+                                detail: practiceHeard ? "That chime means Lobby is listening. Wait for it, then ask."
+                                                      : "It plays when Lobby starts listening.") {
+                        if practiceHeard {
+                            Button("Play It Again", systemImage: "speaker.wave.2") { playChime() }
+                                .font(.subheadline)
                         }
                     }
+                    PracticeRow(number: 3, done: dotSeen, active: practiceHeard && !dotSeen,
+                                title: "Find the orange dot",
+                                detail: "At the top of the screen, an orange dot shows while the microphone is on. That's what listening looks like.") {
+                        if practiceHeard && !dotSeen {
+                            Button("I See It", systemImage: "arrow.up") { dotSeen = true }
+                                .buttonStyle(.bordered)
+                                .font(.subheadline)
+                                .accessibilityIdentifier("onboarding-dot-seen")
+                        }
+                    }
+                    PracticeRow(number: 4, done: false, active: dotSeen,
+                                title: "Turn on background listening",
+                                detail: "Then “Hey Lobby” works any time, even with the phone locked. Uses under 1% of battery an hour.")
                 }
             } actions: {
-                if stepCallDone {
-                    primary("Next", id: "onboarding-next") { advance() }
-                } else if !listeningStarted {
-                    primary("Turn On Listening", id: "onboarding-listen") {
-                        talkOnWake = true
-                        if !wake.enabled && !wake.busy { wake.start() }
-                        listeningStarted = true
-                    }
+                primary("Turn On Listening", id: "onboarding-listen") {
+                    // Restart for a fresh detector, now starting calls.
+                    talkOnWake = true
+                    practiceStarted = false
+                    wake.stop()
+                    wake.start()
+                    advance()
                 }
+                .disabled(!dotSeen)
+            }
+            .onAppear(perform: startPractice)
+            .onChange(of: wake.detections) {
+                guard step == .heyLobby, !practiceHeard else { return }
+                practiceHeard = true
+                playChime()
             }
         case .demo:
             OnboardingPage(icon: "play.rectangle.on.rectangle.fill", title: "See what Lobby can do",
@@ -267,6 +285,21 @@ struct OnboardingView: View {
 
     private let callDoneNote = "That's a call. Start one any time from the main screen."
 
+    /// Listening on without starting calls, so "Hey Lobby" can be practised.
+    private func startPractice() {
+        practiceHeard = false
+        dotSeen = false
+        guard !wake.enabled, !wake.busy else { return }
+        talkOnWake = false
+        practiceStarted = true
+        wake.start()
+    }
+
+    private func playChime() {
+        chimePlayer = try? AVAudioPlayer(data: HotAudioDevice.readyChimeWAV())
+        chimePlayer?.play()
+    }
+
     private func primary(_ title: String, id: String, action: @escaping () -> Void) -> some View {
         Button(action: action) {
             Text(title).frame(maxWidth: .infinity).padding(.vertical, 6)
@@ -278,8 +311,9 @@ struct OnboardingView: View {
 
     /// The next step that can work now.
     private func advance() {
+        // Leaving practice without turning listening on: stop the practice listener.
+        if practiceStarted { practiceStarted = false; wake.stop() }
         stepCallDone = false
-        listeningStarted = false
         firstCallDone = false
         var next = Step(rawValue: step.rawValue + 1) ?? .done
         while next != .done, !available(next) { next = Step(rawValue: next.rawValue + 1) ?? .done }
@@ -316,6 +350,39 @@ struct OnboardingRow: View {
                 .accessibilityHidden(true)
             Text(text).foregroundStyle(textStyle)
         }
+    }
+}
+
+/// A numbered practice step: a check once done, highlighted while it's the current one.
+struct PracticeRow<Extra: View>: View {
+    let number: Int
+    let done: Bool
+    let active: Bool
+    let title: String
+    let detail: String
+    @ViewBuilder var extra: Extra
+
+    var body: some View {
+        HStack(alignment: .firstTextBaseline, spacing: 12) {
+            Image(systemName: done ? "checkmark.circle.fill" : "\(number).circle")
+                .foregroundStyle(done ? AnyShapeStyle(.green) : active ? AnyShapeStyle(.tint) : AnyShapeStyle(.secondary))
+                .frame(width: 28)
+                .accessibilityHidden(true)
+            VStack(alignment: .leading, spacing: 4) {
+                Text(title).font(.headline).foregroundStyle(done || active ? .primary : .secondary)
+                HStack(spacing: 6) {
+                    if active && !done && number == 1 { ProgressView().controlSize(.small) }
+                    Text(detail).font(.subheadline).foregroundStyle(.secondary)
+                }
+                extra
+            }
+        }
+    }
+}
+
+extension PracticeRow where Extra == EmptyView {
+    init(number: Int, done: Bool, active: Bool, title: String, detail: String) {
+        self.init(number: number, done: done, active: active, title: title, detail: detail) { EmptyView() }
     }
 }
 

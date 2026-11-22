@@ -276,6 +276,23 @@ final class HotAudioDevice: NSObject, @unchecked Sendable {
         return index
     }
 
+    /// The ready chime as a WAV file, to play it outside a call (onboarding).
+    static func readyChimeWAV() -> Data {
+        let sampleRate = 48_000.0
+        let samples = UnsafeMutablePointer<Int16>.allocate(capacity: 48_000)
+        defer { samples.deallocate() }
+        let count = render([(1_318.5, 0.07), (1_760, 0.10)], into: samples, sampleRate: sampleRate,
+                           level: 0.22, attack: 0.005, decay: nil)
+        let pcm = Data(bytes: samples, count: count * 2)
+        var wav = Data()
+        func u32(_ v: UInt32) { withUnsafeBytes(of: v.littleEndian) { wav.append(contentsOf: $0) } }
+        func u16(_ v: UInt16) { withUnsafeBytes(of: v.littleEndian) { wav.append(contentsOf: $0) } }
+        wav.append(contentsOf: Array("RIFF".utf8)); u32(UInt32(36 + pcm.count))
+        wav.append(contentsOf: Array("WAVEfmt ".utf8)); u32(16); u16(1); u16(1); u32(48_000); u32(96_000); u16(2); u16(16)
+        wav.append(contentsOf: Array("data".utf8)); u32(UInt32(pcm.count)); wav.append(pcm)
+        return wav
+    }
+
     /// Plays the hang-up chime if the engine is running (any thread).
     func playEndChime() { endChimeStart = true }
 

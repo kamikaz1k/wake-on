@@ -62,6 +62,8 @@ final class WakeController: NSObject, ObservableObject, UNUserNotificationCenter
     @Published var error: String?
     @Published var notificationNote = ""
     @Published var isPlaying = false
+    /// "Hey Lobby" detections since launch (onboarding's practice step watches it).
+    @Published private(set) var detections = 0
     private let queue = DispatchQueue(label: "wake.audio", qos: .userInitiated)
     private var engine = AVAudioEngine()
     private var captureRoute: AudioInputRoute?
@@ -468,6 +470,7 @@ final class WakeController: NSObject, ObservableObject, UNUserNotificationCenter
                     self.wakeWasBackground = UIApplication.shared.applicationState == .background
                     self.wakeLocation = self.wakeWasBackground ? "Detected in background" : "Detected in foreground"
                     self.handoff = capture
+                    self.detections += 1
                     BatteryMonitor.shared.noteWake()
                     MainActor.assumeIsolated { ListeningActivityController.shared.noteWake() }
                     self.status = "Wake detected · capturing handoff"
