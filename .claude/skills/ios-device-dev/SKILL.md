@@ -121,6 +121,11 @@ xcrun devicectl device install app --device 5976CF6D-0FD6-5A57-9711-AA29F94404E7
 - Keep a copy in the scratchpad, then clear the log after installing a test build
   (`copy to` an empty file) so the next test is easy to read.
 - Audio-specific log reading is in the `ios-audio` skill.
+- **Data protection trap (Nov 2026):** files written with `.completeFileProtection` can't be
+  read while the phone is locked. The app is often launched locked (Action Button, Hey Lobby,
+  `devicectl`), so a store that treats "can't read" as "empty" and then saves wipes the file.
+  That lost the chat logs once; they were rebuilt from `call-captures/`. Use
+  `.completeFileProtectionUntilFirstUserAuthentication` and never write a file you couldn't read.
 
 ## Platform limits (from feature scoping)
 
