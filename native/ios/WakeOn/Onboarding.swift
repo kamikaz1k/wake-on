@@ -64,7 +64,10 @@ final class InviteLink: ObservableObject {
 }
 
 struct OnboardingView: View {
-    enum Step: Int, CaseIterable { case welcome, access, permission, firstCall, actionButton, heyLobby, demo, done }
+    /// Each step is done, not just read: a code that checks out, a real call, a press of the
+    /// Action Button, a watched demo, and last, listening turned on from the main button and
+    /// tried with "Hey Lobby".
+    enum Step: Int, CaseIterable { case welcome, access, permission, firstCall, actionButton, demo, heyLobby }
 
     @ObservedObject var wake: WakeController
     @ObservedObject var voice: VoiceSessionController = .shared
@@ -81,6 +84,7 @@ struct OnboardingView: View {
     /// The first call just ended: the next page opens with a "That's a call" line.
     @State private var firstCallDone = false
     @State private var settingsLinkFailed = false
+    @State private var demoWatched = false
 
     var body: some View {
         NavigationStack {
@@ -93,7 +97,7 @@ struct OnboardingView: View {
                 }
             }
             .toolbar {
-                if step != .welcome, step != .done, voice.phase == .idle {
+                if step != .welcome, voice.phase == .idle {
                     ToolbarItem(placement: .topBarTrailing) {
                         Button("Skip") { advance() }.accessibilityIdentifier("onboarding-skip")
                     }
@@ -215,9 +219,9 @@ struct OnboardingView: View {
         case .heyLobby:
             OnboardingPage(note: firstCallDone ? callDoneNote : nil,
                            icon: stepCallDone ? "checkmark.circle.fill" : "waveform",
-                           title: stepCallDone ? "Lobby heard you" : "Just say “Hey Lobby”",
+                           title: stepCallDone ? "You're all set" : "Just say “Hey Lobby”",
                            text: stepCallDone
-                               ? "Listening stays on until you turn it off in Settings."
+                               ? "Lobby heard you. Listening stays on until you turn it off in Settings. Start a chat from the main screen, press the Action Button, or say “Hey Lobby”."
                                : "Say “Hey Lobby”, wait for the chime, then ask. It works even with the phone locked.") {
                 if !stepCallDone {
                     if listeningStarted {
@@ -239,8 +243,9 @@ struct OnboardingView: View {
                 }
             } actions: {
                 if stepCallDone {
-                    primary("Next", id: "onboarding-next") { advance() }
+                    primary("Start Using Pixie", id: "onboarding-finish") { finish() }
                 } else if !listeningStarted {
+                    // The last step: the main button turns on background listening.
                     primary("Turn On Listening", id: "onboarding-listen") {
                         talkOnWake = true
                         if !wake.enabled && !wake.busy { wake.start() }
@@ -249,18 +254,12 @@ struct OnboardingView: View {
                 }
             }
         case .demo:
-            OnboardingPage(icon: "play.rectangle.on.rectangle.fill", title: "See what Lobby can do",
-                           text: "Recorded calls, played back as they happened.") {
-                DemoList()
+            OnboardingPage(note: firstCallDone ? callDoneNote : nil,
+                           icon: "play.rectangle.on.rectangle.fill", title: "See what Lobby can do",
+                           text: demoWatched ? "Watch another, or go on." : "Tap a recorded call to watch it play back as it happened.") {
+                DemoList { demoWatched = true }
             } actions: {
-                primary("Next", id: "onboarding-next") { advance() }
-            }
-        case .done:
-            OnboardingPage(icon: "checkmark.seal.fill", title: "You're all set",
-                           text: "Start a chat from the main screen, press the Action Button, or say “Hey Lobby”.") {
-                EmptyView()
-            } actions: {
-                primary("Start Using Pixie", id: "onboarding-finish") { finish() }
+                if demoWatched { primary("Next", id: "onboarding-next") { advance() } }
             }
         }
     }
@@ -276,14 +275,14 @@ struct OnboardingView: View {
         .accessibilityIdentifier(id)
     }
 
-    /// The next step that can work now.
+    /// The next step that can work now; past the last one, onboarding is finished.
     private func advance() {
         stepCallDone = false
         listeningStarted = false
         firstCallDone = false
-        var next = Step(rawValue: step.rawValue + 1) ?? .done
-        while next != .done, !available(next) { next = Step(rawValue: next.rawValue + 1) ?? .done }
-        step = next
+        var next = Step(rawValue: step.rawValue + 1)
+        while let candidate = next, !available(candidate) { next = Step(rawValue: candidate.rawValue + 1) }
+        if let next { step = next } else { finish() }
     }
 
     private func available(_ step: Step) -> Bool {
@@ -293,7 +292,7 @@ struct OnboardingView: View {
         case .permission: return voice.keySource != "missing" && !AIConsent.given
         case .firstCall, .heyLobby: return canCall
         case .actionButton: return canCall && Onboarding.hasActionButton
-        case .welcome, .demo, .done: return true
+        case .welcome, .demo: return true
         }
     }
 }
@@ -358,6 +357,8 @@ struct OnboardingPage<Content: View, Actions: View>: View {
 
 /// The recorded sample calls (also used by Chat Lab), each played back on tap.
 struct DemoList: View {
+    /// Runs when a recorded call is opened.
+    var watched: () -> Void = {}
     private let calls: [CapturedCall] = (Bundle.main.urls(forResourcesWithExtension: "jsonl", subdirectory: nil) ?? [])
         .sorted { $0.lastPathComponent < $1.lastPathComponent }
         .compactMap(CapturedCall.load)
@@ -366,7 +367,7 @@ struct DemoList: View {
         VStack(spacing: 10) {
             ForEach(calls) { call in
                 if #available(iOS 18.0, *) {
-                    NavigationLink { DemoReplayView(call: call) } label: {
+                    NavigationLink { DemoReplayView(call: call).onAppear(perform: watched) } label: {
                         Label(call.title, systemImage: "play.circle")
                             .frame(maxWidth: .infinity, alignment: .leading)
                             .padding(.vertical, 6)
