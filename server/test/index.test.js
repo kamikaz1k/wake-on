@@ -188,3 +188,19 @@ test("the count is read while OpenAI sets up the call", async () => {
   await handle(call(goodBody(), t.code), t.env, upstream);
   assert.deepEqual(order.slice(0, 3).sort(), ["count read", "count read", "openai asked"]);
 });
+
+test("checking a code answers like a call would, without OpenAI or counting", async () => {
+  const t = await setup({ env: { REVOKED: "jo" } });
+  const check = (code) => handle(new Request("https://worker.example/v1/check", {
+    method: "POST", headers: code ? { Authorization: `Bearer ${code}` } : {},
+  }), t.env, t.upstream);
+  const good = await check(t.code);
+  assert.equal(good.status, 200);
+  assert.deepEqual(await good.json(), { ok: true, name: "alex" });
+  assert.equal((await (await check(await codeFor("jo"))).json()).error.code, "revoked_code");
+  assert.equal((await (await check(await codeFor("alex", "7", "retired"))).json()).error.code, "expired_code");
+  assert.equal((await check("nope")).status, 401);
+  assert.equal((await check(null)).status, 401);
+  assert.equal(t.sent.length, 0);
+  assert.equal(t.usage.map.size, 0);
+});

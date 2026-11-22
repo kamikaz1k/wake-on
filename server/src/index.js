@@ -38,6 +38,15 @@ export async function handle(request, env, upstream, ctx = { waitUntil: () => {}
   // The app opens a connection ahead of a call with a HEAD request: answer it cheaply.
   if (request.method === "HEAD") return new Response(null, { status: 204 });
   if (url.pathname === "/health") return json(200, { ok: true });
+  // The app checks a code before saving it: same answers as a call, but OpenAI isn't asked
+  // and nothing is counted.
+  if (url.pathname === "/v1/check" && request.method === "POST") {
+    const code = (request.headers.get("Authorization") || "").replace(/^Bearer\s+/i, "").trim();
+    if (!code) return error(401, "missing_code", PROBLEMS.invalid_code);
+    const check = await checkCode(code, env);
+    if (check.problem) return error(401, check.problem, PROBLEMS[check.problem]);
+    return json(200, { ok: true, name: check.name });
+  }
   if (url.pathname !== "/v1/live/sessions") return error(404, "not_found", "Unknown path.");
   if (request.method !== "POST") return error(405, "method_not_allowed", "Use POST.");
 

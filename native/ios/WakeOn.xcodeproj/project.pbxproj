@@ -105,6 +105,17 @@
 			<key>sourceTree</key>
 			<string>&lt;group&gt;</string>
 		</dict>
+		<key>0B2B63CD30D0D4CC192066A5</key>
+		<dict>
+			<key>isa</key>
+			<string>PBXFileReference</string>
+			<key>lastKnownFileType</key>
+			<string>sourcecode.swift</string>
+			<key>path</key>
+			<string>WakeOn/CredentialCheck.swift</string>
+			<key>sourceTree</key>
+			<string>&lt;group&gt;</string>
+		</dict>
 		<key>0B4CDEE182E01D65166BE05F</key>
 		<dict>
 			<key>explicitFileType</key>
@@ -1528,6 +1539,7 @@
 				<string>5655D4377A320893D7964C00</string>
 				<string>2E25DF7EB50C6B90D3C76346</string>
 				<string>364477DAA4A0A3FDA02EC409</string>
+				<string>9974356E209FF4C15ABE4053</string>
 				<string>FD0F0DB50B6695E5A313F02A</string>
 				<string>604415CC5C8C5E7AD42D4232</string>
 				<string>F5A8AD6DD1708ECCF94AA2E2</string>
@@ -1805,6 +1817,17 @@
 			<string>142B9894125D9D38AEB912D4</string>
 			<key>isa</key>
 			<string>PBXBuildFile</string>
+		</dict>
+		<key>7EB96735C070336980330FA2</key>
+		<dict>
+			<key>isa</key>
+			<string>PBXFileReference</string>
+			<key>lastKnownFileType</key>
+			<string>sourcecode.swift</string>
+			<key>path</key>
+			<string>Tests/CredentialCheckTests.swift</string>
+			<key>sourceTree</key>
+			<string>&lt;group&gt;</string>
 		</dict>
 		<key>7EF1F34084C4FEA92F209E15</key>
 		<dict>
@@ -2200,6 +2223,13 @@
 			<key>sourceTree</key>
 			<string>&lt;group&gt;</string>
 		</dict>
+		<key>96BED2CC5F692481EDA9CC0A</key>
+		<dict>
+			<key>fileRef</key>
+			<string>0B2B63CD30D0D4CC192066A5</string>
+			<key>isa</key>
+			<string>PBXBuildFile</string>
+		</dict>
 		<key>98F54143AB4E86B28C3AFEE0</key>
 		<dict>
 			<key>attributes</key>
@@ -2245,6 +2275,13 @@
 				<string>C5B168124450AD2BB493BFA4</string>
 				<string>4AA624B9A28ADC88DF6317A9</string>
 			</array>
+		</dict>
+		<key>9974356E209FF4C15ABE4053</key>
+		<dict>
+			<key>fileRef</key>
+			<string>7EB96735C070336980330FA2</string>
+			<key>isa</key>
+			<string>PBXBuildFile</string>
 		</dict>
 		<key>9C636EDAE9D9B588A67427F2</key>
 		<dict>
@@ -2551,6 +2588,7 @@
 				<string>B99C26864023D73F5AD560E0</string>
 				<string>B54125122EED1782DCF9B206</string>
 				<string>141FC4B68CEA3CBAC086E734</string>
+				<string>96BED2CC5F692481EDA9CC0A</string>
 				<string>71A29599834994135DF78497</string>
 				<string>190FC281175A458411477DAD</string>
 				<string>D233B84F177F79322304C486</string>
@@ -3050,6 +3088,7 @@
 				<string>CC176C17FF9F49D4A917C518</string>
 				<string>C81A61E9307DAAB1D29A09A0</string>
 				<string>1DC5C0769628AED0F89639D8</string>
+				<string>0B2B63CD30D0D4CC192066A5</string>
 				<string>E823720E1997284D87C9BE0D</string>
 				<string>D51D6D61BE2D40D10969555F</string>
 				<string>3A95F3BBE1057DD42D6E55F8</string>
@@ -3091,6 +3130,7 @@
 				<string>93421563D67A7CA1779FC6D5</string>
 				<string>BEE981B64F5E0E5875912826</string>
 				<string>182587B069862EA9650992A3</string>
+				<string>7EB96735C070336980330FA2</string>
 				<string>9F2F0D7B8211BA8CBE1CF982</string>
 				<string>F92C1B086F4CDFB01AAC82C5</string>
 				<string>A52E1E1026008ABCCF27FFB3</string>

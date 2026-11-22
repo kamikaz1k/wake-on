@@ -152,6 +152,8 @@ struct APIKeyLink: View {
 struct APIKeyView: View {
     @ObservedObject var voice: VoiceSessionController
     @State private var keyDraft = ""
+    @State private var checking = false
+    @State private var outcome: CredentialCheck.Outcome?
     @AppStorage(LobbyServer.needsNewCodeKey) private var needsNewCode = false
 
     var body: some View {
@@ -159,11 +161,34 @@ struct APIKeyView: View {
             Section {
                 SecureField(voice.keySource == "missing" ? "Invite code or sk-…" : "New code or key", text: $keyDraft)
                     .textContentType(.password)
+                    .autocorrectionDisabled()
+                    .textInputAutocapitalization(.never)
+                    .disabled(checking)
+                    .onSubmit(verify)
+                    .onChange(of: keyDraft) { _, typed in
+                        // Typing again clears the last result (clearing the field after a save doesn't).
+                        if !checking && !typed.isEmpty { outcome = nil }
+                    }
                     .accessibilityIdentifier("api-key-field")
-                Button("Save to Keychain") { voice.saveKey(keyDraft); keyDraft = "" }
-                    .disabled(keyDraft.isEmpty)
+                Button(action: verify) {
+                    HStack {
+                        Text(checking ? "Verifying…" : "Verify and Save")
+                        if checking {
+                            Spacer()
+                            ProgressView()
+                        }
+                    }
+                }
+                .disabled(keyDraft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || checking)
+                .accessibilityIdentifier("api-key-save")
             } footer: {
-                Text(status)
+                if let outcome {
+                    Label(outcome.message, systemImage: icon(for: outcome))
+                        .foregroundStyle(color(for: outcome))
+                        .accessibilityIdentifier("api-key-outcome")
+                } else {
+                    Text(status)
+                }
             }
             if voice.keySource == "keychain" {
                 Section {
@@ -174,6 +199,36 @@ struct APIKeyView: View {
         .navigationTitle("Invite Code or Key")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar(.hidden, for: .tabBar)
+    }
+
+    private func verify() {
+        let draft = keyDraft
+        guard !draft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty, !checking else { return }
+        checking = true
+        outcome = nil
+        Task {
+            let result = await voice.verifyAndSave(draft)
+            checking = false
+            outcome = result
+            // A rejected code stays in the field to fix; a saved one is cleared.
+            if result.saves { keyDraft = "" }
+        }
+    }
+
+    private func icon(for outcome: CredentialCheck.Outcome) -> String {
+        switch outcome {
+        case .valid: "checkmark.circle.fill"
+        case .savedWithWarning: "exclamationmark.triangle.fill"
+        case .rejected: "xmark.octagon.fill"
+        }
+    }
+
+    private func color(for outcome: CredentialCheck.Outcome) -> Color {
+        switch outcome {
+        case .valid: .green
+        case .savedWithWarning: .orange
+        case .rejected: .red
+        }
     }
 
     private var status: String {

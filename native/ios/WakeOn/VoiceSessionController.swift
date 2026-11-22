@@ -494,6 +494,13 @@ final class VoiceSessionController: ObservableObject {
         } catch { self.error = error.localizedDescription }
     }
 
+    /// Checks the code or key first ("Verify and Save"), then saves it unless it was rejected.
+    func verifyAndSave(_ draft: String) async -> CredentialCheck.Outcome {
+        let outcome = await CredentialCheck.check(draft)
+        if outcome.saves { saveKey(draft) }
+        return outcome
+    }
+
     func forgetKey() {
         OpenAIKeyStore.delete()
         UserDefaults.standard.removeObject(forKey: LobbyServer.needsNewCodeKey)
