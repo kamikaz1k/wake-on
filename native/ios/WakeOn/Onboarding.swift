@@ -27,6 +27,27 @@ enum Onboarding {
     }
 }
 
+/// Opens the Settings app, where Action Button is one tap away. iOS has no link to the Action
+/// Button page itself (iOS 26 sends deeper Settings links to Settings › Apps: tried
+/// "App-Prefs:ACTION_BUTTON" on 2026-11-22), so this opens the top of Settings with the private
+/// "App-Prefs:" link, falling back to Pixie's own settings page (the public link).
+enum ActionButtonSettings {
+    static let candidates = ["App-Prefs:", UIApplication.openSettingsURLString]
+
+    @MainActor
+    static func open() async -> Bool {
+        for candidate in candidates {
+            guard let url = URL(string: candidate) else { continue }
+            if await UIApplication.shared.open(url) {
+                VoiceSessionController.appLog("action_button_settings opened=\(candidate)")
+                return true
+            }
+        }
+        VoiceSessionController.appLog("action_button_settings opened=none")
+        return false
+    }
+}
+
 /// `wakeon://invite?code=alex-1-7k2mq9xd4r8w`: a friend's invite, filled in and checked.
 @MainActor
 final class InviteLink: ObservableObject {
@@ -59,6 +80,7 @@ struct OnboardingView: View {
     @State private var listeningStarted = false
     /// The first call just ended: the next page opens with a "That's a call" line.
     @State private var firstCallDone = false
+    @State private var settingsLinkFailed = false
 
     var body: some View {
         NavigationStack {
@@ -166,7 +188,7 @@ struct OnboardingView: View {
                                : "Pressing the Action Button opens Pixie and starts a call like the one you just had. Press it again to hang up.") {
                 if !stepCallDone {
                     VStack(alignment: .leading, spacing: 10) {
-                        OnboardingRow(icon: "1.circle", tint: .primary, textStyle: .primary, text: "Open Settings › Action Button")
+                        OnboardingRow(icon: "1.circle", tint: .primary, textStyle: .primary, text: "Open Settings, then tap Action Button")
                         OnboardingRow(icon: "2.circle", tint: .primary, textStyle: .primary, text: "Swipe to Shortcut, then tap Choose a Shortcut")
                         OnboardingRow(icon: "3.circle", tint: .primary, textStyle: .primary, text: "Pick Pixie › Talk to Lobby")
                         OnboardingRow(icon: "4.circle", tint: .primary, textStyle: .primary, text: "Come back here and press the Action Button")
@@ -178,7 +200,17 @@ struct OnboardingView: View {
                     .padding(.top, 8)
                 }
             } actions: {
-                if stepCallDone { primary("Next", id: "onboarding-next") { advance() } }
+                if stepCallDone {
+                    primary("Next", id: "onboarding-next") { advance() }
+                } else {
+                    if settingsLinkFailed {
+                        Text("Couldn't open it directly. Follow the steps above.")
+                            .font(.footnote).foregroundStyle(.secondary)
+                    }
+                    primary("Open Settings", id: "onboarding-action-settings") {
+                        Task { settingsLinkFailed = !(await ActionButtonSettings.open()) }
+                    }
+                }
             }
         case .heyLobby:
             OnboardingPage(note: firstCallDone ? callDoneNote : nil,
