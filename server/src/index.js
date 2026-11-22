@@ -35,10 +35,13 @@ export async function handle(request, env, upstream) {
   if (url.pathname !== "/v1/live/sessions") return error(404, "not_found", "Unknown path.");
   if (request.method !== "POST") return error(405, "method_not_allowed", "Use POST.");
 
+  // Each step's time goes back in a Server-Timing header, so the app's log shows where the
+  // server's share of a call's set-up went (the code itself is never logged).
+  const timing = new Timing();
   const code = (request.headers.get("Authorization") || "").replace(/^Bearer\s+/i, "").trim();
   if (!code) return error(401, "missing_code", "Enter your invite code in Settings.");
   const codeHash = await sha256(code);
-  const invite = await env.USAGE.get(`code:${codeHash}`, "json");
+  const invite = await timing.step("code", env.USAGE.get(`code:${codeHash}`, "json"));
   if (!invite) return error(401, "invalid_code", "That invite code isn't valid.");
 
   const text = await request.text();
@@ -57,13 +60,13 @@ export async function handle(request, env, upstream) {
   const overall = Number(env.GLOBAL_DAILY_CALLS || 300);
   const codeKey = `count:${day}:${codeHash}`;
   const allKey = `count:${day}:all`;
-  const [codeCount, allCount] = await Promise.all([count(env, codeKey), count(env, allKey)]);
+  const [codeCount, allCount] = await timing.step("limits", Promise.all([count(env, codeKey), count(env, allKey)]));
   if (codeCount >= perCode) return error(429, "daily_limit", "You've reached today's call limit.");
   if (allCount >= overall) return error(429, "global_limit", "Lobby is out of calls for today.");
 
   // Recordings stay off whatever the client asks.
   body.session.store = false;
-  const response = await upstream(OPENAI_URL, {
+  const response = await timing.step("openai", upstream(OPENAI_URL, {
     method: "POST",
     headers: {
       Authorization: `Bearer ${env.OPENAI_API_KEY}`,
@@ -72,20 +75,23 @@ export async function handle(request, env, upstream) {
       "OpenAI-Safety-Identifier": codeHash.slice(0, 32),
     },
     body: JSON.stringify(body),
-  });
+  }));
   // Count only calls OpenAI accepted (a failed setup costs nothing).
   if (response.ok) {
     const ttl = { expirationTtl: 3 * 24 * 3600 };
-    await Promise.all([
+    await timing.step("count", Promise.all([
       env.USAGE.put(codeKey, String(codeCount + 1), ttl),
       env.USAGE.put(allKey, String(allCount + 1), ttl),
-    ]);
+    ]));
   }
   const headers = new Headers({ "Content-Type": response.headers.get("Content-Type") || "application/json" });
   for (const name of ["x-request-id", "openai-processing-ms"]) {
     const value = response.headers.get(name);
     if (value) headers.set(name, value);
   }
+  const colo = request.cf && request.cf.colo;
+  headers.set("Server-Timing", timing.header(colo));
+  console.log(JSON.stringify({ status: response.status, colo, ms: timing.steps }));
   return new Response(response.body, { status: response.status, headers });
 }
 
@@ -105,6 +111,29 @@ export function checkSession(body, env) {
     }
   }
   return null;
+}
+
+/** Durations of the server's own steps, in ms. (Workers' clock only moves across I/O, which
+ * is exactly what these steps are.) */
+export class Timing {
+  constructor() {
+    this.start = Date.now();
+    this.steps = {};
+  }
+  async step(name, promise) {
+    const begin = Date.now();
+    try {
+      return await promise;
+    } finally {
+      this.steps[name] = Date.now() - begin;
+    }
+  }
+  header(colo) {
+    const parts = Object.entries(this.steps).map(([name, ms]) => `${name};dur=${ms}`);
+    parts.push(`total;dur=${Date.now() - this.start}`);
+    if (colo) parts.push(`colo;desc=${colo}`);
+    return parts.join(",");
+  }
 }
 
 async function count(env, key) {

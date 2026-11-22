@@ -559,7 +559,7 @@ final class OpenAILiveVoiceProvider: NSObject {
         let status = http?.statusCode ?? 0
         var fields = metrics.fields
         fields["status"] = status
-        for header in ["x-request-id", "openai-processing-ms"] {
+        for header in ["x-request-id", "openai-processing-ms", "server-timing"] {
             if let value = http?.value(forHTTPHeaderField: header) { fields[header] = value }
         }
         let json = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any]

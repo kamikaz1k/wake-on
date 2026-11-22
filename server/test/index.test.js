@@ -127,3 +127,13 @@ test("prewarm HEAD and health need no code", async () => {
   assert.equal(health.status, 200);
   assert.equal(t.sent.length, 0);
 });
+
+test("reports each step's time in Server-Timing", async () => {
+  const t = await setup();
+  const response = await handle(call(goodBody()), t.env, t.upstream);
+  const timing = response.headers.get("Server-Timing");
+  for (const step of ["code", "limits", "openai", "count", "total"]) {
+    assert.match(timing, new RegExp(`${step};dur=\\d+`));
+  }
+  assert.ok(!timing.includes("friend-code"));
+});
