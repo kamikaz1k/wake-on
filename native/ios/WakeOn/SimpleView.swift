@@ -16,6 +16,8 @@ struct SimpleView: View {
     @State private var openLogs = ProcessInfo.processInfo.arguments.contains("-chat-logs")
     /// Screenshot launch argument: open straight to the browser's sign-in sites.
     @State private var openSignIns = ProcessInfo.processInfo.arguments.contains("-sign-ins")
+    /// Opens Invite Code or Key from the set-up button shown while neither is saved.
+    @State private var openKeySetup = false
 
     /// Emptied when a call starts, so a call resumed from a saved chat shows the call screen.
     @State private var path = NavigationPath()
@@ -34,6 +36,7 @@ struct SimpleView: View {
             .navigationBarTitleDisplayMode(.inline)
             .navigationDestination(isPresented: $openLogs) { ChatLogsView() }
             .navigationDestination(isPresented: $openSignIns) { BrowserSignInsView() }
+            .navigationDestination(isPresented: $openKeySetup) { APIKeyView(voice: voice) }
             .onChange(of: voice.phase) { old, new in
                 if old == .idle, new != .idle {
                     path = NavigationPath()
@@ -54,6 +57,21 @@ struct SimpleView: View {
                             .listRowInsets(EdgeInsets())
                     }
                     switch voice.phase {
+                    case .idle where voice.keySource == "missing":
+                        // Nothing to call with yet: the main button sets that up instead.
+                        Button {
+                            openKeySetup = true
+                        } label: {
+                            Text("Add Invite Code or Key")
+                                .font(.title3.weight(.semibold))
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, 8)
+                        }
+                        .buttonStyle(.borderedProminent)
+                        .buttonBorderShape(.capsule)
+                        .listRowInsets(EdgeInsets())
+                        .listRowBackground(Color.clear)
+                        .accessibilityIdentifier("simple-add-key")
                     case .idle:
                         Button {
                             voice.start(trigger: "in_app")
@@ -67,7 +85,6 @@ struct SimpleView: View {
                         .buttonBorderShape(.capsule)
                         .listRowInsets(EdgeInsets())
                         .listRowBackground(Color.clear)
-                        .disabled(voice.keySource == "missing")
                         .accessibilityIdentifier("simple-talk")
                     case .connecting, .live:
                         Text(voice.status).foregroundStyle(.secondary)
@@ -92,7 +109,11 @@ struct SimpleView: View {
                             .accessibilityIdentifier("simple-error")
                     }
                 } footer: {
-                    Text("Or press the Action Button. Say “bye” or press it again to hang up.")
+                    if voice.keySource == "missing" {
+                        Text("To talk to Lobby, enter an invite code from a friend, or your own OpenAI API key.")
+                    } else {
+                        Text("Or press the Action Button. Say “bye” or press it again to hang up.")
+                    }
                 }
 
 
