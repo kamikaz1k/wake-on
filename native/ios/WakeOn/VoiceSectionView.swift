@@ -171,15 +171,23 @@ struct APIKeyView: View {
                         if !checking && !typed.isEmpty { outcome = nil }
                     }
                     .accessibilityIdentifier("api-key-field")
+            }
+            // A real button under the field, like a form's submit button (its own section, so the
+            // field's card keeps its rounded corners).
+            Section {
                 Button(action: verify) {
-                    HStack {
+                    HStack(spacing: 8) {
+                        if checking { ProgressView().tint(.white) }
                         Text(checking ? "Verifying…" : "Verify and Save")
-                        if checking {
-                            Spacer()
-                            ProgressView()
-                        }
                     }
+                    .font(.headline)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 6)
                 }
+                .buttonStyle(.borderedProminent)
+                .buttonBorderShape(.capsule)
+                .listRowInsets(EdgeInsets())
+                .listRowBackground(Color.clear)
                 .disabled(keyDraft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || checking)
                 .accessibilityIdentifier("api-key-save")
             } footer: {
@@ -197,6 +205,7 @@ struct APIKeyView: View {
                 }
             }
         }
+        .listSectionSpacing(.compact)
         .navigationTitle("Invite Code or Key")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar(.hidden, for: .tabBar)

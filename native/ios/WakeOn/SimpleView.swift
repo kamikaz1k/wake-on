@@ -16,8 +16,9 @@ struct SimpleView: View {
     @State private var openLogs = ProcessInfo.processInfo.arguments.contains("-chat-logs")
     /// Screenshot launch argument: open straight to the browser's sign-in sites.
     @State private var openSignIns = ProcessInfo.processInfo.arguments.contains("-sign-ins")
-    /// Opens Invite Code or Key from the set-up button shown while neither is saved.
-    @State private var openKeySetup = false
+    /// Opens Invite Code or Key from the set-up button shown while neither is saved
+    /// (screenshot launch argument: -key-setup).
+    @State private var openKeySetup = ProcessInfo.processInfo.arguments.contains("-key-setup")
 
     /// Emptied when a call starts, so a call resumed from a saved chat shows the call screen.
     @State private var path = NavigationPath()
@@ -42,6 +43,7 @@ struct SimpleView: View {
                     path = NavigationPath()
                     openLogs = false
                     openSignIns = false
+                    openKeySetup = false
                 }
             }
         }
