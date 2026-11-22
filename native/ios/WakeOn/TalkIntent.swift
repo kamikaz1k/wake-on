@@ -2,12 +2,12 @@ import AppIntents
 import Foundation
 import UIKit
 
-/// Assign this to the Action Button (Settings › Action Button › Shortcut › Wake On › Talk to Lobby).
+/// Assign this to the Action Button (Settings › Action Button › Shortcut › Pixie › Talk to Lobby).
 /// It brings the app forward, because iOS only lets a foreground app start the microphone reliably,
 /// and starts the call without waiting for it to connect.
 struct TalkIntent: AppIntent {
     static var title: LocalizedStringResource = "Talk to Lobby"
-    static var description = IntentDescription("Open Wake On and start a realtime voice conversation.")
+    static var description = IntentDescription("Open Pixie and start a realtime voice conversation.")
     static var openAppWhenRun: Bool = true
     @available(iOS 26.0, *)
     static var supportedModes: IntentModes { .foreground(.immediate) }
@@ -27,7 +27,7 @@ struct TalkIntent: AppIntent {
 /// starts once the app is active, because iOS does not allow starting it in the background.
 struct FastTalkIntent: AppIntent {
     static var title: LocalizedStringResource = "Talk to Lobby (fast start)"
-    static var description = IntentDescription("Start connecting immediately, then open Wake On.")
+    static var description = IntentDescription("Start connecting immediately, then open Pixie.")
     static var openAppWhenRun: Bool = false
     @available(iOS 26.0, *)
     static var supportedModes: IntentModes { [.background, .foreground(.dynamic)] }

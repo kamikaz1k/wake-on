@@ -3,7 +3,7 @@ import Foundation
 
 struct StartRecordingIntent: AppIntent {
     static var title: LocalizedStringResource = "Start recording"
-    static var description = IntentDescription("Open Wake On and immediately capture a five-second audio handoff.")
+    static var description = IntentDescription("Open Pixie and immediately capture a five-second audio handoff.")
     // Foreground microphone capture also supports the iOS 17 deployment target.
     static var openAppWhenRun: Bool = true
     @available(iOS 26.0, *)

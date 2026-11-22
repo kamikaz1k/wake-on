@@ -1,8 +1,8 @@
-# Wake On privacy policy
+# Pixie privacy policy
 
-Last updated: November 21, 2026
+Last updated: November 22, 2026
 
-Wake On is an iPhone app for talking to Lobby, a voice assistant. This page explains what
+Pixie is an iPhone app for talking to Lobby, a voice assistant. This page explains what
 the app does with your information. In short: your voice goes to OpenAI only while you're
 in a call, your chat history stays on your iPhone, and the app has no ads, analytics or
 tracking.
@@ -62,7 +62,7 @@ web.
 
 ## Children
 
-Wake On isn't directed at children under 13.
+Pixie isn't directed at children under 13.
 
 ## Changes and contact
 

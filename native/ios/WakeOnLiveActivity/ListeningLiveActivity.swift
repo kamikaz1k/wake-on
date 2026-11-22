@@ -71,7 +71,7 @@ struct Look {
     }
 
     var detail: String {
-        if stale { return "Open Wake On to listen again" }
+        if stale { return "Open Pixie to listen again" }
         switch mode {
         case .listening: return "Say “Hey Lobby” to talk"
         case .heard: return "Connecting…"

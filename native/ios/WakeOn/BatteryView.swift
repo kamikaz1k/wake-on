@@ -14,7 +14,7 @@ struct BatteryView: View {
                 LabeledContent("Low Power Mode", value: monitor.now.lowPowerMode ? "On" : "Off")
                 LabeledContent("Thermal state", value: Self.thermal(monitor.now.thermalState))
             } header: { Text("Now") } footer: {
-                Text("iOS reports the battery level in coarse steps, so battery drop is meaningful over long, unplugged sessions. App power is the kernel's energy estimate for Wake On itself; it does not include the microphone hardware and iOS audio service.")
+                Text("iOS reports the battery level in coarse steps, so battery drop is meaningful over long, unplugged sessions. App power is the kernel's energy estimate for Pixie itself; it does not include the microphone hardware and iOS audio service.")
             }
 
             if let current = monitor.current {

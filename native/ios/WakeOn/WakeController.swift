@@ -715,7 +715,7 @@ final class WakeController: NSObject, ObservableObject, UNUserNotificationCenter
     private func notifyWake() {
         let content = UNMutableNotificationContent()
         content.title = "Hey Lobby heard you"
-        content.body = "Your audio handoff is being captured. Tap to open Wake On."
+        content.body = "Your audio handoff is being captured. Tap to open Pixie."
         // Silent: do not inject a notification sound into the post-wake recording.
         UNUserNotificationCenter.current().add(UNNotificationRequest(identifier: "wake-handoff", content: content, trigger: nil))
     }
@@ -958,7 +958,7 @@ extension WakeController {
             // listener resumes when the app is next active (or iOS ends another interruption).
             guard retry <= Self.resumeRetryDelays.count else {
                 VoiceSessionController.appLog("wake_listener_resume_waiting_for_app trigger=retries_exhausted")
-                status = "Paused · resumes when you open Wake On"
+                status = "Paused · resumes when you open Pixie"
                 endResumeBackgroundTask()
                 return
             }

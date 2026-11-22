@@ -1,7 +1,7 @@
 import UIKit
 
-/// Whether the user can see Wake On during a call. In view, visuals and maps are worth showing
-/// unasked; away (phone locked, or Wake On in the background, as with most Hey Lobby calls),
+/// Whether the user can see Pixie during a call. In view, visuals and maps are worth showing
+/// unasked; away (phone locked, or Pixie in the background, as with most Hey Lobby calls),
 /// they wait unseen in the chat, so Lobby answers in speech instead.
 ///
 /// The app tells both models once the call starts and whenever it changes: the backend gets
@@ -29,8 +29,8 @@ enum ScreenPresence: String {
 
     var backendLine: String {
         switch self {
-        case .inView: "Screen: the user is looking at Wake On now."
-        case .away: "Screen: the user can't see the screen right now (the phone is locked or Wake On is in the background)."
+        case .inView: "Screen: the user is looking at Pixie now."
+        case .away: "Screen: the user can't see the screen right now (the phone is locked or Pixie is in the background)."
         }
     }
 
@@ -38,9 +38,9 @@ enum ScreenPresence: String {
     var thinking: String {
         switch self {
         case .inView:
-            "The user can now see Wake On's screen, where charts, tables and maps appear. Delegate questions that a chart, list or map would answer well, and keep the spoken answer short when something is on screen."
+            "The user can now see Pixie's screen, where charts, tables and maps appear. Delegate questions that a chart, list or map would answer well, and keep the spoken answer short when something is on screen."
         case .away:
-            "The user can't see the screen right now (the phone is locked or Wake On is in the background). Answer fully in speech; anything shown waits in the app for later."
+            "The user can't see the screen right now (the phone is locked or Pixie is in the background). Answer fully in speech; anything shown waits in the app for later."
         }
     }
 

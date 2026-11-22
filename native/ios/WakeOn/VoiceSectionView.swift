@@ -68,7 +68,7 @@ struct VoiceSectionView: View {
             }
             .accessibilityIdentifier("voice-idle-seconds")
         } header: { Text("Voice assistant") } footer: {
-            Text("Assign Talk to Lobby to the Action Button: Settings › Action Button › Shortcut › Wake On. "
+            Text("Assign Talk to Lobby to the Action Button: Settings › Action Button › Shortcut › Pixie. "
                  + "Press it again to hang up. Lobby asks if there is anything else after an answer, or after "
                  + "the silence time; the call ends 4 s after that question with no answer, or 2 s after Lobby says bye.")
         }

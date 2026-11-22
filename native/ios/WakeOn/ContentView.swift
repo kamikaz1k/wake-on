@@ -120,7 +120,7 @@ struct AdvancedView: View {
                 AudioExperimentsSection()
                 #endif
             }
-            .navigationTitle("Wake On")
+            .navigationTitle("Pixie")
             .navigationBarTitleDisplayMode(.inline)
             #if DEBUG
             .navigationDestination(isPresented: $openGallery) {
@@ -150,7 +150,7 @@ private struct AudioExperimentsSection: View {
         } header: {
             Text("Audio experiments")
         } footer: {
-            Text("Debug builds only. Takes effect the next time Wake On launches: swipe it away, then open it from its icon.")
+            Text("Debug builds only. Takes effect the next time Pixie launches: swipe it away, then open it from its icon.")
         }
     }
 }

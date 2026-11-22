@@ -33,7 +33,7 @@ struct SimpleView: View {
                     list
                 }
             }
-            .navigationTitle("Wake On")
+            .navigationTitle("Pixie")
             .navigationBarTitleDisplayMode(.inline)
             .navigationDestination(isPresented: $openLogs) { ChatLogsView() }
             .navigationDestination(isPresented: $openSignIns) { BrowserSignInsView() }
@@ -169,7 +169,7 @@ struct SimpleView: View {
                     .accessibilityIdentifier("simple-visualizer")
                     APIKeyLink(voice: voice)
                 } header: { Text("Settings") } footer: {
-                    Text("Background listening hears “Hey Lobby”, even with the phone locked: say it and your request in one go. With the browser on, Lobby can open, search and read websites; it keeps you signed in only to the sites you choose. While charging, the screen stays on as long as Wake On is open.")
+                    Text("Background listening hears “Hey Lobby”, even with the phone locked: say it and your request in one go. With the browser on, Lobby can open, search and read websites; it keeps you signed in only to the sites you choose. While charging, the screen stays on as long as Pixie is open.")
                 }
             }
     }

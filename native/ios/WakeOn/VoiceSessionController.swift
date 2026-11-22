@@ -570,7 +570,7 @@ final class VoiceSessionController: ObservableObject {
             record("microphone_permission", fields: ["granted": granted])
             guard granted else {
                 provider.close(reason: "no_permission")
-                return fail("Microphone access is off. Turn it on in Settings › Wake On.")
+                return fail("Microphone access is off. Turn it on in Settings › Pixie.")
             }
         }
         guard phase == .connecting, self.provider === provider else { return }
@@ -1348,7 +1348,7 @@ final class VoiceSessionController: ObservableObject {
             pendingSpotify = nil
             Task {
                 // Leave the screen only once the restarting listener's microphone runs: iOS
-                // won't start it once Spotify has the screen and Wake On is in the background.
+                // won't start it once Spotify has the screen and Pixie is in the background.
                 let wake = WakeController.shared
                 for _ in 0..<60 where wake.busy && !wake.enabled { try? await Task.sleep(for: .milliseconds(50)) }
                 self.log("spotify_after_listener listening=\(wake.enabled)")
