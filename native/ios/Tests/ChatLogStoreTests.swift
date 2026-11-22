@@ -57,4 +57,39 @@ final class ChatLogStoreTests: XCTestCase {
         XCTAssertEqual(lobbyOnly.title, "Lobby only")
         XCTAssertEqual(lobbyOnly.source, "Action Button")
     }
+
+    /// Regression (Nov 2026): launched while the phone was locked, the store couldn't read the
+    /// file, started empty, and the next call saved over every older log.
+    func testUnreadableFileIsNeverSavedOver() throws {
+        let now = Date()
+        let first = ChatLogStore(url: url)
+        first.add(log(daysAgo: 3, "older one", now: now))
+        first.add(log(daysAgo: 2, "older two", now: now))
+        try FileManager.default.setAttributes([.posixPermissions: 0o000], ofItemAtPath: url.path)
+        defer { try? FileManager.default.setAttributes([.posixPermissions: 0o644], ofItemAtPath: url.path) }
+
+        let locked = ChatLogStore(url: url)
+        locked.add(log(daysAgo: 0, "new while locked", now: now))
+        XCTAssertEqual(locked.logs.map(\.title), ["new while locked"])
+
+        // Unlocked: the old logs come back, merged with the new one, and all are saved.
+        try FileManager.default.setAttributes([.posixPermissions: 0o644], ofItemAtPath: url.path)
+        XCTAssertEqual(ChatLogStore(url: url).logs.map(\.title), ["older two", "older one"])
+        NotificationCenter.default.post(name: UIApplication.protectedDataDidBecomeAvailableNotification, object: nil)
+        XCTAssertEqual(locked.logs.map(\.title), ["new while locked", "older two", "older one"])
+        XCTAssertEqual(ChatLogStore(url: url).logs.map(\.title), ["new while locked", "older two", "older one"])
+    }
+
+    func testDamagedFileIsKeptAside() throws {
+        try Data("not json".utf8).write(to: url)
+        let store = ChatLogStore(url: url)
+        store.add(log(daysAgo: 0, "fresh", now: Date()))
+        XCTAssertEqual(ChatLogStore(url: url).logs.map(\.title), ["fresh"])
+        let folder = url.deletingLastPathComponent()
+        let base = url.deletingPathExtension().lastPathComponent
+        let aside = try FileManager.default.contentsOfDirectory(atPath: folder.path)
+            .filter { $0.hasPrefix(base + ".damaged-") }
+        XCTAssertEqual(aside.count, 1)
+        for name in aside { try? FileManager.default.removeItem(at: folder.appendingPathComponent(name)) }
+    }
 }

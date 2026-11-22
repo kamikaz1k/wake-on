@@ -68,7 +68,7 @@ final class CallCapture {
     func save(in folder: URL = defaultFolder) {
         let url = Self.url(for: id, in: folder)
         try? FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
-        try? lines.reduce(into: Data()) { $0.append($1) }.write(to: url, options: [.atomic, .completeFileProtection])
+        try? lines.reduce(into: Data()) { $0.append($1) }.write(to: url, options: [.atomic, .completeFileProtectionUntilFirstUserAuthentication])
         lines = []
         savedURL = url
     }

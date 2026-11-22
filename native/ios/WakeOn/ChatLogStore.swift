@@ -1,4 +1,5 @@
 import Foundation
+import UIKit
 
 /// One finished call's transcript.
 struct ChatLog: Codable, Identifiable, Equatable {
@@ -51,15 +52,50 @@ final class ChatLogStore: ObservableObject {
 
     @Published private(set) var logs: [ChatLog] = []
     private let url: URL
+    /// False while the saved file exists but can't be read yet (iOS keeps protected files
+    /// unreadable after a restart until the first unlock). Nothing is written then: writing
+    /// would replace every older log with just the new ones, which once lost all of them.
+    private var loaded = false
+    private var protectedDataObserver: NSObjectProtocol?
     /// Each log's full call data (`CallCapture`), named by the log's id.
     let capturesFolder: URL
 
     init(url: URL = ChatLogStore.defaultURL, capturesFolder: URL = CallCapture.defaultFolder) {
         self.url = url
         self.capturesFolder = capturesFolder
-        if let data = try? Data(contentsOf: url), let saved = try? JSONDecoder().decode([ChatLog].self, from: data) {
-            logs = saved.sorted { $0.started > $1.started }
+        loaded = load()
+        if !loaded {
+            protectedDataObserver = NotificationCenter.default.addObserver(
+                forName: UIApplication.protectedDataDidBecomeAvailableNotification, object: nil, queue: .main
+            ) { [weak self] _ in
+                MainActor.assumeIsolated { self?.retryLoad() }
+            }
         }
+    }
+
+    /// Reads the saved logs, keeping any added since launch. False if the file is there but
+    /// can't be read yet; a damaged file is kept aside and a new one started.
+    private func load() -> Bool {
+        guard FileManager.default.fileExists(atPath: url.path) else { return true }
+        guard let data = try? Data(contentsOf: url) else { return false }
+        guard let saved = try? JSONDecoder().decode([ChatLog].self, from: data) else {
+            let aside = url.deletingPathExtension()
+                .appendingPathExtension("damaged-\(Int(Date().timeIntervalSince1970)).json")
+            try? FileManager.default.moveItem(at: url, to: aside)
+            return true
+        }
+        let added = Set(logs.map(\.id))
+        logs = (logs + saved.filter { !added.contains($0.id) }).sorted { $0.started > $1.started }
+        return true
+    }
+
+    /// Once the file can be read: merge it with what was added meanwhile, and save both.
+    private func retryLoad() {
+        guard !loaded, load() else { return }
+        loaded = true
+        if let protectedDataObserver { NotificationCenter.default.removeObserver(protectedDataObserver) }
+        protectedDataObserver = nil
+        save()
     }
 
     nonisolated static var defaultURL: URL {
@@ -123,7 +159,13 @@ final class ChatLogStore: ObservableObject {
     }
 
     private func save() {
+        if !loaded {
+            loaded = load()
+            guard loaded else { return }  // kept in memory until the file can be read
+        }
         guard let data = try? JSONEncoder().encode(logs) else { return }
-        try? data.write(to: url, options: [.atomic, .completeFileProtection])
+        // Readable after the first unlock, so calls from the lock screen (Action Button,
+        // Hey Lobby) can read and add to it.
+        try? data.write(to: url, options: [.atomic, .completeFileProtectionUntilFirstUserAuthentication])
     }
 }
