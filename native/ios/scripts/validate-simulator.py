@@ -24,8 +24,8 @@ def sim(*arguments):
     return subprocess.check_output(['xcrun', 'simctl', *arguments], text=True).strip()
 
 sim('install', args.device, str(app))
-sim('privacy', args.device, 'grant', 'microphone', 'dev.wakeon.ios')
-container = Path(sim('get_app_container', args.device, 'dev.wakeon.ios', 'data'))
+sim('privacy', args.device, 'grant', 'microphone', 'com.kamikaz1k.wakeon')
+container = Path(sim('get_app_container', args.device, 'com.kamikaz1k.wakeon', 'data'))
 identifier = str(uuid.uuid4())
 mode = '--silence' if args.scenario == 'silence' else '--fixture'
 direct = args.scenario.startswith('direct')
@@ -37,7 +37,7 @@ if direct:
 if args.scenario == 'direct-reuse':
     launch_args += ['--reuse-mic']
 launch_args += ['--delay', '0' if direct else '10', '--test-id', identifier]
-sim('launch', '--terminate-running-process', args.device, 'dev.wakeon.ios',
+sim('launch', '--terminate-running-process', args.device, 'com.kamikaz1k.wakeon',
     *launch_args)
 succeeded = False
 try:
@@ -107,5 +107,5 @@ try:
     succeeded = True
 finally:
     if not (args.keep_running and succeeded):
-        subprocess.run(['xcrun', 'simctl', 'terminate', args.device, 'dev.wakeon.ios'],
+        subprocess.run(['xcrun', 'simctl', 'terminate', args.device, 'com.kamikaz1k.wakeon'],
                        stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)

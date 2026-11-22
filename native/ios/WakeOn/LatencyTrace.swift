@@ -10,7 +10,7 @@ final class LatencyTrace {
     static let fileURL = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
         .appendingPathComponent("latency.jsonl")
     private static let writer = DispatchQueue(label: "wake.metrics.file", qos: .utility)
-    private static let log = OSLog(subsystem: "dev.wakeon.ios", category: "latency")
+    private static let log = OSLog(subsystem: "com.kamikaz1k.wakeon", category: "latency")
     let id = UUID().uuidString
     let origin: UInt64
     private let lock = NSLock()

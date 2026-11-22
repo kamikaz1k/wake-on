@@ -218,6 +218,6 @@ python3 scripts/generate-project.py
   `--no-delegation`, `--no-web-search`, `--effort <level>`, `--ice-quiet <ms>`,
   `--no-warm-audio`, `--builtin-audio`, `--no-prepare`.
 - Device logs: `xcrun devicectl device copy from --domain-type appDataContainer
-  --domain-identifier dev.wakeon.ios --source Documents/voice-console.log`.
+  --domain-identifier com.kamikaz1k.wakeon --source Documents/voice-console.log`.
 - Summaries: `scripts/summarize-voice-log.py` (per call, CSV) and
   `scripts/summarize-latency.py` (traces).

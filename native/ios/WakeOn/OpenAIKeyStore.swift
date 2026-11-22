@@ -5,7 +5,7 @@ import Security
 /// Debug builds can also read `OPENAI_API_KEY` from the launch environment,
 /// which is how the simulator scripts pass it without writing it to disk.
 enum OpenAIKeyStore {
-    private static let service = "dev.wakeon.ios.openai"
+    private static let service = "com.kamikaz1k.wakeon.openai"
     private static let account = "api-key"
 
     enum Source: String { case keychain, environment }

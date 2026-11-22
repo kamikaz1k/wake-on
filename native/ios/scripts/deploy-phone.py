@@ -31,7 +31,7 @@ DERIVED = IOS / "build-device"
 APP = DERIVED / "Build/Products/Debug-iphoneos/WakeOn.app"
 DEVICE = "5976CF6D-0FD6-5A57-9711-AA29F94404E7"
 TEAM = "JDR6VAV2RA"
-BUNDLES = ["dev.wakeon.ios", "dev.wakeon.ios.LiveActivity"]
+BUNDLES = ["com.kamikaz1k.wakeon", "com.kamikaz1k.wakeon.LiveActivity"]
 PROFILES = Path.home() / "Library/Developer/Xcode/UserData/Provisioning Profiles"
 ASC_ENV = Path.home() / ".appstoreconnect/wakeon.env"
 ENV = {**os.environ, "DEVELOPER_DIR": "/Applications/Xcode.app/Contents/Developer"}
@@ -165,7 +165,7 @@ def install(launch: bool) -> bool:
     log("installed")
     if launch:
         subprocess.run(["xcrun", "devicectl", "device", "process", "launch", "--terminate-existing",
-                        "--device", DEVICE, "dev.wakeon.ios"], capture_output=True, env=ENV)
+                        "--device", DEVICE, "com.kamikaz1k.wakeon"], capture_output=True, env=ENV)
         log("launched")
     return True
 

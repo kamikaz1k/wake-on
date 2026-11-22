@@ -170,7 +170,7 @@ before proposing an interruption fix, and add a row after every device test.
 ```sh
 export DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer
 xcrun devicectl device copy from --device 5976CF6D-0FD6-5A57-9711-AA29F94404E7 \
-  --domain-type appDataContainer --domain-identifier dev.wakeon.ios \
+  --domain-type appDataContainer --domain-identifier com.kamikaz1k.wakeon \
   --source Documents/voice-console.log --destination <scratchpad>/voice-console.log
 ```
 

@@ -43,9 +43,11 @@ xcrun devicectl device install app --device 5976CF6D-0FD6-5A57-9711-AA29F94404E7
 - `devicectl` and network tools need `dangerouslyDisableSandbox`.
 - Simulator tests: `xcodebuild ... -destination 'platform=iOS Simulator,id=<udid>'
   -derivedDataPath build CODE_SIGNING_ALLOWED=NO test` (29 tests as of Nov 2026).
-- Device: CoreDevice id `5976CF6D-0FD6-5A57-9711-AA29F94404E7`, bundle `dev.wakeon.ios`,
-  Live Activity extension `dev.wakeon.ios.LiveActivity`.
-- Chat Lab (`dev.wakeon.chatlab`, scheme `ChatLab`, derived data `build-lab-device`) is a
+- Device: CoreDevice id `5976CF6D-0FD6-5A57-9711-AA29F94404E7`, bundle `com.kamikaz1k.wakeon`,
+  Live Activity extension `com.kamikaz1k.wakeon.LiveActivity`.
+- Bundle IDs follow `com.kamikaz1k.<app>` (since 2026-11-21; before that `dev.wakeon.ios`, a
+  placeholder, and `wakeon.dev` isn't ours). Use the same convention for any new iOS app.
+- Chat Lab (`com.kamikaz1k.chatlab`, scheme `ChatLab`, derived data `build-lab-device`) is a
   separate app for comparing chat UI libraries; same commands with its scheme and app path.
 - **Simulator passing doesn't prove the phone build launches.** The simulator loads
   frameworks from the build folder; the phone only has what's inside the .app. A Swift
@@ -71,7 +73,7 @@ xcrun devicectl device install app --device 5976CF6D-0FD6-5A57-9711-AA29F94404E7
   check a profile's ExpirationDate before assuming the 7-day rule.
 - 2026-11-14: wrong for Wake On. Its profiles (created Nov 7) still expired after 7 days, and a
   CLI build with `-allowProvisioningUpdates` failed with "No Accounts" / "No profiles for
-  'dev.wakeon.ios'". Symptom on the phone: "App not available". Fixed by opening the project
+  'dev.wakeon.ios', the bundle ID then". Symptom on the phone: "App not available". Fixed by opening the project
   in the Xcode app (`osascript`: `tell application "Xcode" to open ".../WakeOn.xcodeproj"`,
   then `build`); Xcode made **1-year** profiles for the app and the Live Activity (until
   2027-11-14). The first AppleScript to Xcode triggers macOS's "claude wants to control
@@ -117,7 +119,7 @@ xcrun devicectl device install app --device 5976CF6D-0FD6-5A57-9711-AA29F94404E7
 
 - `Documents/voice-console.log` (voice and listener events) and `Documents/latency.jsonl`
   (traces) in the app container. Copy with `devicectl device copy from --domain-type
-  appDataContainer --domain-identifier dev.wakeon.ios --source Documents/<file>`.
+  appDataContainer --domain-identifier com.kamikaz1k.wakeon --source Documents/<file>`.
 - Keep a copy in the scratchpad, then clear the log after installing a test build
   (`copy to` an empty file) so the next test is easy to read.
 - Audio-specific log reading is in the `ios-audio` skill.
@@ -155,7 +157,7 @@ xcrun devicectl device install app --device 5976CF6D-0FD6-5A57-9711-AA29F94404E7
   autoplays (verified 2026-11-07). From the background it posts a
   notification to tap instead (`SpotifyPlayer.swift`). Verified on the phone with Premium:
   opening `spotify:track:<id>` starts playback right away. Test without speaking:
-  `devicectl device process launch --terminate-existing dev.wakeon.ios --talk spotify`.
+  `devicectl device process launch --terminate-existing com.kamikaz1k.wakeon --talk spotify`.
   The `spotify_open` log line may be missing because the app is suspended as Spotify opens.
 - **Volume (built 2026-11-15):** `set_volume` (`VolumeControl.swift`) moves the slider of a
   hidden `MPVolumeView` (off screen, alpha 0.01, in the key window; it builds its slider a

@@ -13,7 +13,7 @@ out=captures
 mkdir -p "$out"
 copy() {
   xcrun devicectl device copy from --device "$device" --domain-type appDataContainer \
-    --domain-identifier dev.wakeon.ios --source "$1" --destination "$2" >/dev/null
+    --domain-identifier com.kamikaz1k.wakeon --source "$1" --destination "$2" >/dev/null
 }
 copy "Library/Application Support/chat-logs.json" "$out/chat-logs.json" 2>/dev/null || echo "No chat logs on the phone yet."
 if copy "Library/Application Support/call-captures" "$out/call-captures" 2>/dev/null; then
@@ -24,7 +24,7 @@ fi
 if [ "$lab" = yes ] && [ -d "$out/call-captures" ]; then
   for f in "$out"/call-captures/*.jsonl; do
     xcrun devicectl device copy to --device "$device" --domain-type appDataContainer \
-      --domain-identifier dev.wakeon.chatlab --source "$f" \
+      --domain-identifier com.kamikaz1k.chatlab --source "$f" \
       --destination "Documents/call-captures/$(basename "$f")" >/dev/null
   done
   echo "Copied them into Chat Lab (Real calls)."

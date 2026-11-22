@@ -209,7 +209,7 @@
 				<key>ONLY_ACTIVE_ARCH</key>
 				<string>YES</string>
 				<key>PRODUCT_BUNDLE_IDENTIFIER</key>
-				<string>dev.wakeon.ios.tests</string>
+				<string>com.kamikaz1k.wakeon.tests</string>
 				<key>PRODUCT_NAME</key>
 				<string>$(TARGET_NAME)</string>
 				<key>SDKROOT</key>
@@ -436,7 +436,7 @@
 				<key>ONLY_ACTIVE_ARCH</key>
 				<string>YES</string>
 				<key>PRODUCT_BUNDLE_IDENTIFIER</key>
-				<string>dev.wakeon.ios.tests</string>
+				<string>com.kamikaz1k.wakeon.tests</string>
 				<key>PRODUCT_NAME</key>
 				<string>$(TARGET_NAME)</string>
 				<key>SDKROOT</key>
@@ -1160,7 +1160,7 @@
 					<string>-lc++</string>
 				</array>
 				<key>PRODUCT_BUNDLE_IDENTIFIER</key>
-				<string>dev.wakeon.ios</string>
+				<string>com.kamikaz1k.wakeon</string>
 				<key>PRODUCT_NAME</key>
 				<string>$(TARGET_NAME)</string>
 				<key>SDKROOT</key>
@@ -1313,7 +1313,7 @@
 				<key>ONLY_ACTIVE_ARCH</key>
 				<string>YES</string>
 				<key>PRODUCT_BUNDLE_IDENTIFIER</key>
-				<string>dev.wakeon.chatlab</string>
+				<string>com.kamikaz1k.chatlab</string>
 				<key>PRODUCT_NAME</key>
 				<string>$(TARGET_NAME)</string>
 				<key>SDKROOT</key>
@@ -1742,7 +1742,7 @@
 					<string>@executable_path/../../Frameworks</string>
 				</array>
 				<key>PRODUCT_BUNDLE_IDENTIFIER</key>
-				<string>dev.wakeon.ios.LiveActivity</string>
+				<string>com.kamikaz1k.wakeon.LiveActivity</string>
 				<key>PRODUCT_NAME</key>
 				<string>$(TARGET_NAME)</string>
 				<key>SDKROOT</key>
@@ -1948,7 +1948,7 @@
 				<key>ONLY_ACTIVE_ARCH</key>
 				<string>YES</string>
 				<key>PRODUCT_BUNDLE_IDENTIFIER</key>
-				<string>dev.wakeon.chatlab.uitests</string>
+				<string>com.kamikaz1k.chatlab.uitests</string>
 				<key>PRODUCT_NAME</key>
 				<string>$(TARGET_NAME)</string>
 				<key>SDKROOT</key>
@@ -2132,7 +2132,7 @@
 				<key>ONLY_ACTIVE_ARCH</key>
 				<string>YES</string>
 				<key>PRODUCT_BUNDLE_IDENTIFIER</key>
-				<string>dev.wakeon.chatlab</string>
+				<string>com.kamikaz1k.chatlab</string>
 				<key>PRODUCT_NAME</key>
 				<string>$(TARGET_NAME)</string>
 				<key>SDKROOT</key>
@@ -3218,7 +3218,7 @@
 				<key>ONLY_ACTIVE_ARCH</key>
 				<string>YES</string>
 				<key>PRODUCT_BUNDLE_IDENTIFIER</key>
-				<string>dev.wakeon.chatlab.uitests</string>
+				<string>com.kamikaz1k.chatlab.uitests</string>
 				<key>PRODUCT_NAME</key>
 				<string>$(TARGET_NAME)</string>
 				<key>SDKROOT</key>
@@ -3466,7 +3466,7 @@
 					<string>-lc++</string>
 				</array>
 				<key>PRODUCT_BUNDLE_IDENTIFIER</key>
-				<string>dev.wakeon.ios</string>
+				<string>com.kamikaz1k.wakeon</string>
 				<key>PRODUCT_NAME</key>
 				<string>$(TARGET_NAME)</string>
 				<key>SDKROOT</key>
@@ -3518,7 +3518,7 @@
 					<string>@executable_path/../../Frameworks</string>
 				</array>
 				<key>PRODUCT_BUNDLE_IDENTIFIER</key>
-				<string>dev.wakeon.ios.LiveActivity</string>
+				<string>com.kamikaz1k.wakeon.LiveActivity</string>
 				<key>PRODUCT_NAME</key>
 				<string>$(TARGET_NAME)</string>
 				<key>SDKROOT</key>
