@@ -17,7 +17,7 @@ final class VoiceSessionController: ObservableObject {
     static let shared = VoiceSessionController()
 
     enum Phase: Equatable { case idle, connecting, live, ending }
-    enum Probe: String { case greeting, search, spotify, youtube, remember, recall, volume, note, pause, visual, map, place, browser }
+    enum Probe: String { case greeting, search, spotify, youtube, remember, recall, volume, note, pause, visual, map, place, browser, prompt }
 
     struct TimelineRow: Identifiable { let id = UUID(); let name: String; let ms: Double }
     struct TranscriptLine: Identifiable { let id = UUID(); let speaker: String; var text: String }
@@ -62,6 +62,11 @@ final class VoiceSessionController: ObservableObject {
     @Published var error: String?
     /// The permission sheet (AIConsentView) is up, asking before the first call.
     @Published var consentNeeded = false
+    /// How the latest call started ("in_app", "app_intent", "wake_word"…). Onboarding watches it
+    /// to confirm the Action Button and "Hey Lobby" work.
+    @Published private(set) var lastTrigger: String?
+    /// The words a `.prompt` probe sends (a suggested first question).
+    private var promptText: String?
     /// What to do once the user agrees (start the call they asked for, turn on listening).
     private var afterConsent: (() -> Void)?
     @Published private(set) var keySource: String = OpenAIKeyStore.load()?.source.rawValue ?? "missing"
@@ -265,6 +270,7 @@ final class VoiceSessionController: ObservableObject {
         setupOrigin = origin
         callStarted = origin
         self.probe = probe
+        lastTrigger = trigger
         phase = .connecting
         // With local buffering, speech is kept from the moment the microphone starts (well
         // within a person's reaction time to this cue), so say "Listening" right away.
@@ -1097,8 +1103,9 @@ final class VoiceSessionController: ObservableObject {
         case .greeting:
             provider?.send(["type": "session.commentary.append", "delegation_id": NSNull(),
                             "content": "Greet the user in five words or fewer."])
-        case .search, .spotify, .youtube, .remember, .recall, .volume, .note, .pause, .visual, .map, .place, .browser:
+        case .search, .spotify, .youtube, .remember, .recall, .volume, .note, .pause, .visual, .map, .place, .browser, .prompt:
             let text = switch probe {
+            case .prompt: promptText ?? "Hi"
             case .search: "Search the web: what is the current weather in Toronto?"
             case .spotify: "Play Blinding Lights by The Weeknd on Spotify."
             case .youtube: "Play the official Never Gonna Give You Up video on YouTube."
@@ -1419,6 +1426,12 @@ final class VoiceSessionController: ObservableObject {
         #endif
     }
     private var completedCalls = 0
+
+    /// Starts a call that asks `prompt` as if the user had said it (suggested questions).
+    func start(trigger: String, prompt: String) {
+        promptText = prompt
+        start(trigger: trigger, probe: .prompt)
+    }
 
     /// Shows the permission sheet; runs `then` if the user agrees.
     func requestConsent(then: @escaping () -> Void) {

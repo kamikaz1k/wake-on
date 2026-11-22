@@ -21,7 +21,16 @@ struct AIConsentView: View {
     let decline: () -> Void
 
     var body: some View {
-        NavigationStack {
+        NavigationStack { AIConsentPage(agree: agree, decline: decline) }
+    }
+}
+
+/// The permission text and buttons, as a sheet (AIConsentView) or an onboarding page.
+struct AIConsentPage: View {
+    let agree: () -> Void
+    let decline: () -> Void
+
+    var body: some View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 16) {
                     Image(systemName: "waveform.circle.fill")
@@ -54,6 +63,5 @@ struct AIConsentView: View {
                 .background(.bar)
             }
             .navigationBarTitleDisplayMode(.inline)
-        }
     }
 }

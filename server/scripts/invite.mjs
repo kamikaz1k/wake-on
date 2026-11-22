@@ -50,7 +50,10 @@ if (command === "add") {
   if (revoked.includes(name)) throw new Error(`${name}'s code was revoked; pick another name, like ${name}2.`);
   if (!ids.length) throw new Error("No signing key yet: run `keys new` first.");
   const id = String(ids[ids.length - 1]);
-  console.log(`Invite code for ${name}: ${name}-${id}-${await sign(keys[id], id, name)}`);
+  const code = `${name}-${id}-${await sign(keys[id], id, name)}`;
+  console.log(`Invite code for ${name}: ${code}`);
+  // Opens Pixie with the code filled in and checked (wakeon://invite, see InviteLink).
+  console.log(`Invite link: wakeon://invite?code=${code}`);
 } else if (command === "revoke") {
   const name = cleanName(arg);
   if (!name) throw new Error("usage: revoke NAME");

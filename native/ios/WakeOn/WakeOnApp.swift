@@ -62,7 +62,7 @@ struct WakeOnApp: App {
     var body: some Scene {
         WindowGroup {
             ContentView(controller: controller)
-                // wakeon://talk, wakeon://talk?probe=greeting|search, wakeon://end
+                // wakeon://talk, wakeon://talk?probe=greeting|search, wakeon://end, wakeon://invite?code=…
                 .onOpenURL { url in
                     VoiceSessionController.appLog("open_url \(url.host ?? "")")
                     let entered = DispatchTime.now().uptimeNanoseconds
@@ -73,6 +73,9 @@ struct WakeOnApp: App {
                         VoiceSessionController.shared.start(trigger: "url", origin: entered, probe: probe)
                     case "end":
                         VoiceSessionController.shared.stop(reason: "url")
+                    case "invite":
+                        // wakeon://invite?code=…: a friend's invite, filled in and checked.
+                        InviteLink.shared.code = InviteLink.code(from: url)
                     default:
                         break
                     }

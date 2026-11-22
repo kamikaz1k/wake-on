@@ -151,6 +151,12 @@ struct APIKeyLink: View {
 /// to OpenAI): enter or replace it (saved to the Keychain), or remove it.
 struct APIKeyView: View {
     @ObservedObject var voice: VoiceSessionController
+    /// A code from an invite link: filled in and checked right away.
+    var prefill: String? = nil
+    /// Shown above the field (onboarding).
+    var intro: String? = nil
+    /// Runs when the code or key works; by default the page goes back.
+    var onValid: (() -> Void)? = nil
     @State private var keyDraft = ""
     @State private var checking = false
     @State private var outcome: CredentialCheck.Outcome?
@@ -171,6 +177,8 @@ struct APIKeyView: View {
                         if !checking && !typed.isEmpty { outcome = nil }
                     }
                     .accessibilityIdentifier("api-key-field")
+            } header: {
+                if let intro { Text(intro).textCase(nil).font(.body).foregroundStyle(.primary).padding(.bottom, 8) }
             }
             // A real button under the field, like a form's submit button (its own section, so the
             // field's card keeps its rounded corners).
@@ -208,7 +216,14 @@ struct APIKeyView: View {
         .listSectionSpacing(.compact)
         .navigationTitle("Invite Code or Key")
         .navigationBarTitleDisplayMode(.inline)
-        .toolbar(.hidden, for: .tabBar)
+        .onAppear(perform: usePrefill)
+        .onChange(of: prefill) { usePrefill() }
+    }
+
+    private func usePrefill() {
+        guard let prefill, !prefill.isEmpty, prefill != keyDraft, !checking else { return }
+        keyDraft = prefill
+        verify()
     }
 
     private func verify() {
@@ -223,7 +238,9 @@ struct APIKeyView: View {
             // A rejected code stays in the field to fix; a saved one is cleared. When it works,
             // go back so the main button is ready to talk; a warning stays up to be read.
             if result.saves { keyDraft = "" }
-            if case .valid = result { dismiss() }
+            if case .valid = result {
+                if let onValid { onValid() } else { dismiss() }
+            }
         }
     }
 

@@ -1,24 +1,37 @@
 import SwiftUI
 
-/// Two tabs in the standard tab bar (Liquid Glass on iOS 26): Simple (everyday controls) and
-/// Advanced (the full test surface).
+/// First run: onboarding. After that: the chat-first home screen, with settings in a sheet and
+/// the old Advanced page under Settings › Developer (debug builds).
 struct ContentView: View {
-    enum Mode: String { case advanced, simple }
     @ObservedObject var controller: WakeController
-    @AppStorage("ui.tab") private var mode: Mode = .simple
+    @AppStorage(Onboarding.doneKey) private var onboardingDone = false
+    /// `-onboarding` shows setup even after it was done (screenshots, trying it again).
+    @State private var forceOnboarding = ProcessInfo.processInfo.arguments.contains("-onboarding")
     @ObservedObject private var browser = BrowserSession.shared
     @ObservedObject private var voice = VoiceSessionController.shared
     /// Debug screenshots of the visualizer gallery (Advanced) open that tab.
     static let galleryRequested = ProcessInfo.processInfo.arguments.contains("-visualizer-gallery")
+    /// Screenshot and test launches open the main screen directly; `-onboarding` forces setup.
+    static var skipsOnboarding: Bool {
+        let args = ProcessInfo.processInfo.arguments
+        if args.contains("-onboarding") { return false }
+        return args.contains("-no-onboarding") || args.contains("-chat-logs") || args.contains("-sign-ins")
+            || args.contains("-key-setup") || args.contains("-settings")
+            || ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] != nil
+    }
 
     var body: some View {
-        TabView(selection: Binding(get: { Self.galleryRequested ? .advanced : mode }, set: { mode = $0 })) {
-            AdvancedView(controller: controller)
-                .tabItem { Label("Advanced", systemImage: "gearshape") }
-                .tag(Mode.advanced)
-            SimpleView(wake: controller)
-                .tabItem { Label("Simple", systemImage: "mic") }
-                .tag(Mode.simple)
+        Group {
+            if Self.galleryRequested {
+                AdvancedView(controller: controller)
+            } else if (onboardingDone && !forceOnboarding) || Self.skipsOnboarding {
+                HomeView(wake: controller)
+            } else {
+                OnboardingView(wake: controller) {
+                    onboardingDone = true
+                    forceOnboarding = false
+                }
+            }
         }
         // Lobby's browser, or yours from the Simple page: full screen so its top bar can take
         // the page's colour behind the status bar, as Safari and Chrome do.

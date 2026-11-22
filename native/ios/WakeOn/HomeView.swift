@@ -1,0 +1,288 @@
+import SwiftUI
+
+/// The main screen: Lobby's chat. The latest chat (or the live call) fills the screen, with a
+/// talk button at the bottom; history and settings sit in the toolbar.
+struct HomeView: View {
+    @ObservedObject var wake: WakeController
+    @ObservedObject var voice: VoiceSessionController = .shared
+    @ObservedObject var logs: ChatLogStore = .shared
+    @ObservedObject private var invite = InviteLink.shared
+    @AppStorage(VoiceVisualizerSettings.styleKey) private var visualizerStyle: VoiceVisualizerStyle = .skyOrb
+    @AppStorage(VoiceVisualizerSettings.paletteKey) private var visualizerPalette = VoicePalette.default.name
+    /// Screenshot/debug launch argument: open straight to the chat logs.
+    @State private var openLogs = ProcessInfo.processInfo.arguments.contains("-chat-logs")
+    /// Screenshot launch argument: open straight to the browser's sign-in sites.
+    @State private var openSignIns = ProcessInfo.processInfo.arguments.contains("-sign-ins")
+    /// Opens Invite Code or Key from the set-up button shown while neither is saved, or from an
+    /// invite link (screenshot launch argument: -key-setup).
+    @State private var openKeySetup = ProcessInfo.processInfo.arguments.contains("-key-setup")
+    @State private var showSettings = ProcessInfo.processInfo.arguments.contains("-settings")
+
+    var body: some View {
+        NavigationStack {
+            Group {
+                if #available(iOS 18.0, *), voice.phase != .idle, let chat = voice.liveChat {
+                    LiveCallScreen(voice: voice, transcript: chat.transcript,
+                                   visualizer: VoiceVisualizer(style: visualizerStyle, palette: .named(visualizerPalette)))
+                } else {
+                    idle
+                }
+            }
+            .navigationTitle("Pixie")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                if voice.phase == .idle {
+                    ToolbarItem(placement: .topBarLeading) {
+                        Button("Chat History", systemImage: "clock.arrow.circlepath") { openLogs = true }
+                            .accessibilityIdentifier("home-history")
+                    }
+                    ToolbarItemGroup(placement: .topBarTrailing) {
+                        Button("Open Browser", systemImage: "globe") { BrowserSession.shared.show() }
+                            .accessibilityIdentifier("home-browser")
+                        Button("Settings", systemImage: "gearshape") { showSettings = true }
+                            .accessibilityIdentifier("home-settings")
+                    }
+                }
+            }
+            .navigationDestination(isPresented: $openLogs) { ChatLogsView() }
+            .navigationDestination(isPresented: $openSignIns) { BrowserSignInsView() }
+            .navigationDestination(isPresented: $openKeySetup) {
+                APIKeyView(voice: voice, prefill: invite.code, onValid: { invite.code = nil; openKeySetup = false })
+            }
+            .sheet(isPresented: $showSettings) { SettingsView(wake: wake) }
+            .onChange(of: voice.phase) { old, new in
+                if old == .idle, new != .idle {
+                    openLogs = false
+                    openSignIns = false
+                    openKeySetup = false
+                    showSettings = false
+                }
+            }
+            .onChange(of: invite.code) { _, code in if code != nil { openKeySetup = true } }
+        }
+    }
+
+    /// Between calls: the latest chat, or suggestions when there's none yet, and the talk bar.
+    @ViewBuilder private var idle: some View {
+        Group {
+            if #available(iOS 18.0, *), voice.keySource != "missing", let last = logs.logs.first {
+                ChatLogTranscript(log: last, capture: logs.captureURL(for: last.id)).id(last.id)
+            } else {
+                suggestions
+            }
+        }
+        .safeAreaInset(edge: .bottom, spacing: 0) { talkBar }
+    }
+
+    private var suggestions: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 12) {
+                Text(voice.keySource == "missing" ? "Set up to talk to Lobby" : "Ask Lobby anything")
+                    .font(.title2.bold())
+                Text(voice.keySource == "missing"
+                     ? "Enter an invite code from a friend, or your own OpenAI API key."
+                     : "Tap a question, or start a chat and just talk.")
+                    .foregroundStyle(.secondary)
+                if voice.keySource != "missing" {
+                    ForEach(Onboarding.prompts, id: \.label) { prompt in
+                        Button { voice.start(trigger: "in_app", prompt: prompt.text) } label: {
+                            Label(prompt.label, systemImage: prompt.icon)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                                .padding(.vertical, 6)
+                        }
+                        .buttonStyle(.bordered)
+                    }
+                }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding()
+        }
+    }
+
+    private var talkBar: some View {
+        VStack(spacing: 8) {
+            if let error = voice.error {
+                Text(error)
+                    .font(.footnote)
+                    .foregroundStyle(.red)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .accessibilityIdentifier("simple-error")
+            }
+            switch voice.phase {
+            case .idle where voice.keySource == "missing":
+                // Nothing to call with yet: the main button sets that up instead.
+                bigButton("Add Invite Code or Key", id: "simple-add-key") { openKeySetup = true }
+            case .idle:
+                bigButton("Start chat", id: "simple-talk") { voice.start(trigger: "in_app") }
+                Text("Or press the Action Button. Say “bye” to hang up.")
+                    .font(.footnote).foregroundStyle(.secondary)
+            case .connecting, .live, .ending:
+                // iOS 17 has no live chat view: plain call controls.
+                HStack {
+                    Text(voice.status).foregroundStyle(.secondary)
+                    Spacer()
+                    Button("End", systemImage: "phone.down.fill", role: .destructive) { voice.stop() }
+                        .accessibilityIdentifier("simple-end")
+                }
+            }
+        }
+        .padding(.horizontal).padding(.vertical, 10)
+        .background(.bar)
+    }
+
+    private func bigButton(_ title: String, id: String, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Text(title)
+                .font(.title3.weight(.semibold))
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 8)
+        }
+        .buttonStyle(.borderedProminent)
+        .buttonBorderShape(.capsule)
+        .accessibilityIdentifier(id)
+    }
+}
+
+/// Everything adjustable, in a sheet from the main screen's gear.
+struct SettingsView: View {
+    @ObservedObject var wake: WakeController
+    @ObservedObject var voice: VoiceSessionController = .shared
+    @AppStorage(VoiceVisualizerSettings.styleKey) private var visualizerStyle: VoiceVisualizerStyle = .skyOrb
+    @AppStorage(LiveVoiceConfig.voiceKey) private var voiceName = "marin"
+    @AppStorage(ListenerSettings.Key.talkOnWake) private var talkOnWake = false
+    @AppStorage(ScreenAwake.key) private var awakeWhileCharging = true
+    @AppStorage(BrowserTool.enabledKey) private var browserEnabled = true
+    @AppStorage(AIConsent.key) private var openAIConsent = false
+    @AppStorage(Onboarding.doneKey) private var onboardingDone = true
+    @Environment(\.dismiss) private var dismiss
+    @State private var showDeveloper = false
+
+    var body: some View {
+        NavigationStack {
+            List {
+                Section {
+                    APIKeyLink(voice: voice)
+                    Picker(selection: $voiceName) {
+                        ForEach(LiveVoiceConfig.voices, id: \.self) { Text($0.capitalized).tag($0) }
+                    } label: {
+                        Text("Voice")
+                    }
+                    NavigationLink {
+                        VoiceVisualizerGallery()
+                    } label: {
+                        LabeledContent("Visualizer", value: visualizerStyle.title)
+                    }
+                    .accessibilityIdentifier("simple-visualizer")
+                } header: { Text("Lobby") }
+
+                Section {
+                    // One switch: background listening that starts a conversation on "Hey Lobby".
+                    // (Developer keeps the listener's separate options, including notify-only.)
+                    Toggle(isOn: Binding(get: { (wake.enabled || wake.busy) && talkOnWake },
+                                         set: { on in
+                                             if on {
+                                                 // Listening starts calls, so ask first.
+                                                 let turnOn = {
+                                                     talkOnWake = true
+                                                     if !wake.enabled && !wake.busy { wake.start() }
+                                                 }
+                                                 if AIConsent.given { turnOn() } else { voice.requestConsent(then: turnOn) }
+                                             } else {
+                                                 wake.stop()
+                                             }
+                                         })) {
+                        Text(wake.busy ? "Starting…" : "Listen for “Hey Lobby”")
+                    }
+                    .disabled(wake.busy)
+                    .accessibilityIdentifier("simple-hands-free")
+                    Toggle("Keep screen on while charging", isOn: $awakeWhileCharging)
+                        .accessibilityIdentifier("simple-awake-charging")
+                } header: { Text("Listening") } footer: {
+                    Text("Listening hears “Hey Lobby”, even with the phone locked: say it and your request in one go. While charging, the screen stays on as long as Pixie is open.")
+                }
+
+                Section {
+                    Toggle("Lobby can use the browser", isOn: $browserEnabled)
+                        .accessibilityIdentifier("simple-browser-enabled")
+                    BrowserSignInsLink()
+                    ObsidianVaultRow()
+                } header: { Text("Browser and notes") } footer: {
+                    Text("With the browser on, Lobby can open, search and read websites; it keeps you signed in only to the sites you choose.")
+                }
+
+                Section {
+                    Toggle("Send voice to OpenAI in calls", isOn: $openAIConsent)
+                        .accessibilityIdentifier("simple-openai-consent")
+                    Link("Privacy Policy", destination: AIConsent.privacyPolicy)
+                        .accessibilityIdentifier("simple-privacy-policy")
+                } header: { Text("Privacy") } footer: {
+                    Text("Calls with Lobby send your voice to OpenAI. Turn this off to stop that: no call starts until you agree again.")
+                }
+
+                Section {
+                    Button("Show Setup Again") {
+                        dismiss()
+                        onboardingDone = false
+                    }
+                    .accessibilityIdentifier("settings-onboarding")
+                    #if DEBUG
+                    Button("Developer") { showDeveloper = true }
+                        .accessibilityIdentifier("settings-developer")
+                    #endif
+                }
+            }
+            .navigationTitle("Settings")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .confirmationAction) { Button("Done") { dismiss() } }
+            }
+            .sheet(isPresented: $showDeveloper) { AdvancedView(controller: wake) }
+        }
+    }
+}
+
+/// During a call: the orb, the conversation in Lobby's chat view as it happens (the same view
+/// and rows as the chat log afterwards), and the call controls.
+@available(iOS 18.0, *)
+struct LiveCallScreen: View {
+    @ObservedObject var voice: VoiceSessionController
+    @ObservedObject var transcript: ChatTranscript
+    let visualizer: VoiceVisualizer
+
+    var body: some View {
+        VStack(spacing: 0) {
+            visualizer
+                .frame(height: 180)
+                .frame(maxWidth: .infinity)
+                .background(Color.black, in: RoundedRectangle(cornerRadius: 20))
+                .padding(.horizontal)
+            ChatTranscriptView(items: transcript.items, call: transcript.call, showsHeader: false)
+                .accessibilityIdentifier("live-chat")
+            ChatLengthWarning(tokens: voice.threadTokens)
+            controls
+        }
+        .navigationBarTitleDisplayMode(.inline)
+    }
+
+    private var controls: some View {
+        VStack(spacing: 8) {
+            if let error = voice.error { Text(error).foregroundStyle(.red).font(.footnote) }
+            HStack {
+                Button(voice.muted ? "Unmute" : "Mute", systemImage: voice.muted ? "mic.slash.fill" : "mic.fill") {
+                    voice.toggleMute()
+                }
+                .disabled(voice.phase == .ending)
+                Spacer()
+                Text(voice.phase == .ending ? "Ending…" : voice.status)
+                    .font(.footnote).foregroundStyle(.secondary).lineLimit(1)
+                Spacer()
+                Button("End", systemImage: "phone.down.fill", role: .destructive) { voice.stop() }
+                    .disabled(voice.phase == .ending)
+                    .accessibilityIdentifier("simple-end")
+            }
+            .buttonStyle(.bordered)
+        }
+        .padding(.horizontal).padding(.vertical, 10)
+        .background(.bar)
+    }
+}
