@@ -196,7 +196,11 @@ struct OnboardingView: View {
                     } else {
                         VStack(alignment: .leading, spacing: 10) {
                             Label("Listening happens on your iPhone. Nothing is sent until you say “Hey Lobby”.", systemImage: "lock.iphone")
-                            Label("The orange dot shows while the microphone is on.", systemImage: "circle.fill")
+                            Label {
+                                Text("The orange dot shows while the microphone is on.")
+                            } icon: {
+                                Image(systemName: "circle.fill").foregroundStyle(.orange).imageScale(.small)
+                            }
                             Label("Uses under 1% of battery an hour.", systemImage: "battery.75percent")
                         }
                         .foregroundStyle(.secondary)
