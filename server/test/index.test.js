@@ -204,3 +204,50 @@ test("checking a code answers like a call would, without OpenAI or counting", as
   assert.equal(t.sent.length, 0);
   assert.equal(t.usage.map.size, 0);
 });
+
+function summaryRequest(lines, code) {
+  return new Request("https://worker.example/v1/memory/summarize", {
+    method: "POST",
+    headers: code ? { Authorization: `Bearer ${code}` } : {},
+    body: JSON.stringify({ lines }),
+  });
+}
+
+const summaryUpstream = (sent) => async (url, init) => {
+  sent.push({ url, init });
+  return new Response(JSON.stringify({ output: [{ content: [{ type: "output_text", text: " One line. " }] }] }),
+    { status: 200, headers: { "Content-Type": "application/json" } });
+};
+
+test("summarizes memory lines with the fixed prompt and model, and counts it", async () => {
+  const t = await setup();
+  const sent = [];
+  const pending = [];
+  const response = await handle(summaryRequest(["[Nov 1, 2026] a", "[Nov 2, 2026] b"], t.code), t.env,
+    summaryUpstream(sent), { waitUntil: (p) => pending.push(p) });
+  assert.equal(response.status, 200);
+  assert.deepEqual(await response.json(), { text: "One line." });
+  assert.equal(sent[0].url, "https://api.openai.com/v1/responses");
+  const body = JSON.parse(sent[0].init.body);
+  assert.equal(body.model, "gpt-5.4-mini");
+  assert.equal(body.store, false);
+  assert.match(body.instructions, /compress a voice assistant's memory/);
+  assert.equal(body.input, "[Nov 1, 2026] a\n[Nov 2, 2026] b");
+  assert.equal(sent[0].init.headers.Authorization, "Bearer sk-real");
+  await Promise.all(pending);
+  assert.equal(t.usage.map.get(`summaries:${t.day}:alex`), "1");
+});
+
+test("summaries need a valid code, a few short lines, and stay under the daily limit", async () => {
+  const t = await setup();
+  const sent = [];
+  assert.equal((await handle(summaryRequest(["a"], null), t.env, summaryUpstream(sent))).status, 401);
+  assert.equal((await handle(summaryRequest(["a"], "alex-2-wrong"), t.env, summaryUpstream(sent))).status, 401);
+  assert.equal((await handle(summaryRequest([], t.code), t.env, summaryUpstream(sent))).status, 400);
+  assert.equal((await handle(summaryRequest(Array(17).fill("a"), t.code), t.env, summaryUpstream(sent))).status, 400);
+  assert.equal((await handle(summaryRequest(["x".repeat(401)], t.code), t.env, summaryUpstream(sent))).status, 400);
+  assert.equal((await handle(summaryRequest([{ role: "system" }], t.code), t.env, summaryUpstream(sent))).status, 400);
+  t.usage.map.set(`summaries:${t.day}:alex`, "60");
+  assert.equal((await handle(summaryRequest(["a"], t.code), t.env, summaryUpstream(sent))).status, 429);
+  assert.equal(sent.length, 0);
+});

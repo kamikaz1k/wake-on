@@ -69,16 +69,12 @@ struct ChatLogsView: View {
         .confirmationDialog(dialogTitle, isPresented: Binding(get: { pendingDelete != nil },
                                                                set: { if !$0 { pendingDelete = nil } }),
                             titleVisibility: .visible, presenting: pendingDelete) { kind in
-            Button(deleteLabel(kind), role: .destructive) {
-                switch kind {
-                case .selected: store.delete(ids: selection)
-                case .older: store.deleteOlder()
-                }
-                selection = []
-                editMode = .inactive
+            Button(deleteLabel(kind), role: .destructive) { bulkDelete(kind, keepMemories: false) }
+            if memories(kind) > 0 {
+                Button("Delete but Keep Memories") { bulkDelete(kind, keepMemories: true) }
             }
-        } message: { _ in
-            Text("This can't be undone.")
+        } message: { kind in
+            Text(MemoryDeleteWords.message(memories(kind)))
         }
         .onChange(of: store.logs) { _, logs in
             selection.formIntersection(logs.map(\.id))
@@ -92,6 +88,23 @@ struct ChatLogsView: View {
         case .older: "Delete chat logs older than \(ChatLogStore.keepDays) days?"
         default: "Delete selected chat logs?"
         }
+    }
+
+    private func ids(_ kind: BulkDelete) -> Set<UUID> {
+        kind == .selected ? selection : Set(store.older().map(\.id))
+    }
+
+    private func memories(_ kind: BulkDelete) -> Int {
+        MemoryStore.shared.noteCount(fromCalls: ids(kind))
+    }
+
+    private func bulkDelete(_ kind: BulkDelete, keepMemories: Bool) {
+        switch kind {
+        case .selected: store.delete(ids: selection, keepMemories: keepMemories)
+        case .older: store.deleteOlder(keepMemories: keepMemories)
+        }
+        selection = []
+        editMode = .inactive
     }
 
     private func deleteLabel(_ kind: BulkDelete) -> String {
@@ -127,6 +140,7 @@ struct ChatLogDetailView: View {
     @ObservedObject var voice: VoiceSessionController = .shared
     @Environment(\.dismiss) private var dismiss
     @State private var confirmDelete = false
+    private var memoryCount: Int { MemoryStore.shared.noteCount(fromCalls: [log.id]) }
 
     var body: some View {
         Group {
@@ -168,8 +182,14 @@ struct ChatLogDetailView: View {
                 store.delete(ids: [log.id])
                 dismiss()
             }
+            if memoryCount > 0 {
+                Button("Delete but Keep Memories") {
+                    store.delete(ids: [log.id], keepMemories: true)
+                    dismiss()
+                }
+            }
         } message: {
-            Text("This can't be undone.")
+            Text(MemoryDeleteWords.message(memoryCount))
         }
     }
 
@@ -218,5 +238,14 @@ struct ChatLogTranscript: View {
         }
         transcript.replaceAll(items)
         return transcript
+    }
+}
+
+/// The delete confirmations' words when a chat has notes in Lobby's memory.
+enum MemoryDeleteWords {
+    static func message(_ memories: Int) -> String {
+        guard memories > 0 else { return "This can't be undone." }
+        let things = memories == 1 ? "1 thing" : "\(memories) things"
+        return "This also removes \(things) Lobby remembered from it. This can't be undone."
     }
 }

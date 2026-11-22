@@ -65,6 +65,10 @@ struct LiveVoiceConfig {
     var visuals = true
     /// The browser tool: an in-app browser Lobby can drive (see BrowserTool).
     var browser = true
+    /// The remember and recall tools (see Memory).
+    var memoryTools = true
+    /// What Lobby remembers, for both models' instructions (`Memory.callText`).
+    var memory: String?
     /// Host candidates are enough: OpenAI's media servers are publicly reachable.
     var iceGatheringTimeout: Duration = .seconds(3)
     /// Send the offer once no new candidate has appeared for this long.
@@ -82,11 +86,13 @@ struct LiveVoiceConfig {
         if maps { text += " " + MapsOpener.delegationInstructions }
         if visuals { text += " " + ShowVisual.delegationInstructions }
         if browser { text += " " + BrowserTool.delegationInstructions }
+        if memoryTools { text += " " + Memory.delegationInstructions }
         if visuals || maps || browser {
             text += " " + ScreenPresence.backendGuidance
             if let screen { text += "\n" + screen.backendLine }
         }
         if browser, let browserLine { text += "\n" + browserLine }
+        if let memory { text += "\n\n" + memory }
         if let earlier = Self.historyNote(history) { text += "\n\n" + earlier }
         return text
     }
@@ -132,6 +138,7 @@ struct LiveVoiceConfig {
         if maps { tools.append(MapsOpener.tool) }
         if visuals { tools.append(ShowVisual.tool) }
         if browser { tools.append(BrowserTool.tool) }
+        if memoryTools { tools += Memory.tools }
         if !tools.isEmpty {
             responses["tools"] = tools
             responses["tool_choice"] = "auto"
@@ -140,6 +147,8 @@ struct LiveVoiceConfig {
         var voiceInstructions = instructions
         if mediaControl { voiceInstructions += " " + MediaControl.voiceInstructions }
         if browser { voiceInstructions += " " + BrowserTool.voiceInstructions }
+        if memoryTools { voiceInstructions += " " + Memory.voiceInstructions }
+        if let memory { voiceInstructions += "\n\n" + memory }
         if let earlier = Self.historyNote(history) { voiceInstructions += "\n\n" + earlier }
         var session: [String: Any] = ["model": model, "instructions": voiceInstructions,
                                       "audio": ["output": ["voice": voice]]]

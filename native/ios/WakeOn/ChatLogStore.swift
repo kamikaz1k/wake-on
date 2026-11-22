@@ -123,7 +123,9 @@ final class ChatLogStore: ObservableObject {
         return true
     }
 
-    func delete(ids: Set<UUID>) {
+    /// Deletes logs and, unless `keepMemories`, what Lobby remembered from them (see Memory).
+    func delete(ids: Set<UUID>, keepMemories: Bool = false) {
+        if !keepMemories { MemoryStore.shared.delete(calls: ids) }
         logs.removeAll { ids.contains($0.id) }
         save()
         for id in ids { try? FileManager.default.removeItem(at: CallCapture.url(for: id, in: capturesFolder)) }
@@ -157,8 +159,8 @@ final class ChatLogStore: ObservableObject {
         Self.older(logs, than: days, now: now)
     }
 
-    func deleteOlder(than days: Int = keepDays, now: Date = Date()) {
-        delete(ids: Set(older(than: days, now: now).map(\.id)))
+    func deleteOlder(than days: Int = keepDays, now: Date = Date(), keepMemories: Bool = false) {
+        delete(ids: Set(older(than: days, now: now).map(\.id)), keepMemories: keepMemories)
     }
 
     nonisolated static func older(_ logs: [ChatLog], than days: Int, now: Date) -> [ChatLog] {

@@ -16,6 +16,7 @@
 //   GLOBAL_DAILY_CALLS   calls per UTC day across everyone (default 300)
 //   ALLOWED_MODELS       comma-separated voice models (default gpt-live-1.1,gpt-live-1)
 //   ALLOWED_BACKEND_MODELS comma-separated delegation models (default gpt-5.6-terra)
+//   DAILY_SUMMARIES      memory summaries per code per UTC day (default 60)
 //
 // Invite codes are signed, so checking one needs no storage: `<name>-<key id>-<signature>`,
 // e.g. `alex-1-7k2mq9xd4r8w`, where the signature is the first 60 bits of
@@ -24,6 +25,16 @@
 
 const OPENAI_URL = "https://api.openai.com/v1/live/sessions";
 const MAX_BODY_BYTES = 256 * 1024;
+const RESPONSES_URL = "https://api.openai.com/v1/responses";
+const SUMMARY_MODEL = "gpt-5.4-mini";
+// The app's Memory.summaryInstructions, kept here so a code can only ask for a summary.
+const SUMMARY_INSTRUCTIONS =
+  "You compress a voice assistant's memory of its user. Merge the lines you're given, oldest " +
+  "first, into one line of at most 280 characters. Keep names, dates, places, preferences, " +
+  "plans and decisions that could matter later; drop the rest. When lines disagree, the later " +
+  "one wins. Reply with the line only.";
+const MAX_SUMMARY_LINES = 16;
+const MAX_SUMMARY_LINE = 400;
 
 export default {
   async fetch(request, env, ctx) {
@@ -46,6 +57,9 @@ export async function handle(request, env, upstream, ctx = { waitUntil: () => {}
     const check = await checkCode(code, env);
     if (check.problem) return error(401, check.problem, PROBLEMS[check.problem]);
     return json(200, { ok: true, name: check.name });
+  }
+  if (url.pathname === "/v1/memory/summarize" && request.method === "POST") {
+    return summarize(request, env, upstream, ctx);
   }
   if (url.pathname !== "/v1/live/sessions") return error(404, "not_found", "Unknown path.");
   if (request.method !== "POST") return error(405, "method_not_allowed", "Use POST.");
@@ -115,6 +129,47 @@ export async function handle(request, env, upstream, ctx = { waitUntil: () => {}
   headers.set("Server-Timing", timing.header(colo));
   console.log(JSON.stringify({ status: response.status, colo, ms: timing.steps }));
   return new Response(response.body, { status: response.status, headers });
+}
+
+/** One line of Lobby's memory from up to 16 lines (see the app's MemoryJob). Only the lines
+ * come from the app; the prompt and model are fixed here. Nothing is stored or logged. */
+async function summarize(request, env, upstream, ctx) {
+  const code = (request.headers.get("Authorization") || "").replace(/^Bearer\s+/i, "").trim();
+  if (!code) return error(401, "missing_code", PROBLEMS.invalid_code);
+  const check = await checkCode(code, env);
+  if (check.problem) return error(401, check.problem, PROBLEMS[check.problem]);
+  let lines;
+  try {
+    lines = (await request.json()).lines;
+  } catch {
+    return error(400, "bad_json", "Request body isn't JSON.");
+  }
+  if (!Array.isArray(lines) || lines.length === 0 || lines.length > MAX_SUMMARY_LINES ||
+      !lines.every((line) => typeof line === "string" && line.length <= MAX_SUMMARY_LINE)) {
+    return error(400, "not_allowed", `Send 1 to ${MAX_SUMMARY_LINES} lines of at most ${MAX_SUMMARY_LINE} characters.`);
+  }
+  const key = `summaries:${new Date().toISOString().slice(0, 10)}:${check.name}`;
+  const used = await count(env, key);
+  if (used >= Number(env.DAILY_SUMMARIES || 60)) return error(429, "daily_limit", "Enough summaries for today.");
+  const response = await upstream(RESPONSES_URL, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${env.OPENAI_API_KEY}`,
+      "Content-Type": "application/json",
+      "OpenAI-Safety-Identifier": (await sha256(check.name)).slice(0, 32),
+    },
+    body: JSON.stringify({
+      model: SUMMARY_MODEL, instructions: SUMMARY_INSTRUCTIONS, input: lines.join("\n"),
+      store: false, max_output_tokens: 400, reasoning: { effort: "low" },
+    }),
+  });
+  if (!response.ok) return error(502, "upstream", `OpenAI answered ${response.status}.`);
+  const reply = await response.json();
+  const text = (reply.output || []).flatMap((item) => item.content || [])
+    .filter((part) => part.type === "output_text").map((part) => part.text).join("").trim();
+  if (!text) return error(502, "upstream", "OpenAI sent no text.");
+  ctx.waitUntil(env.USAGE.put(key, String(used + 1), { expirationTtl: 3 * 24 * 3600 }));
+  return json(200, { text });
 }
 
 const PROBLEMS = {

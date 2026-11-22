@@ -138,6 +138,7 @@ enum ChatToolSteps {
         case "control_media", "media_control": "playpause"
         case "browser": "globe"
         case "save_note": "note.text"
+        case "remember", "recall": "brain"
         case "set_volume": "speaker.wave.2"
         default: "wrench.and.screwdriver"
         }
@@ -169,6 +170,10 @@ enum ChatToolSteps {
         case "save_note":
             (args["title"] as? String).flatMap { $0.isEmpty ? nil : $0 }
                 .map { done ? "Added to \($0)" : "Adding to \($0)" } ?? (done ? "Saved a note" : "Saving a note")
+        case "remember":
+            quoted("note").map { done ? "Remembered \($0)" : "Remembering \($0)" } ?? (done ? "Remembered" : "Remembering")
+        case "recall":
+            quoted("query").map { done ? "Recalled \($0)" : "Recalling \($0)" } ?? (done ? "Searched memory" : "Searching memory")
         default:
             done ? readable(tool.name).capitalizedFirst : "Running \(readable(tool.name))"
         }
@@ -187,6 +192,8 @@ enum ChatToolSteps {
             case "control_media", "media_control": "controlled playback"
             case "browser": "used the browser"
             case "save_note": "saved a note"
+            case "remember": "remembered"
+            case "recall": "searched memory"
             default: readable(tool.name)
             }
             if !parts.contains(part) { parts.append(part) }

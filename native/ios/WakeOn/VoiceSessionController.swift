@@ -273,6 +273,7 @@ final class VoiceSessionController: ObservableObject {
         fullTranscript = []
         callTrigger = trigger
         callStartedAt = Date()
+        notesAdded = 0
         let chat = LiveChat()
         liveChat = chat
         capture = Self.startCapture(trigger: trigger, origin: origin, chat: chat)
@@ -545,9 +546,11 @@ final class VoiceSessionController: ObservableObject {
 
     private func takePrepared() -> OpenAILiveVoiceProvider? {
         defer { prepared = nil }
-        // A setting that changes the tools (vault picked, browser switched) makes it stale too.
+        // A setting that changes the tools (vault picked, browser switched) makes it stale too,
+        // and so does a change to what Lobby remembers.
         guard let prepared, DispatchTime.now().uptimeNanoseconds - preparedSince < Self.preparedMaxAge,
-              prepared.config.notes == ObsidianVault.isSet, prepared.config.browser == BrowserTool.enabled else {
+              prepared.config.notes == ObsidianVault.isSet, prepared.config.browser == BrowserTool.enabled,
+              prepared.config.memory == MemoryStore.shared.callText else {
             prepared?.close(reason: "stale")
             return nil
         }
@@ -559,6 +562,7 @@ final class VoiceSessionController: ObservableObject {
         config.history = history
         config.browser = BrowserTool.enabled
         config.notes = ObsidianVault.isSet
+        config.memory = MemoryStore.shared.callText
         #if DEBUG
         let args = ProcessInfo.processInfo.arguments
         if args.contains("--no-delegation") { config.delegation = false }
@@ -848,6 +852,20 @@ final class VoiceSessionController: ObservableObject {
             }
         } else if name == MapsOpener.toolName {
             result = "Nothing to open: no place and no address."
+        } else if name == Memory.rememberTool {
+            // Saved now, with the call it came from; the call goes on.
+            if let note = MemoryStore.shared.remember(arguments["note"] as? String ?? "", call: capture?.id) {
+                result = "Remembered. The call goes on."
+                notesAdded += 1
+                action = ["kind": "memory", "note": note.text]
+                log("memory_note chars=\(note.text.count)")
+            } else {
+                result = "Nothing to remember: the note was empty."
+            }
+        } else if name == Memory.recallTool {
+            let found = MemoryStore.shared.memory.recall(arguments["query"] as? String ?? "")
+            result = Memory.recallText(found)
+            action = ["kind": "recall", "found": found.count]
         } else if name == ShowVisual.toolName {
             let title = arguments["title"] as? String ?? ""
             let html = arguments["html"] as? String ?? ""
@@ -962,6 +980,8 @@ final class VoiceSessionController: ObservableObject {
     private var fullTranscript: [ChatLog.Line] = []
     private var callTrigger = ""
     private var callStartedAt = Date()
+    /// Notes Lobby remembered this call: any, and the summary job may run (MemoryJob).
+    private var notesAdded = 0
     /// Every event of the call, saved with its chat log (see `CallCapture`).
     private var capture: CallCapture?
 
@@ -1281,6 +1301,7 @@ final class VoiceSessionController: ObservableObject {
                               lookupTokens: lookupInputTokens > 0 ? lookupInputTokens : nil)
         // Kept only with its log; the Spotify and media steps below append to it afterwards.
         let kept = ChatLogStore.shared.add(chatLog, capture: capture)
+        MemoryJob.afterCall(addedNotes: notesAdded > 0)
         // In the browser, pausing or going quiet ends the call (no tokens while you read) but
         // keeps the chat to resume. A call with nothing said keeps the one it resumed.
         if Self.pausesThread(reason: stopReason ?? reason, browserOpen: BrowserSession.shared.isOpen) {

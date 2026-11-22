@@ -28,6 +28,23 @@ and a call starts. The app keeps a few seconds of recent audio in memory so the 
 your request isn't cut off, and discards it otherwise. You can turn listening off at any
 time.
 
+## Lobby's memory
+
+Lobby can remember things about you between calls: things you ask it to remember, and
+lasting facts it picks up in a call, such as people's names or where you live. Each is
+saved as a short note on your iPhone, with the chat it came from. At the start of each call
+the notes, with older ones merged into short summaries, are sent to OpenAI as part of the
+call so Lobby knows them.
+
+The summaries are written by OpenAI from those notes, usually overnight while your iPhone
+charges, and only once there are enough notes to need them. With your own key this goes
+straight to OpenAI; with an invite code it goes through the Lobby server, which passes the
+notes on and keeps nothing but a count of summaries per invite per day, deleted after 3
+days.
+
+You can see and delete notes in Settings › Memory. Deleting a chat also deletes what Lobby
+remembered from it, unless you choose to keep it.
+
 ## Invite codes and the Lobby server
 
 If you use an invite code instead of your own OpenAI key, each call is set up through a
@@ -44,6 +61,7 @@ Lobby server isn't involved. Your key is stored in your iPhone's Keychain.
 
 - Chat history: the transcript of each call, and a record of the call's events, used to
   show and resume past chats. You can delete chats in the app.
+- Lobby's memory: the notes and summaries described above.
 - Settings, your invite code or key (in the Keychain), and anything you sign in to in the
   app's browser.
 - Notes Lobby saves for you go to the folder you choose (for example an Obsidian vault).

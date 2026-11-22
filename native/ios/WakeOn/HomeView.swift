@@ -156,6 +156,9 @@ struct SettingsView: View {
     @AppStorage(Onboarding.doneKey) private var onboardingDone = true
     @Environment(\.dismiss) private var dismiss
     @State private var showDeveloper = false
+    @ObservedObject private var memory: MemoryStore = .shared
+    /// "-memory" opens Settings › Memory, for screenshots.
+    @State private var openMemory = ProcessInfo.processInfo.arguments.contains("-memory")
 
     var body: some View {
         NavigationStack {
@@ -173,6 +176,12 @@ struct SettingsView: View {
                         LabeledContent("Visualizer", value: visualizerStyle.title)
                     }
                     .accessibilityIdentifier("simple-visualizer")
+                    NavigationLink {
+                        MemoryView()
+                    } label: {
+                        LabeledContent("Memory", value: "\(memory.memory.notes.count)")
+                    }
+                    .accessibilityIdentifier("settings-memory")
                 } header: { Text("Lobby") }
 
                 Section {
@@ -237,6 +246,7 @@ struct SettingsView: View {
                 ToolbarItem(placement: .confirmationAction) { Button("Done") { dismiss() } }
             }
             .sheet(isPresented: $showDeveloper) { AdvancedView(controller: wake) }
+            .navigationDestination(isPresented: $openMemory) { MemoryView() }
         }
     }
 }

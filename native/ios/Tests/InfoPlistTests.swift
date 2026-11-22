@@ -14,4 +14,12 @@ final class InfoPlistTests: XCTestCase {
     func testAppIsCalledPixie() {
         XCTAssertEqual(Bundle.main.object(forInfoDictionaryKey: "CFBundleDisplayName") as? String, "Pixie")
     }
+
+    /// The memory's summary job (MemoryJob) can't be scheduled without these.
+    func testMemoryJobIsPermitted() {
+        let ids = Bundle.main.object(forInfoDictionaryKey: "BGTaskSchedulerPermittedIdentifiers") as? [String] ?? []
+        XCTAssertTrue(ids.contains(MemoryJob.identifier))
+        let modes = Bundle.main.object(forInfoDictionaryKey: "UIBackgroundModes") as? [String] ?? []
+        XCTAssertTrue(modes.contains("processing") && modes.contains("audio"))
+    }
 }
