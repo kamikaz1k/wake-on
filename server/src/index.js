@@ -21,13 +21,14 @@ const OPENAI_URL = "https://api.openai.com/v1/live/sessions";
 const MAX_BODY_BYTES = 256 * 1024;
 
 export default {
-  async fetch(request, env) {
-    return handle(request, env, fetch);
+  async fetch(request, env, ctx) {
+    return handle(request, env, fetch, ctx);
   },
 };
 
-/** The whole worker, with `upstream` standing in for fetch (tests pass a fake). */
-export async function handle(request, env, upstream) {
+/** The whole worker, with `upstream` standing in for fetch and `ctx` for the Worker's
+ * execution context (tests pass fakes). */
+export async function handle(request, env, upstream, ctx = { waitUntil: () => {} }) {
   const url = new URL(request.url);
   // The app opens a connection ahead of a call with a HEAD request: answer it cheaply.
   if (request.method === "HEAD") return new Response(null, { status: 204 });
@@ -77,9 +78,11 @@ export async function handle(request, env, upstream) {
     body: JSON.stringify(body),
   }));
   // Count only calls OpenAI accepted (a failed setup costs nothing).
+  // The writes run after the reply is sent (they took 195-345 ms, all of it on the call's
+  // set-up). Two calls at the same moment can then both pass the limit; that's acceptable.
   if (response.ok) {
     const ttl = { expirationTtl: 3 * 24 * 3600 };
-    await timing.step("count", Promise.all([
+    ctx.waitUntil(Promise.all([
       env.USAGE.put(codeKey, String(codeCount + 1), ttl),
       env.USAGE.put(allKey, String(allCount + 1), ttl),
     ]));

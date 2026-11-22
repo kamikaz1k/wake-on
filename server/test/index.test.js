@@ -55,7 +55,9 @@ const goodBody = () => ({
 
 test("forwards a valid call with the real key and counts it", async () => {
   const t = await setup();
-  const response = await handle(call(goodBody()), t.env, t.upstream);
+  const pending = [];
+  const response = await handle(call(goodBody()), t.env, t.upstream, { waitUntil: (p) => pending.push(p) });
+  await Promise.all(pending);
   assert.equal(response.status, 201);
   assert.equal(response.headers.get("x-request-id"), "req_1");
   assert.equal((await response.json()).transport.sdp, "answer");
@@ -132,8 +134,19 @@ test("reports each step's time in Server-Timing", async () => {
   const t = await setup();
   const response = await handle(call(goodBody()), t.env, t.upstream);
   const timing = response.headers.get("Server-Timing");
-  for (const step of ["code", "limits", "openai", "count", "total"]) {
+  for (const step of ["code", "limits", "openai", "total"]) {
     assert.match(timing, new RegExp(`${step};dur=\\d+`));
   }
   assert.ok(!timing.includes("friend-code"));
+});
+
+test("the reply doesn't wait for the counter writes", async () => {
+  const t = await setup();
+  let release;
+  t.usage.put = () => new Promise((resolve) => (release = resolve));
+  const pending = [];
+  const response = await handle(call(goodBody()), t.env, t.upstream, { waitUntil: (p) => pending.push(p) });
+  assert.equal(response.status, 201);
+  assert.equal(pending.length, 1);
+  release();
 });
