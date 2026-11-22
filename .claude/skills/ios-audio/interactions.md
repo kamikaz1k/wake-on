@@ -38,6 +38,14 @@ and wake times: see "Summarise listener sessions" below.
   reason=limit afterMs=8000`): the request reaches OpenAI 8 s late, Lobby's idle nudge
   ("Anything else?") fires at 5 s before the call's mic is even live, and the ready chime
   plays at 8 s instead of right after the wake.
+- 2026-11-22 12:05 (abd9ded-era debug build, onboarding "Hey Lobby" step, app on screen): the
+  pause detector fired on the short gap after "Hey Lobby" (`audio_start_after_pause
+  afterMs=996`), the user kept talking, and the sent audio has **~0.5 s of exact zeros**
+  mid-sentence (listener tail `tailDb=-71` while the call engine starts, then the 0.27 s chime
+  mute). Separately OpenAI returned **no input transcript at all** for ~3.4 s of audio with
+  speech in it (handover itself fine: bridge 1383 ms, seam 0, backlog 2093 ms sent). Cause
+  unknown; debug builds now save `Documents/sent-<time>.wav` (all sent audio) and captures of
+  unheard calls in `call-captures-unheard/` to find it.
 - The ready chime plays when the call's mic goes live, which since 2026-11-07 is the user's
   first pause, not the wake. So it never marks the moment "Hey Lobby" was heard, and over
   music it comes at 8 s.

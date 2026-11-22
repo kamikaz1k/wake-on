@@ -65,11 +65,23 @@ final class HotAudioDevice: NSObject, @unchecked Sendable {
     var onFirstCapture: (() -> Void)?
     /// Debug: the raw backlog (Int16, 48 kHz mono), handed over once it has been sent.
     var onBacklogDump: ((Data) -> Void)?
+    #if DEBUG
+    /// Debug builds: everything sent to OpenAI in the call (backlog and live, up to 30 s), handed
+    /// over when recording stops. Shows what the server got when it heard nothing.
+    var onSentDump: ((Data) -> Void)?
+    private let sentCapacity = 48_000 * 30
+    private let sent = UnsafeMutablePointer<Int16>.allocate(capacity: 48_000 * 30)
+    private var sentCount = 0          // microphone thread
+    private var sentResetRequested = false
+    #endif
     /// Microphone thread: the backlog has been sent; the stream is live. Argument: frames sent.
     var onBacklogDrained: ((Int) -> Void)?
 
     /// Starts a new call's local capture: empty backlog, hold audio until released.
     func beginBuffering() {
+        #if DEBUG
+        sentResetRequested = true
+        #endif
         backlogResetRequested = true
         released = false
         buffering = true
@@ -599,6 +611,9 @@ final class HotAudioDevice: NSObject, @unchecked Sendable {
     private func deliverMicrophone(timestamp: UnsafePointer<AudioTimeStamp>, frames: AVAudioFrameCount,
                                    buffers: UnsafePointer<AudioBufferList>) -> OSStatus {
         guard frames <= 4096 else { return noErr }
+        #if DEBUG
+        if sentResetRequested { sentResetRequested = false; sentCount = 0 }
+        #endif
         if backlogResetRequested {
             backlogResetRequested = false
             backlogCount = 0
@@ -673,6 +688,10 @@ final class HotAudioDevice: NSObject, @unchecked Sendable {
                 onBacklogDrained?(total)
             }
         }
+        #if DEBUG
+        let keep = min(sendCount, sentCapacity - sentCount)
+        if keep > 0 { (sent + sentCount).update(from: source, count: keep); sentCount += keep }
+        #endif
         var status: OSStatus = noErr
         var offset = 0
         while offset < sendCount {
@@ -791,5 +810,15 @@ extension HotAudioDevice: RTCAudioDevice {
     }
     // Buffering belongs to the call (the controller begins and ends it). WebRTC also calls
     // stop when unrelated peer connections close, such as the launch warm-up.
-    func stopRecording() -> Bool { trace("stopRecording"); recording = false; return true }
+    func stopRecording() -> Bool {
+        trace("stopRecording")
+        recording = false
+        #if DEBUG
+        if sentCount > 0, let dump = onSentDump {
+            dump(Data(bytes: sent, count: sentCount * 2))
+            sentCount = 0
+        }
+        #endif
+        return true
+    }
 }

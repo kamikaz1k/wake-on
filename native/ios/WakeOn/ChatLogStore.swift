@@ -108,7 +108,15 @@ final class ChatLogStore: ObservableObject {
     /// call with nothing said, which isn't kept.
     @discardableResult
     func add(_ log: ChatLog, capture: CallCapture? = nil) -> Bool {
-        guard !log.lines.isEmpty else { return false }
+        guard !log.lines.isEmpty else {
+            #if DEBUG
+            // A call where nothing was said (or heard) gets no chat log, but debug builds keep
+            // its events in call-captures-unheard/ for debugging.
+            capture?.save(in: capturesFolder.deletingLastPathComponent()
+                .appendingPathComponent("call-captures-unheard", isDirectory: true))
+            #endif
+            return false
+        }
         logs.insert(log, at: 0)
         save()
         capture?.save(in: capturesFolder)

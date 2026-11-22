@@ -193,20 +193,10 @@ final class VoiceSessionController: ObservableObject {
                 }
             }
             #if DEBUG
-            device.onBacklogDump = { pcm in
-                // Write off the audio thread: Documents/backlog-<time>.wav (16-bit, 48 kHz, mono).
-                DispatchQueue.global(qos: .utility).async {
-                    var wav = Data()
-                    func u32(_ v: UInt32) { withUnsafeBytes(of: v.littleEndian) { wav.append(contentsOf: $0) } }
-                    func u16(_ v: UInt16) { withUnsafeBytes(of: v.littleEndian) { wav.append(contentsOf: $0) } }
-                    wav.append(contentsOf: Array("RIFF".utf8)); u32(UInt32(36 + pcm.count))
-                    wav.append(contentsOf: Array("WAVEfmt ".utf8)); u32(16); u16(1); u16(1); u32(48_000); u32(96_000); u16(2); u16(16)
-                    wav.append(contentsOf: Array("data".utf8)); u32(UInt32(pcm.count)); wav.append(pcm)
-                    let name = "backlog-\(Int(Date().timeIntervalSince1970)).wav"
-                    let url = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0].appendingPathComponent(name)
-                    try? wav.write(to: url)
-                }
-            }
+            // Documents/backlog-<time>.wav: what was staged before the server was ready.
+            device.onBacklogDump = { pcm in Self.writeDebugWav(pcm, prefix: "backlog") }
+            // Documents/sent-<time>.wav: everything the call sent (backlog and live).
+            device.onSentDump = { pcm in Self.writeDebugWav(pcm, prefix: "sent") }
             #endif
             device.beginBuffering()
         }
@@ -1426,6 +1416,23 @@ final class VoiceSessionController: ObservableObject {
         #endif
     }
     private var completedCalls = 0
+
+    #if DEBUG
+    /// Debug audio dumps: 16-bit, 48 kHz, mono WAV in Documents, written off the audio thread.
+    nonisolated static func writeDebugWav(_ pcm: Data, prefix: String) {
+        DispatchQueue.global(qos: .utility).async {
+            var wav = Data()
+            func u32(_ v: UInt32) { withUnsafeBytes(of: v.littleEndian) { wav.append(contentsOf: $0) } }
+            func u16(_ v: UInt16) { withUnsafeBytes(of: v.littleEndian) { wav.append(contentsOf: $0) } }
+            wav.append(contentsOf: Array("RIFF".utf8)); u32(UInt32(36 + pcm.count))
+            wav.append(contentsOf: Array("WAVEfmt ".utf8)); u32(16); u16(1); u16(1); u32(48_000); u32(96_000); u16(2); u16(16)
+            wav.append(contentsOf: Array("data".utf8)); u32(UInt32(pcm.count)); wav.append(pcm)
+            let name = "\(prefix)-\(Int(Date().timeIntervalSince1970)).wav"
+            let url = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0].appendingPathComponent(name)
+            try? wav.write(to: url)
+        }
+    }
+    #endif
 
     /// Starts a call that asks `prompt` as if the user had said it (suggested questions).
     func start(trigger: String, prompt: String) {
