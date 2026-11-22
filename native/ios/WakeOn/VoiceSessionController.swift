@@ -60,6 +60,10 @@ final class VoiceSessionController: ObservableObject {
     @Published private(set) var usageSeconds: Double?
     @Published private(set) var muted = false
     @Published var error: String?
+    /// The permission sheet (AIConsentView) is up, asking before the first call.
+    @Published var consentNeeded = false
+    /// What to do once the user agrees (start the call they asked for, turn on listening).
+    private var afterConsent: (() -> Void)?
     @Published private(set) var keySource: String = OpenAIKeyStore.load()?.source.rawValue ?? "missing"
 
     var medianResponseMs: Double? {
@@ -126,6 +130,18 @@ final class VoiceSessionController: ObservableObject {
             if phase == .live, let probe { runProbe(probe); return }
             // A second Action Button press hangs up.
             if trigger.hasPrefix("app_intent") { stop(reason: "action_button") }
+            return
+        }
+        // Nothing goes to OpenAI before the user agrees (Guideline 5.1.2(i)). One UserDefaults
+        // read, so calls stay as fast once agreed.
+        guard AIConsent.given else {
+            WakeController.shared.cancelHandover()
+            if UIApplication.shared.applicationState == .background {
+                error = AIConsent.backgroundMessage
+            } else {
+                requestConsent { [weak self] in self?.start(trigger: trigger, resuming: resuming) }
+            }
+            log("start_blocked no_consent trigger=\(trigger)")
             return
         }
         // Fast path first, before any bookkeeping or UI work: free the microphone, start audio,
@@ -1403,6 +1419,23 @@ final class VoiceSessionController: ObservableObject {
         #endif
     }
     private var completedCalls = 0
+
+    /// Shows the permission sheet; runs `then` if the user agrees.
+    func requestConsent(then: @escaping () -> Void) {
+        afterConsent = then
+        consentNeeded = true
+    }
+
+    func answerConsent(_ agreed: Bool) {
+        AIConsent.set(agreed)
+        consentNeeded = false
+        let next = afterConsent
+        afterConsent = nil
+        if agreed {
+            if error == AIConsent.backgroundMessage { error = nil }
+            next?()
+        }
+    }
 
     private func fail(_ message: String) {
         log("failed \(message)")

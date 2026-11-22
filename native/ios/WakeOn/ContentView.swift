@@ -7,6 +7,7 @@ struct ContentView: View {
     @ObservedObject var controller: WakeController
     @AppStorage("ui.tab") private var mode: Mode = .simple
     @ObservedObject private var browser = BrowserSession.shared
+    @ObservedObject private var voice = VoiceSessionController.shared
     /// Debug screenshots of the visualizer gallery (Advanced) open that tab.
     static let galleryRequested = ProcessInfo.processInfo.arguments.contains("-visualizer-gallery")
 
@@ -24,6 +25,15 @@ struct ContentView: View {
         .fullScreenCover(isPresented: $browser.isOpen) {
             BrowserSheet(browser: browser)
         }
+        // Before the first call: permission to send the user's voice to OpenAI.
+        .sheet(isPresented: Binding(get: { voice.consentNeeded },
+                                    set: { if !$0, voice.consentNeeded { voice.answerConsent(false) } })) {
+            AIConsentView(agree: { voice.answerConsent(true) }, decline: { voice.answerConsent(false) })
+        }
+        #if DEBUG
+        // Screenshot launch argument: show the permission sheet.
+        .task { if ProcessInfo.processInfo.arguments.contains("-consent-sheet") { voice.requestConsent {} } }
+        #endif
         #if DEBUG
         // `-browser <address or words>`, then `-browser-step <action> <text>` (repeatable):
         // Lobby's browser steps without a call, results in the voice log.

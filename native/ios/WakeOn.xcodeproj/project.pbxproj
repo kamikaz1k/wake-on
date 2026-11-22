@@ -1534,6 +1534,7 @@
 			<integer>2147483647</integer>
 			<key>files</key>
 			<array>
+				<string>A851883D2D56FA2D0CDAB29D</string>
 				<string>EE72E66061F34F35D9E2A154</string>
 				<string>5BEA58C43D2321DE0F5E9EB9</string>
 				<string>5655D4377A320893D7964C00</string>
@@ -2085,6 +2086,17 @@
 			<key>isa</key>
 			<string>PBXBuildFile</string>
 		</dict>
+		<key>8CEFD2EE710915B5D2E5CD71</key>
+		<dict>
+			<key>isa</key>
+			<string>PBXFileReference</string>
+			<key>lastKnownFileType</key>
+			<string>sourcecode.swift</string>
+			<key>path</key>
+			<string>Tests/AIConsentTests.swift</string>
+			<key>sourceTree</key>
+			<string>&lt;group&gt;</string>
+		</dict>
 		<key>8D57C6131DA1F283404544E8</key>
 		<dict>
 			<key>fileRef</key>
@@ -2102,6 +2114,13 @@
 			<string>Vendor/WebRTC.xcframework</string>
 			<key>sourceTree</key>
 			<string>&lt;group&gt;</string>
+		</dict>
+		<key>8E822F5F5DE4A920CD1B1B85</key>
+		<dict>
+			<key>fileRef</key>
+			<string>F0EB0913A01EEAD3C5C8FE4F</string>
+			<key>isa</key>
+			<string>PBXBuildFile</string>
 		</dict>
 		<key>8F689865000D2D112E2DF22D</key>
 		<dict>
@@ -2389,6 +2408,13 @@
 			<key>isa</key>
 			<string>PBXBuildFile</string>
 		</dict>
+		<key>A851883D2D56FA2D0CDAB29D</key>
+		<dict>
+			<key>fileRef</key>
+			<string>8CEFD2EE710915B5D2E5CD71</string>
+			<key>isa</key>
+			<string>PBXBuildFile</string>
+		</dict>
 		<key>A8851735FAE0A2F73AB0D84E</key>
 		<dict>
 			<key>isa</key>
@@ -2586,6 +2612,7 @@
 			<integer>2147483647</integer>
 			<key>files</key>
 			<array>
+				<string>8E822F5F5DE4A920CD1B1B85</string>
 				<string>1DA5A8F982B7C161E74C041E</string>
 				<string>F29E91B590F34040D4912AA5</string>
 				<string>206BA2F968C3FC3C92318888</string>
@@ -3097,6 +3124,7 @@
 		<dict>
 			<key>children</key>
 			<array>
+				<string>F0EB0913A01EEAD3C5C8FE4F</string>
 				<string>B29C300FCD297635482D352B</string>
 				<string>E8B8A81C6CA1C88BC84CAD95</string>
 				<string>BAA884D912E3425D1C2D1458</string>
@@ -3144,6 +3172,7 @@
 				<string>38534BB08E9D76D11C587E49</string>
 				<string>EA887A74159053229BB4FA1B</string>
 				<string>B81F7C4987416DEB2976F4B6</string>
+				<string>8CEFD2EE710915B5D2E5CD71</string>
 				<string>694224480C1EF786AF578D9C</string>
 				<string>4025FAD5BADBA37E3C524972</string>
 				<string>93421563D67A7CA1779FC6D5</string>
@@ -3618,6 +3647,17 @@
 			<string>694224480C1EF786AF578D9C</string>
 			<key>isa</key>
 			<string>PBXBuildFile</string>
+		</dict>
+		<key>F0EB0913A01EEAD3C5C8FE4F</key>
+		<dict>
+			<key>isa</key>
+			<string>PBXFileReference</string>
+			<key>lastKnownFileType</key>
+			<string>sourcecode.swift</string>
+			<key>path</key>
+			<string>WakeOn/AIConsent.swift</string>
+			<key>sourceTree</key>
+			<string>&lt;group&gt;</string>
 		</dict>
 		<key>F29E91B590F34040D4912AA5</key>
 		<dict>

@@ -17,6 +17,9 @@ are set up with storage turned off.
 
 To answer questions, Lobby may search the web. That search runs at OpenAI.
 
+The app asks your permission before the first call. You can withdraw it any time in
+Settings › Privacy ("Send voice to OpenAI in calls"); no call starts until you agree again.
+
 ## "Hey Lobby" listening
 
 If you turn on background listening, the app listens for the phrase "Hey Lobby" using a
@@ -63,6 +66,11 @@ web.
 ## Children
 
 Pixie isn't directed at children under 13.
+
+## Reporting a response
+
+Tap the flag under any of Lobby's replies to report it. This opens a report form on GitHub,
+where reports are public; the reply is copied so you can choose whether to include it.
 
 ## Changes and contact
 

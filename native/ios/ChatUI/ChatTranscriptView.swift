@@ -410,7 +410,8 @@ private struct PlainRow: View {
                     .textSelection(.enabled)
                 ChatMessageFooter(item: item).padding(.horizontal, 12)
                 if state != .streaming, !text.isEmpty {
-                    MessageActions(text: text, canExpand: speaker == .lobby && SizedMarkdown.containsTable(text))
+                    MessageActions(text: text, canExpand: speaker == .lobby && SizedMarkdown.containsTable(text),
+                                   canReport: speaker == .lobby)
                         .padding(.horizontal, 4) // icons have their own padding; text edge lines up
                 }
             }
@@ -427,13 +428,16 @@ private struct PlainRow: View {
     }
 }
 
-/// Actions under a finished message. Just Copy for now; more (feedback, read aloud, share)
-/// go in this row later.
+/// Actions under a finished message: Copy, Expand for wide tables, and Report on Lobby's
+/// replies (App Review Guidelines 1.2 and 4.7.1: a way to report objectionable AI output).
 private struct MessageActions: View {
     let text: String
     var canExpand = false
+    var canReport = false
     @State private var copied = false
     @State private var expanded = false
+    @State private var confirmReport = false
+    @Environment(\.openURL) private var openURL
 
     var body: some View {
         HStack(spacing: 2) {
@@ -458,12 +462,46 @@ private struct MessageActions: View {
                 .accessibilityLabel("Expand")
                 .accessibilityIdentifier("message-expand")
             }
+            if canReport {
+                Button { confirmReport = true } label: {
+                    Image(systemName: "flag")
+                        .frame(width: 32, height: 28)
+                        .contentShape(Rectangle())
+                }
+                .accessibilityLabel("Report")
+                .accessibilityIdentifier("message-report")
+            }
         }
         .sheet(isPresented: $expanded) { ExpandedMessage(text: text) }
+        .confirmationDialog("Report this response?", isPresented: $confirmReport, titleVisibility: .visible) {
+            Button("Report") {
+                UIPasteboard.general.string = text
+                openURL(MessageReport.url)
+            }
+        } message: {
+            Text(MessageReport.explanation)
+        }
         .buttonStyle(.plain)
         .font(.footnote)
         .foregroundStyle(.secondary)
         .sensoryFeedback(.success, trigger: copied) { _, now in now }
+    }
+}
+
+/// Where a reported Lobby reply goes: a GitHub issue form. The reply itself stays out of the
+/// link (issues are public); it's copied so the reporter can choose to paste it.
+enum MessageReport {
+    static let explanation = "This opens a report form on GitHub, where reports are public. "
+        + "The response is copied, so you can paste it in if you want to."
+    static var url: URL {
+        var parts = URLComponents(string: "https://github.com/kamikaz1k/wake-on/issues/new")!
+        parts.queryItems = [
+            URLQueryItem(name: "title", value: "Report: a Lobby response"),
+            URLQueryItem(name: "labels", value: "report"),
+            URLQueryItem(name: "body", value: "What was wrong with the response?\n\n"
+                         + "(Optional) Paste the response here. It was copied when you tapped Report.\n"),
+        ]
+        return parts.url!
     }
 }
 

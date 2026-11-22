@@ -12,6 +12,7 @@ struct SimpleView: View {
     @AppStorage(ListenerSettings.Key.talkOnWake) private var talkOnWake = false
     @AppStorage(ScreenAwake.key) private var awakeWhileCharging = true
     @AppStorage(BrowserTool.enabledKey) private var browserEnabled = true
+    @AppStorage(AIConsent.key) private var openAIConsent = false
     /// Screenshot/debug launch argument: open straight to the chat logs.
     @State private var openLogs = ProcessInfo.processInfo.arguments.contains("-chat-logs")
     /// Screenshot launch argument: open straight to the browser's sign-in sites.
@@ -140,8 +141,12 @@ struct SimpleView: View {
                     Toggle(isOn: Binding(get: { (wake.enabled || wake.busy) && talkOnWake },
                                          set: { on in
                                              if on {
-                                                 talkOnWake = true
-                                                 if !wake.enabled && !wake.busy { wake.start() }
+                                                 // Listening starts calls, so ask first.
+                                                 let turnOn = {
+                                                     talkOnWake = true
+                                                     if !wake.enabled && !wake.busy { wake.start() }
+                                                 }
+                                                 if AIConsent.given { turnOn() } else { voice.requestConsent(then: turnOn) }
                                              } else {
                                                  wake.stop()
                                              }
@@ -170,6 +175,15 @@ struct SimpleView: View {
                     APIKeyLink(voice: voice)
                 } header: { Text("Settings") } footer: {
                     Text("Background listening hears “Hey Lobby”, even with the phone locked: say it and your request in one go. With the browser on, Lobby can open, search and read websites; it keeps you signed in only to the sites you choose. While charging, the screen stays on as long as Pixie is open.")
+                }
+
+                Section {
+                    Toggle("Send voice to OpenAI in calls", isOn: $openAIConsent)
+                        .accessibilityIdentifier("simple-openai-consent")
+                    Link("Privacy Policy", destination: AIConsent.privacyPolicy)
+                        .accessibilityIdentifier("simple-privacy-policy")
+                } header: { Text("Privacy") } footer: {
+                    Text("Calls with Lobby send your voice to OpenAI. Turn this off to stop that: no call starts until you agree again.")
                 }
             }
     }
