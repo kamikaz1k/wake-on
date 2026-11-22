@@ -47,4 +47,7 @@ echo "Uploading…"
 # shellcheck disable=SC2086
 xcodebuild -exportArchive -archivePath "$out/WakeOn.xcarchive" -exportPath "$out/export" \
   -exportOptionsPlist "$out/ExportOptions.plist" -allowProvisioningUpdates $auth
-echo "Uploaded build $build. It appears in App Store Connect › TestFlight after processing (10–30 min)."
+echo "Uploaded build $build. Waiting for App Store Connect to process it…"
+# Apple can still reject the build here (for example a missing purpose string), after the
+# upload itself succeeded, so wait for the verdict instead of assuming it worked.
+node scripts/asc-upload-status.mjs com.kamikaz1k.wakeon "$build" 30

@@ -1543,6 +1543,7 @@
 				<string>FD0F0DB50B6695E5A313F02A</string>
 				<string>604415CC5C8C5E7AD42D4232</string>
 				<string>F5A8AD6DD1708ECCF94AA2E2</string>
+				<string>91D0EFA070F8AC9E81E9E481</string>
 				<string>44DA201589CF3D2915F60C94</string>
 				<string>1FD4FDDD07AD5BF53127D39B</string>
 				<string>2BEF0C492AAC3A40E5C74492</string>
@@ -2198,6 +2199,13 @@
 			<key>sourceTree</key>
 			<string>&lt;group&gt;</string>
 		</dict>
+		<key>91D0EFA070F8AC9E81E9E481</key>
+		<dict>
+			<key>fileRef</key>
+			<string>C3C9A129BAA57EDE6B130330</string>
+			<key>isa</key>
+			<string>PBXBuildFile</string>
+		</dict>
 		<key>923E56ABEC4022D54E7A5068</key>
 		<dict>
 			<key>fileRef</key>
@@ -2727,6 +2735,17 @@
 			<key>isa</key>
 			<string>PBXBuildFile</string>
 		</dict>
+		<key>C3C9A129BAA57EDE6B130330</key>
+		<dict>
+			<key>isa</key>
+			<string>PBXFileReference</string>
+			<key>lastKnownFileType</key>
+			<string>sourcecode.swift</string>
+			<key>path</key>
+			<string>Tests/InfoPlistTests.swift</string>
+			<key>sourceTree</key>
+			<string>&lt;group&gt;</string>
+		</dict>
 		<key>C5B168124450AD2BB493BFA4</key>
 		<dict>
 			<key>buildConfigurationList</key>
@@ -3134,6 +3153,7 @@
 				<string>9F2F0D7B8211BA8CBE1CF982</string>
 				<string>F92C1B086F4CDFB01AAC82C5</string>
 				<string>A52E1E1026008ABCCF27FFB3</string>
+				<string>C3C9A129BAA57EDE6B130330</string>
 				<string>7208E077BFADA885CC025FBD</string>
 				<string>1C6E6C00672E94914095F8DB</string>
 				<string>FA533F6C978897E98E3E2908</string>
