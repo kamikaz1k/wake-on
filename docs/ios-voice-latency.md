@@ -1,6 +1,6 @@
 # iOS realtime voice: architecture and latency
 
-Wake On's iPhone app starts a two-way voice conversation with OpenAI's `gpt-live-1` from
+Wake On's iPhone app starts a two-way voice conversation with OpenAI's `gpt-live-1.1` (measurements below were taken on `gpt-live-1`) from
 the Action Button. The design goal is **trigger → listening**: the time from the press
 until the user can speak and be heard, with the app's own overhead as close to zero as iOS
 allows. OpenAI's processing time is out of scope; everything on the phone is in scope.

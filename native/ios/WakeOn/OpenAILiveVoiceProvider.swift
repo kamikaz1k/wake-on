@@ -5,7 +5,7 @@ import WebRTC
 /// Settings for one GPT-Live session. Defaults favour low latency.
 struct LiveVoiceConfig {
     var endpoint = URL(string: "https://api.openai.com/v1/live/sessions")!
-    var model = "gpt-live-1"
+    var model = "gpt-live-1.1"
     var voice = "marin"
     /// Voices offered in settings, checked against gpt-live-1 on the phone (see voiceKey).
     static let voices = ["marin", "cedar", "alloy", "ash", "ballad", "coral", "echo", "sage", "shimmer", "verse"]

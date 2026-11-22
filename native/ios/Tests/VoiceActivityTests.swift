@@ -89,7 +89,7 @@ final class VoiceActivityTests: XCTestCase {
     func testSessionRequestMatchesTheLiveAPI() throws {
         let body = LiveVoiceConfig().requestBody(sdp: "v=0")
         let session = try XCTUnwrap(body["session"] as? [String: Any])
-        XCTAssertEqual(session["model"] as? String, "gpt-live-1")
+        XCTAssertEqual(session["model"] as? String, "gpt-live-1.1")
         let delegation = try XCTUnwrap(session["delegation"] as? [String: Any])
         XCTAssertEqual(delegation["type"] as? String, "responses")
         let responses = try XCTUnwrap(delegation["responses"] as? [String: Any])
