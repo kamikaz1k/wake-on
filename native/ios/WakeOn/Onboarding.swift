@@ -218,17 +218,19 @@ struct OnboardingView: View {
                            title: stepCallDone ? "Lobby heard you" : "Just say “Hey Lobby”",
                            text: stepCallDone
                                ? "Listening stays on until you turn it off in Settings."
-                               : "With listening on, say “Hey Lobby” and your question in one go, even with the phone locked.") {
+                               : "Say “Hey Lobby”, wait for the chime, then ask. It works even with the phone locked.") {
                 if !stepCallDone {
                     if listeningStarted {
                         HStack(spacing: 12) {
                             ProgressView().frame(width: 28)
-                            Text("Try it: “Hey Lobby, what time is it?”").foregroundStyle(.secondary)
+                            Text("Try it: say “Hey Lobby”, wait for the chime, then “what time is it?”").foregroundStyle(.secondary)
                         }
                     } else {
                         VStack(alignment: .leading, spacing: 10) {
                             OnboardingRow(icon: "lock.iphone",
                                           text: "Listening happens on your iPhone. Nothing is sent until you say “Hey Lobby”.")
+                            OnboardingRow(icon: "bell.fill",
+                                          text: "A chime means Lobby is listening. Words said during it are missed.")
                             OnboardingRow(icon: "circle.fill", tint: .orange, small: true,
                                           text: "The orange dot shows while the microphone is on.")
                             OnboardingRow(icon: "battery.75percent", text: "Uses under 1% of battery an hour.")
