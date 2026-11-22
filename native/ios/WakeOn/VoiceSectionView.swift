@@ -155,6 +155,7 @@ struct APIKeyView: View {
     @State private var checking = false
     @State private var outcome: CredentialCheck.Outcome?
     @AppStorage(LobbyServer.needsNewCodeKey) private var needsNewCode = false
+    @Environment(\.dismiss) private var dismiss
 
     var body: some View {
         Form {
@@ -210,8 +211,10 @@ struct APIKeyView: View {
             let result = await voice.verifyAndSave(draft)
             checking = false
             outcome = result
-            // A rejected code stays in the field to fix; a saved one is cleared.
+            // A rejected code stays in the field to fix; a saved one is cleared. When it works,
+            // go back so the main button is ready to talk; a warning stays up to be read.
             if result.saves { keyDraft = "" }
+            if case .valid = result { dismiss() }
         }
     }
 
