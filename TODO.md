@@ -113,6 +113,11 @@ results belong in `docs/`; this file tracks what remains.
 - [ ] Add long-running soak tests covering Realtime reconnection, expired warm
   sessions, repeated conversations, delegate crashes, and audio-device changes.
 - [ ] Define the portability boundary for future non-macOS audio backends.
+- [ ] Call server: move friends' invite codes to a new signing key on their own. When a call
+  uses a code from an older key that is still listed, the worker returns the same name's code
+  signed with the newest key in a response header, and the app replaces the saved code
+  silently. Then `invite.sh keys retire` only affects friends who made no call since
+  `keys new`. Revocation stays by name, so it still holds.
 
 ## Completed foundations
 
