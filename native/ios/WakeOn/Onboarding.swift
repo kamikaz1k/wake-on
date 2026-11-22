@@ -166,13 +166,13 @@ struct OnboardingView: View {
                                : "Pressing the Action Button opens Pixie and starts a call like the one you just had. Press it again to hang up.") {
                 if !stepCallDone {
                     VStack(alignment: .leading, spacing: 10) {
-                        Label("Open Settings › Action Button", systemImage: "1.circle")
-                        Label("Swipe to Shortcut, then tap Choose a Shortcut", systemImage: "2.circle")
-                        Label("Pick Pixie › Talk to Lobby", systemImage: "3.circle")
-                        Label("Come back here and press the Action Button", systemImage: "4.circle")
+                        OnboardingRow(icon: "1.circle", tint: .primary, textStyle: .primary, text: "Open Settings › Action Button")
+                        OnboardingRow(icon: "2.circle", tint: .primary, textStyle: .primary, text: "Swipe to Shortcut, then tap Choose a Shortcut")
+                        OnboardingRow(icon: "3.circle", tint: .primary, textStyle: .primary, text: "Pick Pixie › Talk to Lobby")
+                        OnboardingRow(icon: "4.circle", tint: .primary, textStyle: .primary, text: "Come back here and press the Action Button")
                     }
-                    HStack(spacing: 8) {
-                        ProgressView()
+                    HStack(spacing: 12) {
+                        ProgressView().frame(width: 28)
                         Text("Waiting for a press…").foregroundStyle(.secondary)
                     }
                     .padding(.top, 8)
@@ -189,21 +189,18 @@ struct OnboardingView: View {
                                : "With listening on, say “Hey Lobby” and your question in one go, even with the phone locked.") {
                 if !stepCallDone {
                     if listeningStarted {
-                        HStack(spacing: 8) {
-                            ProgressView()
+                        HStack(spacing: 12) {
+                            ProgressView().frame(width: 28)
                             Text("Try it: “Hey Lobby, what time is it?”").foregroundStyle(.secondary)
                         }
                     } else {
                         VStack(alignment: .leading, spacing: 10) {
-                            Label("Listening happens on your iPhone. Nothing is sent until you say “Hey Lobby”.", systemImage: "lock.iphone")
-                            Label {
-                                Text("The orange dot shows while the microphone is on.")
-                            } icon: {
-                                Image(systemName: "circle.fill").foregroundStyle(.orange).imageScale(.small)
-                            }
-                            Label("Uses under 1% of battery an hour.", systemImage: "battery.75percent")
+                            OnboardingRow(icon: "lock.iphone",
+                                          text: "Listening happens on your iPhone. Nothing is sent until you say “Hey Lobby”.")
+                            OnboardingRow(icon: "circle.fill", tint: .orange, small: true,
+                                          text: "The orange dot shows while the microphone is on.")
+                            OnboardingRow(icon: "battery.75percent", text: "Uses under 1% of battery an hour.")
                         }
-                        .foregroundStyle(.secondary)
                     }
                 }
             } actions: {
@@ -263,6 +260,27 @@ struct OnboardingView: View {
         case .firstCall, .heyLobby: return canCall
         case .actionButton: return canCall && Onboarding.hasActionButton
         case .welcome, .demo, .done: return true
+        }
+    }
+}
+
+/// An icon and a line of text, with every row's icon in the same fixed-width column so the
+/// text lines up.
+struct OnboardingRow: View {
+    let icon: String
+    var tint: Color = .secondary
+    var small = false
+    var textStyle: Color = .secondary
+    let text: String
+
+    var body: some View {
+        HStack(alignment: .firstTextBaseline, spacing: 12) {
+            Image(systemName: icon)
+                .imageScale(small ? .small : .medium)
+                .foregroundStyle(tint)
+                .frame(width: 28)
+                .accessibilityHidden(true)
+            Text(text).foregroundStyle(textStyle)
         }
     }
 }
