@@ -47,6 +47,11 @@ xcrun devicectl device install app --device 5976CF6D-0FD6-5A57-9711-AA29F94404E7
   Live Activity extension `com.kamikaz1k.wakeon.LiveActivity`.
 - Bundle IDs follow `com.kamikaz1k.<app>` (since 2026-11-21; before that `dev.wakeon.ios`, a
   placeholder, and `wakeon.dev` isn't ours). Use the same convention for any new iOS app.
+- **Builds don't register App IDs.** Automatic signing (dev and Release archives) uses the
+  team's wildcard `*` profile, so a new bundle ID never shows up in App Store Connect's
+  "New App" dropdown. Register it explicitly: App Store Connect API `POST /v1/bundleIds`
+  (JWT from the key in `~/.appstoreconnect/deploy.env`), or Certificates, Identifiers &
+  Profiles. `com.kamikaz1k.wakeon` and `.LiveActivity` were registered this way 2026-11-22.
 - Chat Lab (`com.kamikaz1k.chatlab`, scheme `ChatLab`, derived data `build-lab-device`) is a
   separate app for comparing chat UI libraries; same commands with its scheme and app path.
 - **Simulator passing doesn't prove the phone build launches.** The simulator loads
