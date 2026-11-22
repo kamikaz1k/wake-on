@@ -57,6 +57,8 @@ struct OnboardingView: View {
     /// The current step's call happened (first call, Action Button press, "Hey Lobby").
     @State private var stepCallDone = false
     @State private var listeningStarted = false
+    /// The first call just ended: the next page opens with a "That's a call" line.
+    @State private var firstCallDone = false
 
     var body: some View {
         NavigationStack {
@@ -79,6 +81,11 @@ struct OnboardingView: View {
         }
         .onChange(of: voice.phase) { old, new in
             if old == .idle, new != .idle, callCounts(voice.lastTrigger) { stepCallDone = true }
+            // After the first call, go straight on to the Action Button (no separate "done" page).
+            if new == .idle, step == .firstCall, stepCallDone {
+                advance()
+                firstCallDone = true
+            }
         }
         .onChange(of: invite.code) { _, code in if code != nil, step == .welcome { step = .access } }
     }
@@ -151,7 +158,8 @@ struct OnboardingView: View {
                 if stepCallDone { primary("Next", id: "onboarding-next") { advance() } }
             }
         case .actionButton:
-            OnboardingPage(icon: stepCallDone ? "checkmark.circle.fill" : "button.vertical.left.press.fill",
+            OnboardingPage(note: firstCallDone ? callDoneNote : nil,
+                           icon: stepCallDone ? "checkmark.circle.fill" : "button.vertical.left.press.fill",
                            title: stepCallDone ? "The Action Button works" : "One press to talk",
                            text: stepCallDone
                                ? "Press it any time, even with the phone locked. Press it again to hang up."
@@ -173,7 +181,8 @@ struct OnboardingView: View {
                 if stepCallDone { primary("Next", id: "onboarding-next") { advance() } }
             }
         case .heyLobby:
-            OnboardingPage(icon: stepCallDone ? "checkmark.circle.fill" : "waveform",
+            OnboardingPage(note: firstCallDone ? callDoneNote : nil,
+                           icon: stepCallDone ? "checkmark.circle.fill" : "waveform",
                            title: stepCallDone ? "Lobby heard you" : "Just say “Hey Lobby”",
                            text: stepCallDone
                                ? "Listening stays on until you turn it off in Settings."
@@ -221,6 +230,8 @@ struct OnboardingView: View {
         }
     }
 
+    private let callDoneNote = "That's a call. Start one any time from the main screen."
+
     private func primary(_ title: String, id: String, action: @escaping () -> Void) -> some View {
         Button(action: action) {
             Text(title).frame(maxWidth: .infinity).padding(.vertical, 6)
@@ -234,6 +245,7 @@ struct OnboardingView: View {
     private func advance() {
         stepCallDone = false
         listeningStarted = false
+        firstCallDone = false
         var next = Step(rawValue: step.rawValue + 1) ?? .done
         while next != .done, !available(next) { next = Step(rawValue: next.rawValue + 1) ?? .done }
         step = next
@@ -253,6 +265,8 @@ struct OnboardingView: View {
 
 /// One onboarding page: icon, title, text, the step's own content, and buttons at the bottom.
 struct OnboardingPage<Content: View, Actions: View>: View {
+    /// A line above the icon about the step before ("That's a call").
+    var note: String? = nil
     let icon: String
     let title: String
     let text: String
@@ -262,6 +276,12 @@ struct OnboardingPage<Content: View, Actions: View>: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 16) {
+                if let note {
+                    Label(note, systemImage: "checkmark.circle.fill")
+                        .font(.subheadline)
+                        .foregroundStyle(.green)
+                        .padding(.bottom, 8)
+                }
                 Image(systemName: icon)
                     .font(.system(size: 56))
                     .foregroundStyle(.tint)
