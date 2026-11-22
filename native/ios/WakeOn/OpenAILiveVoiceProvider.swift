@@ -373,6 +373,14 @@ final class OpenAILiveVoiceProvider: NSObject {
         }
         emit("http_response", at: result.finished, fields: result.fields)
         guard (200..<300).contains(result.status) else {
+            if LobbyServer.isInviteCode(apiKey),
+               let problem = LobbyServer.problem(status: result.status, code: result.errorCode) {
+                // Only the saved code is marked (a debug --invite code isn't saved).
+                if problem.needsNewCode, OpenAIKeyStore.load()?.key == apiKey {
+                    UserDefaults.standard.set(true, forKey: LobbyServer.needsNewCodeKey)
+                }
+                throw VoiceError.message(problem.message)
+            }
             throw VoiceError.message("OpenAI refused the session (\(result.status)): \(result.errorMessage)")
         }
         guard let answer = result.answer else { throw VoiceError.message("OpenAI returned no SDP answer.") }
@@ -547,6 +555,7 @@ final class OpenAILiveVoiceProvider: NSObject {
         var answer: String?
         var sessionID: String?
         var errorMessage: String
+        var errorCode: String?
         var fields: [String: Any]
         var finished: UInt64
     }
@@ -563,12 +572,13 @@ final class OpenAILiveVoiceProvider: NSObject {
             if let value = http?.value(forHTTPHeaderField: header) { fields[header] = value }
         }
         let json = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any]
+        let errorCode = (json?["error"] as? [String: Any])?["code"] as? String
         let message = ((json?["error"] as? [String: Any])?["message"] as? String)
             ?? String(decoding: data.prefix(300), as: UTF8.self)
         let answer = ((json?["transport"] as? [String: Any])?["sdp"] as? String).flatMap { $0.isEmpty ? nil : $0 }
         return SessionResult(status: status, answer: answer,
                              sessionID: (json?["session"] as? [String: Any])?["id"] as? String,
-                             errorMessage: message, fields: fields, finished: finished)
+                             errorMessage: message, errorCode: errorCode, fields: fields, finished: finished)
     }
 
     // MARK: - Statistics

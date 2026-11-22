@@ -20,4 +20,6 @@ else
   echo "Paste the OpenAI project key when asked (it isn't shown or saved locally):"
   npx wrangler secret put OPENAI_API_KEY
 fi
+# The first signing key for invite codes (kept in .env, copied to the worker's secrets).
+grep -q '^INVITE_KEYS=' .env 2>/dev/null || node scripts/invite.mjs keys new
 echo "Done. Put the workers.dev URL above into LobbyServer.url in native/ios/WakeOn/LobbyServer.swift."

@@ -488,6 +488,7 @@ final class VoiceSessionController: ObservableObject {
     func saveKey(_ key: String) {
         do {
             try OpenAIKeyStore.save(key)
+            UserDefaults.standard.removeObject(forKey: LobbyServer.needsNewCodeKey)
             keySource = OpenAIKeyStore.Source.keychain.rawValue
             error = nil
         } catch { self.error = error.localizedDescription }
@@ -495,6 +496,7 @@ final class VoiceSessionController: ObservableObject {
 
     func forgetKey() {
         OpenAIKeyStore.delete()
+        UserDefaults.standard.removeObject(forKey: LobbyServer.needsNewCodeKey)
         keySource = OpenAIKeyStore.load()?.source.rawValue ?? "missing"
     }
 

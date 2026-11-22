@@ -130,14 +130,20 @@ struct VoiceSectionView: View {
 /// A settings row that opens the invite code / OpenAI key page, showing whether one is set.
 struct APIKeyLink: View {
     @ObservedObject var voice: VoiceSessionController
+    @AppStorage(LobbyServer.needsNewCodeKey) private var needsNewCode = false
 
     var body: some View {
         NavigationLink {
             APIKeyView(voice: voice)
         } label: {
-            LabeledContent("Invite Code or Key", value: voice.keySource == "missing" ? "Not set" : "Saved")
+            LabeledContent("Invite Code or Key", value: value)
         }
         .accessibilityIdentifier("api-key-link")
+    }
+
+    private var value: String {
+        if voice.keySource == "missing" { return "Not set" }
+        return needsNewCode ? "Needs a new code" : "Saved"
     }
 }
 
@@ -146,6 +152,7 @@ struct APIKeyLink: View {
 struct APIKeyView: View {
     @ObservedObject var voice: VoiceSessionController
     @State private var keyDraft = ""
+    @AppStorage(LobbyServer.needsNewCodeKey) private var needsNewCode = false
 
     var body: some View {
         Form {
@@ -171,6 +178,8 @@ struct APIKeyView: View {
 
     private var status: String {
         switch voice.keySource {
+        case "keychain" where needsNewCode:
+            "The saved invite code doesn't work anymore. Ask for a new one and enter it above."
         case "keychain": "Saved in this iPhone's Keychain. Lobby needs it to talk."
         case "environment": "Using the key from the launch environment (debug builds)."
         default: "Lobby needs an invite code, or your own OpenAI API key, to talk. It's kept in this iPhone's Keychain."

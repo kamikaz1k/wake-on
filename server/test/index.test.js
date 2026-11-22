@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { handle, sha256 } from "../src/index.js";
+import { handle, sign } from "../src/index.js";
 
 /** In-memory stand-in for a KV namespace. */
 function kv(entries = {}) {
@@ -18,11 +18,17 @@ function kv(entries = {}) {
   };
 }
 
+const KEYS = JSON.stringify({ 1: "test-secret-one", 2: "test-secret-two" });
+
+async function codeFor(name, keyId = "2", secret = "test-secret-two") {
+  return `${name}-${keyId}-${await sign(secret, keyId, name)}`;
+}
+
 async function setup({ calls = 0, all = 0, env = {} } = {}) {
-  const hash = await sha256("friend-code");
+  const code = await codeFor("alex");
   const day = new Date().toISOString().slice(0, 10);
-  const usage = kv({ [`code:${hash}`]: JSON.stringify({ name: "Alex" }) });
-  if (calls) usage.map.set(`count:${day}:${hash}`, String(calls));
+  const usage = kv();
+  if (calls) usage.map.set(`count:${day}:alex`, String(calls));
   if (all) usage.map.set(`count:${day}:all`, String(all));
   const sent = [];
   const upstream = async (url, init) => {
@@ -32,10 +38,10 @@ async function setup({ calls = 0, all = 0, env = {} } = {}) {
       headers: { "Content-Type": "application/json", "x-request-id": "req_1" },
     });
   };
-  return { env: { OPENAI_API_KEY: "sk-real", USAGE: usage, ...env }, usage, sent, upstream, hash, day };
+  return { env: { OPENAI_API_KEY: "sk-real", INVITE_KEYS: KEYS, USAGE: usage, ...env }, usage, sent, upstream, code, day };
 }
 
-function call(body, code = "friend-code") {
+function call(body, code) {
   return new Request("https://worker.example/v1/live/sessions", {
     method: "POST",
     headers: code ? { Authorization: `Bearer ${code}` } : {},
@@ -56,7 +62,7 @@ const goodBody = () => ({
 test("forwards a valid call with the real key and counts it", async () => {
   const t = await setup();
   const pending = [];
-  const response = await handle(call(goodBody()), t.env, t.upstream, { waitUntil: (p) => pending.push(p) });
+  const response = await handle(call(goodBody(), t.code), t.env, t.upstream, { waitUntil: (p) => pending.push(p) });
   await Promise.all(pending);
   assert.equal(response.status, 201);
   assert.equal(response.headers.get("x-request-id"), "req_1");
@@ -67,58 +73,74 @@ test("forwards a valid call with the real key and counts it", async () => {
   const forwarded = JSON.parse(t.sent[0].init.body);
   assert.equal(forwarded.session.store, false);
   assert.equal(forwarded.transport.sdp, "v=0");
-  assert.equal(t.usage.map.get(`count:${t.day}:${t.hash}`), "1");
+  assert.equal(t.usage.map.get(`count:${t.day}:alex`), "1");
   assert.equal(t.usage.map.get(`count:${t.day}:all`), "1");
 });
 
 test("the invite code itself is never sent to OpenAI or stored", async () => {
   const t = await setup();
-  await handle(call(goodBody()), t.env, t.upstream);
+  await handle(call(goodBody(), t.code), t.env, t.upstream);
   const sent = JSON.stringify(t.sent[0].init);
-  assert.ok(!sent.includes("friend-code"));
-  assert.ok(![...t.usage.map.keys()].some((key) => key.includes("friend-code")));
+  assert.ok(!sent.includes(t.code));
+  assert.ok(![...t.usage.map.keys()].some((key) => key.includes(t.code)));
 });
 
-test("rejects missing and unknown codes without calling OpenAI", async () => {
-  const t = await setup();
+test("wrong, expired and revoked codes are told apart, without calling OpenAI", async () => {
+  const t = await setup({ env: { REVOKED: "sam, jo" } });
+  const problem = async (code) => {
+    const response = await handle(call(goodBody(), code), t.env, t.upstream);
+    assert.equal(response.status, 401);
+    return (await response.json()).error.code;
+  };
   assert.equal((await handle(call(goodBody(), null), t.env, t.upstream)).status, 401);
-  const wrong = await handle(call(goodBody(), "guess"), t.env, t.upstream);
-  assert.equal(wrong.status, 401);
-  assert.equal((await wrong.json()).error.code, "invalid_code");
+  assert.equal(await problem("guess"), "invalid_code");
+  assert.equal(await problem(t.code.slice(0, -1) + "0"), "invalid_code");
+  assert.equal(await problem(await codeFor("bob", "2", "another-secret")), "invalid_code");
+  assert.equal(await problem(await codeFor("alex", "7", "retired")), "expired_code");
+  assert.equal(await problem(await codeFor("jo")), "revoked_code");
   assert.equal(t.sent.length, 0);
+});
+
+test("codes from an older key still work while that key is listed, and ignore case", async () => {
+  const t = await setup();
+  const old = await codeFor("alex", "1", "test-secret-one");
+  assert.equal((await handle(call(goodBody(), old), t.env, t.upstream)).status, 201);
+  assert.equal((await handle(call(goodBody(), ` ${t.code.toUpperCase()} `), t.env, t.upstream)).status, 201);
 });
 
 test("only Wake On's models and WebRTC calls are allowed", async () => {
   const t = await setup();
   const otherModel = goodBody();
   otherModel.session.model = "gpt-6";
-  assert.equal((await handle(call(otherModel), t.env, t.upstream)).status, 400);
+  assert.equal((await handle(call(otherModel, t.code), t.env, t.upstream)).status, 400);
   const otherBackend = goodBody();
   otherBackend.session.delegation.responses.model = "o9-pro";
-  assert.equal((await handle(call(otherBackend), t.env, t.upstream)).status, 400);
+  assert.equal((await handle(call(otherBackend, t.code), t.env, t.upstream)).status, 400);
   const websocket = goodBody();
   websocket.transport = { type: "websocket" };
-  assert.equal((await handle(call(websocket), t.env, t.upstream)).status, 400);
-  assert.equal((await handle(call("not json"), t.env, t.upstream)).status, 400);
+  assert.equal((await handle(call(websocket, t.code), t.env, t.upstream)).status, 400);
+  assert.equal((await handle(call("not json", t.code), t.env, t.upstream)).status, 400);
   assert.equal(t.sent.length, 0);
 });
 
 test("daily limits per code and overall", async () => {
   const perCode = await setup({ calls: 40 });
-  const limited = await handle(call(goodBody()), perCode.env, perCode.upstream);
+  const limited = await handle(call(goodBody(), perCode.code), perCode.env, perCode.upstream);
   assert.equal(limited.status, 429);
-  assert.equal((await limited.json()).error.code, "daily_limit");
+  const limitedText = await limited.text();
+  assert.equal(JSON.parse(limitedText).error.code, "daily_limit");
   const overall = await setup({ all: 5, env: { GLOBAL_DAILY_CALLS: "5" } });
-  assert.equal((await handle(call(goodBody()), overall.env, overall.upstream)).status, 429);
-  assert.equal(perCode.sent.length + overall.sent.length, 0);
+  assert.equal((await handle(call(goodBody(), overall.code), overall.env, overall.upstream)).status, 429);
+  // OpenAI was asked in parallel, but its answer never reaches the phone.
+  assert.ok(!limitedText.includes("answer"));
 });
 
 test("a call OpenAI refuses isn't counted", async () => {
   const t = await setup();
   const refuse = async () => new Response('{"error":{"message":"bad voice"}}', { status: 400 });
-  const response = await handle(call(goodBody()), t.env, refuse);
+  const response = await handle(call(goodBody(), t.code), t.env, refuse);
   assert.equal(response.status, 400);
-  assert.equal(t.usage.map.get(`count:${t.day}:${t.hash}`), undefined);
+  assert.equal(t.usage.map.get(`count:${t.day}:alex`), undefined);
 });
 
 test("prewarm HEAD and health need no code", async () => {
@@ -132,7 +154,7 @@ test("prewarm HEAD and health need no code", async () => {
 
 test("reports each step's time in Server-Timing", async () => {
   const t = await setup();
-  const response = await handle(call(goodBody()), t.env, t.upstream);
+  const response = await handle(call(goodBody(), t.code), t.env, t.upstream);
   const timing = response.headers.get("Server-Timing");
   for (const step of ["code", "limits", "openai", "total"]) {
     assert.match(timing, new RegExp(`${step};dur=\\d+`));
@@ -145,8 +167,24 @@ test("the reply doesn't wait for the counter writes", async () => {
   let release;
   t.usage.put = () => new Promise((resolve) => (release = resolve));
   const pending = [];
-  const response = await handle(call(goodBody()), t.env, t.upstream, { waitUntil: (p) => pending.push(p) });
+  const response = await handle(call(goodBody(), t.code), t.env, t.upstream, { waitUntil: (p) => pending.push(p) });
   assert.equal(response.status, 201);
   assert.equal(pending.length, 1);
   release();
+});
+
+test("the count is read while OpenAI sets up the call", async () => {
+  const t = await setup();
+  const order = [];
+  t.usage.get = async () => {
+    order.push("count read");
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    return null;
+  };
+  const upstream = async (url, init) => {
+    order.push("openai asked");
+    return t.upstream(url, init);
+  };
+  await handle(call(goodBody(), t.code), t.env, upstream);
+  assert.deepEqual(order.slice(0, 3).sort(), ["count read", "count read", "openai asked"]);
 });
