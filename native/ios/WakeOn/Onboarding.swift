@@ -81,6 +81,8 @@ struct OnboardingView: View {
     @State private var firstCallDone = false
     @State private var settingsLinkFailed = false
     @State private var practiceStarted = false
+    /// Steps already passed (done or skipped), for Back.
+    @State private var history: [Step] = []
     @State private var practiceHeard = false
     @State private var dotSeen = false
     @State private var chimePlayer: AVAudioPlayer?
@@ -96,6 +98,12 @@ struct OnboardingView: View {
                 }
             }
             .toolbar {
+                if !history.isEmpty, voice.phase == .idle {
+                    ToolbarItem(placement: .topBarLeading) {
+                        Button("Back", systemImage: "chevron.left") { goBack() }
+                            .accessibilityIdentifier("onboarding-back")
+                    }
+                }
                 if step != .welcome, step != .done, voice.phase == .idle {
                     ToolbarItem(placement: .topBarTrailing) {
                         Button("Skip") { advance() }.accessibilityIdentifier("onboarding-skip")
@@ -309,11 +317,24 @@ struct OnboardingView: View {
         .accessibilityIdentifier(id)
     }
 
-    /// The next step that can work now.
-    private func advance() {
-        // Leaving practice without turning listening on: stop the practice listener.
+    /// Back to the step before (one that was done or skipped).
+    private func goBack() {
+        guard let previous = history.popLast() else { return }
+        leaveStep()
+        step = previous
+    }
+
+    /// Leaving a step: stop the practice listener if listening wasn't turned on, reset state.
+    private func leaveStep() {
         if practiceStarted { practiceStarted = false; wake.stop() }
         stepCallDone = false
+        firstCallDone = false
+    }
+
+    /// The next step that can work now.
+    private func advance() {
+        history.append(step)
+        leaveStep()
         firstCallDone = false
         var next = Step(rawValue: step.rawValue + 1) ?? .done
         while next != .done, !available(next) { next = Step(rawValue: next.rawValue + 1) ?? .done }
