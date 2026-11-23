@@ -78,7 +78,16 @@ final class MemoryTests: XCTestCase {
                        "The summary covering the most notes opens first, so lines stay even")
         XCTAssertEqual(texts(memory.cover(budget: 11)), (0...6).map { "S1.\($0)" } + (14...17).map { "note \($0)" },
                        "Among equals the newest opens first")
-        XCTAssertEqual(memory.summaryInput(level: 2, index: 0).count, 2)
+        XCTAssertEqual(memory.summaryInput(level: 2, index: 0), (0...3).map { Memory.text(.note(memory.notes[$0])) },
+                       "Up to 16 notes are summarized from the notes, as in OptMem")
+        XCTAssertEqual(memory.summaryInput(level: 4, index: 0).count, 16)
+    }
+
+    func testBigBlocksMergeTwoSummaries() {
+        var memory = memory(32)
+        summarizeAll(&memory)
+        XCTAssertEqual(memory.summaryInput(level: 5, index: 0).count, 2)
+        XCTAssertTrue(memory.summaryInput(level: 5, index: 0)[0].hasSuffix("S4.0"))
     }
 
     /// The fading rule matches OptMem's `cover()` (memo, Nov 2026): notes per line, oldest first.

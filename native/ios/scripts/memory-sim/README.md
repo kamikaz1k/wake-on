@@ -11,7 +11,7 @@ native/ios/scripts/memory-sim/run.sh <out-dir> [lobby|eager|never]
 
 - `lobby` is the app's policy, `eager` summarizes after every call that saved a note, and
   `never` writes no summaries.
-- Settings: `SUMMARY_MODEL` and `SUMMARY_EFFORT` (default: the app's), `QUIZ_MODEL` (default `gpt-5.6-terra`, the model calls use), `GRADE_MODEL` (default `gpt-6.1-terra`), `COVER=fading` (OptMem's start-of-call rule, see below; default `even`), `BUDGET=12 SUMMARIZE_AT=8` (squeezes the memory as about 280 notes would at the app's 40 lines), and `LEGACY=1` (the first version: 8 notes per summary, long lines cut).
+- Settings: `SUMMARY_MODEL` and `SUMMARY_EFFORT` (default: the app's), `QUIZ_MODEL` (default `gpt-5.6-terra`, the model calls use), `GRADE_MODEL` (default `gpt-6.1-terra`), `RAW_MAX` (blocks up to this many notes are summarized from the notes; default 16 as in OptMem, `RAW_MAX=2` for the earlier way), `COVER=fading` (OptMem's start-of-call rule, see below; default `even`), `BUDGET=12 SUMMARIZE_AT=8` (squeezes the memory as about 280 notes would at the app's 40 lines), and `LEGACY=1` (the first version: 8 notes per summary, long lines cut).
 - `quiz.txt` has 35 questions; prices are in `main.swift`.
 - The key comes from `OPENAI_API_KEY`, else from `server/.env`. It is never printed.
 - Each run writes `report.md`, `calls.tsv` (one row per call), `summaries.txt`, the
@@ -74,3 +74,23 @@ word for word. Notes per line at day 89, oldest first, and quiz results (two run
   note is recent and wins.
 - Fading is what we want (old things that don't come up again fade, recent ones stay sharp), so
   it's only as good as the refreshing: Lobby saving a fact again when it comes up again.
+
+**Round 5, small blocks from the notes (2026-11-23).** OptMem writes blocks of up to 16 notes from
+the notes themselves (`RAW_MAX`); Lobby wrote every block above 2 from two summaries, so a fact
+one summary dropped was gone from every summary above it. At 12 lines, three runs each, memory
+alone out of 35 (sol medium):
+
+| rule | from two summaries | up to 16 notes from the notes |
+|---|---|---|
+| even | 30, 31, 29 | **33, 33, 32** |
+| fading | 30, 30, 30 | 30, 31, 29 |
+
+- Even gains because its squeezed lines are 16-note blocks, now written from all 16 notes.
+  Fading's oldest line covers 32 notes, still merged from two summaries, and that's where it
+  loses the sister's birthday, wake time and playlist either way.
+- Example, the Oct 15–20 line. From two summaries: "…Grace is Sam's mom…" (one half had already
+  dropped the visit). From the notes: "…Sam's mom Grace is visiting Montreal for Christmas,
+  Dec 22–28, 2026…". The mom's visit went from 0 of 6 to 6 of 6 runs right, with both rules.
+- At 40 lines, still 35/35 with both rules. Cost about 10% more ($0.08–0.11 per run).
+- Time to first reply (gpt-5.6-terra, low, 8 calls each, nothing cached): 40 full-length lines,
+  3.9k tokens, 624 ms median; 96 lines (OptMem's default), 9.4k tokens, 768 ms. Kept at 40.

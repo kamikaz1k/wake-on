@@ -196,7 +196,7 @@ var memory = Memory()
 var log: [String] = ["day\tcall\tsaved\tnotes\tsummaries\troots\tcover\tleft_out\tchars\tneed\tran\twritten"]
 var overnight = false
 var checkpoints = [30, 60, calls.last!.day]
-var report = "# Memory simulation: \(policy), \(legacy ? "first version" : "OptMem merges"), \(Memory.coverRule) cover, summaries by \(summaryModel) (\(summaryEffort))\n\n"
+var report = "# Memory simulation: \(policy), \(legacy ? "first version" : "OptMem merges"), \(Memory.coverRule) cover, blocks up to \(Memory.rawMax) notes from the notes, summaries by \(summaryModel) (\(summaryEffort))\n\n"
 var scores: [[String: Any]] = []
 /// Every question's grades, and each checkpoint's lines (days since the oldest note, notes covered).
 var grades: [[String: Any]] = []
@@ -294,7 +294,7 @@ try tree.write(to: out.appendingPathComponent("summaries.txt"), atomically: true
 try report.write(to: out.appendingPathComponent("report.md"), atomically: true, encoding: .utf8)
 try JSONEncoder().encode(memory).write(to: out.appendingPathComponent("memory.json"))
 let result: [String: Any] = [
-    "model": summaryModel, "effort": summaryEffort, "legacy": legacy, "policy": policy, "cover": "\(Memory.coverRule)",
+    "model": summaryModel, "effort": summaryEffort, "legacy": legacy, "policy": policy, "cover": "\(Memory.coverRule)", "rawMax": Memory.rawMax,
     "notes": memory.notes.count, "summaries": memory.summaries.count, "requests": s.requests,
     "overFirstTry": over, "retries": retries, "failures": failures, "empties": empties,
     "inputTokens": s.input, "outputTokens": s.output, "dollars": s.dollars, "scores": scores, "grades": grades, "profiles": profiles,

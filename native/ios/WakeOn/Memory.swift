@@ -254,9 +254,15 @@ struct Memory: Codable, Equatable {
         return found
     }
 
+    /// Blocks up to this many notes are summarized from the notes themselves, as in OptMem
+    /// (`RAW_MAX`), so nothing a smaller summary dropped is lost; bigger ones merge two summaries.
+    static let rawMax = 16
+
     /// The lines a summary is written from, oldest first.
     func summaryInput(level: Int, index: Int) -> [String] {
-        children(level, index).map(Self.text)
+        let span = Self.span(level: level, index: index)
+        if span.count <= Self.rawMax { return notes(in: span).map { Self.text(.note($0)) } }
+        return children(level, index).map(Self.text)
     }
 
     /// Saves a summary. A line over `noteBytes` is refused, never cut (cutting lost facts): ask
