@@ -128,6 +128,12 @@ struct WakeOnApp: App {
                     } else if let index = args.firstIndex(of: "--demo-call"), index + 1 < args.count {
                         // Plays a saved capture into the live call screen, without connecting.
                         VoiceSessionController.shared.demoCall(capture: URL(fileURLWithPath: args[index + 1]))
+                    } else if args.contains("--memory-summarize") {
+                        // Writes every summary that's ready now, whatever the memory's length.
+                        Task { @MainActor in
+                            let written = await MemoryJob.run()
+                            VoiceSessionController.appLog("memory_job forced written=\(written)")
+                        }
                     } else if let index = args.firstIndex(of: "--talk-prompt"), index + 1 < args.count {
                         // A call that asks this text as if it were said (memory tests).
                         VoiceSessionController.shared.start(trigger: "launch_argument", prompt: args[index + 1])

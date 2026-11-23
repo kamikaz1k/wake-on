@@ -1,0 +1,23 @@
+# question | expected answer | first day the answer is known | kind
+# kind: early (said once, long ago), update (changed later; the later answer is right),
+# detail (a small specific), recent.
+Is the user allergic to anything? | Severely allergic to peanuts, carries an EpiPen | 0 | early
+When is the user's sister's birthday? | Ella, March 3 | 0 | early
+What's the user's partner's name and their anniversary? | Priya, June 12 | 2 | early
+What city does the user live in? | Montreal (Mile End) since October 15; before that Toronto | 0 | update
+Where does the user work? | Figma, senior product designer (left Shopify) | 2 | update
+What does the user drink in the morning? | Rooibos tea; quit caffeine (used to drink oat flat whites) | 5 | update
+Where is the user travelling next spring? | Japan, Tokyo and Kyoto, May 2027 (Lisbon was cancelled) | 10 | update
+What language is the user learning on Duolingo? | Japanese (switched from Portuguese) | 15 | update
+Who is the user's dog's vet? | Dr. Tremblay, Clinique Vétérinaire Mile End (was Dr. Mehta) | 13 | update
+What pets does the user have? | A beagle, Biscuit, and a cat, Miso | 2 | recent
+Where does the user's brother live? | Daniel, Calgary | 7 | early
+When is Marcus's birthday? | September 19 | 17 | detail
+What car does the user drive? | Grey 2019 Honda Civic | 20 | detail
+What is the user's 10 km goal and race? | Under 55 minutes; Montreal Fall Classic, November 22 | 30 | detail
+What's the user's focus playlist? | Late Night Keys (jazz piano) | 3 | detail
+What food does the user dislike? | Cilantro | 23 | detail
+What book is the user reading now? | Klara and the Sun | 8 | update
+When is Priya's birthday and what gift idea? | November 30, a ceramics class | 75 | recent
+When is the user's mom visiting? | Grace, December 22 to 28 for Christmas | 78 | recent
+What did the user ask to be reminded about? | Booking a ryokan in Kyoto | 89 | recent

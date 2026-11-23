@@ -13,6 +13,8 @@ When a check is redone, add a new row rather than editing the old one.
 
 | Date | SHA | Check | How | Where | Result | Files |
 | --- | --- | --- | --- | --- | --- | --- |
+| 2026-11-22 | HEAD | Forced memory summaries on the phone, through the invite-code server route | 83 simulated notes copied in as memory.json, launched with `--memory-summarize`, pulled the log and memory.json, then restored the phone's own memory (byte-identical) | phone (iOS 26), debug | 17 of 18 summaries written; the 18th got HTTP 502 (an empty OpenAI reply, intermittent: the same request then worked 3 times out of 3). 15 of 17 summaries were cut at 280 bytes. **Not seen:** the Write Summaries Now button on screen | `native/ios/WakeOn/MemoryJob.swift`, `native/ios/WakeOn/MemoryView.swift`, `native/ios/WakeOn/WakeOnApp.swift`, `server/src/index.js` |
+| 2026-11-22 | HEAD | Memory over 3 months of simulated calls (the app's Memory code, real summaries) | `native/ios/scripts/memory-sim/run.sh` with the lobby, eager and never policies; quiz from memory alone and with recall | Mac | lobby: 15 summaries, 6.6k tokens, 18/20 from memory alone and 20/20 with recall at day 89; never: 6–13/20. Findings in `native/ios/scripts/memory-sim/README.md` | `native/ios/WakeOn/Memory.swift`, `native/ios/scripts/memory-sim/main.swift` |
 | 2026-11-22 | 04d5009 | Server summary route deployed and live | `wrangler deploy` (version 4957c0e1); POST /v1/memory/summarize with no code, then with a freshly signed test code and 3 lines | Cloudflare (wake-on.kamikaz1k.workers.dev) | 401 without a code (unknown path 404); 200 with one summary line joining all 3 facts | `server/src/index.js` |
 | 2026-11-22 | 8726666 | Memory: remember in one call, a new call knows it | `--talk-prompt` calls: "Remember that my sister Ella's birthday is March 3." then "When is my sister's birthday?"; pulled the log and memory.json | phone (iOS 26), debug | `remember` called with "The user's sister Ella's birthday is March 3.", saved with the call's id; the next call answered "Your sister Ella's…" from memory, no recall needed | `native/ios/WakeOn/Memory.swift`, `native/ios/WakeOn/VoiceSessionController.swift`, `native/ios/WakeOn/OpenAILiveVoiceProvider.swift` |
 | 2026-11-22 | 8726666 | Memory tree, cover, deletes, summary request, tool list | `MemoryTests` (15), 154 tests; server `npm test` (14, 2 new for /v1/memory/summarize); summary prompt tried on gpt-5.4-mini (210 tokens) | sim (iOS 26), Mac | Pass | `native/ios/WakeOn/Memory.swift`, `native/ios/WakeOn/MemoryJob.swift`, `server/src/index.js` |
@@ -86,7 +88,7 @@ When a check is redone, add a new row rather than editing the old one.
 
 | Since | What | Why not |
 | --- | --- | --- |
-| 2026-11-22 | Memory summaries on the phone: the overnight BGProcessingTask firing, the after-call run past 40 lines, invite-code summaries from the app | Needs 25+ notes (the server route itself works) |
+| 2026-11-22 | Memory summaries on the phone: the overnight BGProcessingTask firing, the after-call run past 40 lines | The background task can't be forced from the CLI; in the simulation the after-call run was never needed |
 | 2026-11-22 | Lobby noting lasting facts unasked (not just "remember that…") | Only a direct request was tried |
 | 2026-11-12 | How the live call screen looks and scrolls in a real call; a Hey Lobby call | Waiting on your verdict; only an Action Button call so far |
 | 2026-11-12 | Action Button time to mic live, with more samples | One cold start so far (543 ms, at the top of the earlier range); warm starts not measured yet |

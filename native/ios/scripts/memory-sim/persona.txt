@@ -1,0 +1,158 @@
+# A made-up user, three months of calls. "## day N" starts a call (day 0 = Aug 1, 2026);
+# the lines under it are the notes Lobby saves in that call. A call with no lines saved none.
+# Some facts change later (move, new job, quitting caffeine, a cancelled trip): the later one wins.
+
+## day 0
+The user's name is Sam Okafor; goes by Sam.
+Sam lives in Toronto, in the Annex.
+Sam is severely allergic to peanuts and carries an EpiPen.
+## day 0
+Sam's sister Ella's birthday is March 3.
+## day 1
+## day 2
+Sam works as a product designer at Shopify.
+Sam's partner is Priya; their anniversary is June 12.
+Sam has a beagle named Biscuit.
+## day 3
+Sam likes jazz piano, especially Bill Evans.
+Sam's Spotify playlist for focus is "Late Night Keys".
+## day 4
+## day 5
+Sam drinks oat flat whites, usually from Pilot Coffee.
+Sam goes to the gym Monday, Wednesday and Friday at 7am.
+Sam prefers metric units and 24-hour time.
+## day 7
+Sam's brother Daniel lives in Calgary and works as a nurse.
+Sam's mom, Grace, lives in Ottawa and calls on Sundays.
+## day 8
+Sam is reading "The Overstory" by Richard Powers.
+## day 9
+## day 10
+Sam and Priya are planning a trip to Lisbon in April 2027.
+Sam wants restaurant suggestions to avoid anything with peanut oil.
+Sam's favourite restaurant is Pai on Duncan Street (orders without peanuts).
+## day 12
+Sam wakes up at 6:30 on weekdays.
+## day 13
+Biscuit's vet is Dr. Mehta at Annex Animal Clinic.
+Biscuit is due for vaccines in October.
+## day 14
+## day 15
+Sam is learning Portuguese on Duolingo for the Lisbon trip.
+Sam's Duolingo streak is 20 days.
+## day 17
+Sam's best friend is Marcus, who lives in Brooklyn.
+Marcus's birthday is September 19.
+## day 18
+Sam plays five-a-side soccer on Thursday nights.
+## day 19
+## day 20
+Sam's car is a 2019 Honda Civic, grey.
+Sam's car insurance renews on November 1.
+## day 22
+Sam finished "The Overstory" and gave it 4 stars.
+Sam started reading "Piranesi" by Susanna Clarke.
+## day 23
+Sam dislikes cilantro.
+Sam prefers aisle seats on flights.
+## day 25
+## day 26
+Sam is thinking about leaving Shopify; feels stuck on the checkout team.
+## day 27
+Sam's manager at Shopify is Lena.
+## day 28
+Sam's niece Zoe (Daniel's daughter) turns 5 on September 2.
+Sam wants to send Zoe a dinosaur book.
+## day 30
+Sam started training for a 10 km race in November.
+Sam's 10 km goal time is under 55 minutes.
+## day 31
+## day 33
+Sam interviewed at Figma for a senior product designer role.
+## day 34
+Sam's dentist appointment is October 8 at 2pm.
+## day 35
+Sam's landlord is Mr. Chen; rent is due on the 1st.
+Sam's lease in Toronto ends December 31.
+## day 36
+## day 38
+Sam got a second-round interview at Figma.
+Priya got a job offer in Montreal at Ubisoft.
+## day 40
+Sam and Priya are deciding whether to move to Montreal.
+## day 41
+Sam's Duolingo streak is 45 days.
+## day 42
+## day 44
+Sam accepted Figma's offer: senior product designer, remote, starting October 1.
+Sam's last day at Shopify is September 26.
+## day 45
+Sam and Priya decided to move to Montreal in mid-October.
+## day 46
+Sam wants to find a new vet for Biscuit in Montreal.
+## day 48
+Sam is cancelling the Lisbon trip because of the move.
+## day 49
+Sam and Priya now plan a trip to Japan in May 2027 instead of Lisbon.
+Sam switched from Portuguese to Japanese on Duolingo.
+## day 50
+## day 52
+Sam quit caffeine; now drinks rooibos tea in the morning.
+## day 53
+Sam's Figma manager is Andre.
+## day 55
+Sam's moving company is Déménagement Express, booked for October 15.
+## day 56
+Sam's new address is in Mile End, Montreal, on Rue Saint-Viateur.
+## day 57
+## day 58
+Sam broke the lease early with Mr. Chen; agreed to pay one extra month.
+## day 60
+Sam moved to Montreal on October 15.
+## day 61
+Sam needs to change the Civic's registration to Quebec within 90 days.
+Sam needs a Quebec health card (RAMQ); applied October 17.
+## day 62
+## day 63
+Biscuit's new vet is Dr. Tremblay at Clinique Vétérinaire Mile End.
+Biscuit's vaccines were moved to November 5 with Dr. Tremblay.
+## day 65
+Sam found a new gym: Crossfit Mile End, Tuesday and Thursday at 6pm.
+Sam stopped five-a-side soccer after the move.
+## day 66
+Sam is looking for a jazz bar in Montreal; liked Upstairs Jazz Bar.
+## day 67
+## day 68
+Sam finished "Piranesi" and loved it, 5 stars.
+Sam started reading "Klara and the Sun".
+## day 70
+Sam's favourite Montreal café is Café Olimpico (orders rooibos or a hot chocolate).
+## day 71
+Sam wants to learn French; signed up for evening classes on Mondays.
+## day 72
+## day 73
+Sam's 10 km race is the Montreal Fall Classic on November 22.
+## day 75
+Priya's birthday is November 30.
+Sam wants to get Priya a ceramics class as a gift.
+## day 76
+Sam's Japan trip is booked: Tokyo and Kyoto, May 3 to May 17, 2027.
+## day 77
+## day 78
+Sam's mom Grace is visiting Montreal for Christmas, December 22 to 28.
+## day 80
+Sam adopted a cat named Miso.
+Miso and Biscuit get along.
+## day 81
+## day 82
+Sam's Figma project is redesigning FigJam's sticky notes.
+## day 84
+Sam's RAMQ health card arrived.
+## day 85
+Sam's car insurance renewed with a Quebec insurer, Desjardins.
+## day 86
+## day 88
+Sam ran a practice 10 km in 53 minutes.
+## day 89
+Sam's Japanese Duolingo streak is 40 days.
+Sam wants Lobby to remind him to book a ryokan in Kyoto.

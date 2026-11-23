@@ -28,6 +28,9 @@ struct MemoryView: View {
                     Text("Lobby sees these at the start of every call, with older ones summarized. They stay on this iPhone and go to OpenAI only during calls and when summarized.")
                 }
             }
+            #if DEBUG
+            MemoryDebugSection(store: store)
+            #endif
         }
         .navigationTitle("Memory")
         .navigationBarTitleDisplayMode(.inline)
@@ -63,3 +66,52 @@ struct MemoryRow: View {
         }
     }
 }
+
+#if DEBUG
+/// Debug builds: write the summaries now, and see what a call starts with.
+struct MemoryDebugSection: View {
+    @ObservedObject var store: MemoryStore
+    @State private var running = false
+    @State private var result: String?
+
+    private var memory: Memory { store.memory }
+
+    var body: some View {
+        Section {
+            LabeledContent("Notes", value: "\(memory.notes.count)")
+            LabeledContent("Summaries", value: "\(memory.summaries.count)")
+            LabeledContent("Lines at call start", value: "\(memory.cover().count) of \(memory.roots.count)")
+            LabeledContent("Ready to summarize", value: "\(memory.ready.count)")
+            Button {
+                running = true
+                Task {
+                    let written = await MemoryJob.run()
+                    result = written == 0 && memory.ready.isEmpty
+                        ? "Nothing ready: a summary needs \(Memory.block) notes in a row."
+                        : "Wrote \(written) \(written == 1 ? "summary" : "summaries")."
+                    running = false
+                }
+            } label: {
+                if running { ProgressView() } else { Text("Write Summaries Now") }
+            }
+            .disabled(running)
+            .accessibilityIdentifier("memory-summarize")
+            NavigationLink("Start-of-Call Memory") {
+                ScrollView {
+                    Text(memory.callText() ?? "Empty.")
+                        .font(.footnote.monospaced())
+                        .textSelection(.enabled)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding()
+                }
+                .navigationTitle("Start of Call")
+                .navigationBarTitleDisplayMode(.inline)
+            }
+        } header: {
+            Text("Debug")
+        } footer: {
+            if let result { Text(result) }
+        }
+    }
+}
+#endif
