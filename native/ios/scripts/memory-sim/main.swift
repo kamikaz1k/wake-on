@@ -9,7 +9,7 @@
 // never: no summaries.
 //
 // Environment: SUMMARY_MODEL, SUMMARY_EFFORT (default: the app's), QUIZ_MODEL (the call's
-// backend model), GRADE_MODEL, LEGACY=1 (the first version: one try, the line cut at 280 bytes;
+// backend model), GRADE_MODEL, COVER (run.sh: even or fading), LEGACY=1 (the first version: one try, the line cut at 280 bytes;
 // run.sh also sets 8 notes per block for it).
 import Foundation
 
@@ -196,8 +196,11 @@ var memory = Memory()
 var log: [String] = ["day\tcall\tsaved\tnotes\tsummaries\troots\tcover\tleft_out\tchars\tneed\tran\twritten"]
 var overnight = false
 var checkpoints = [30, 60, calls.last!.day]
-var report = "# Memory simulation: \(policy), \(legacy ? "first version" : "OptMem merges"), summaries by \(summaryModel) (\(summaryEffort))\n\n"
+var report = "# Memory simulation: \(policy), \(legacy ? "first version" : "OptMem merges"), \(Memory.coverRule) cover, summaries by \(summaryModel) (\(summaryEffort))\n\n"
 var scores: [[String: Any]] = []
+/// Every question's grades, and each checkpoint's lines (days since the oldest note, notes covered).
+var grades: [[String: Any]] = []
+var profiles: [[String: Any]] = []
 
 func runJob() async throws -> Int {
     var written = 0
@@ -229,6 +232,18 @@ func quizAt(_ day: Int, final: Bool) async throws {
         report += "| \(known[index].kind) | \(known[index].q) | \(plain[index]) (\(a)) | \(searched[index].replacingOccurrences(of: "\n", with: " ")) (\(b)) |\n"
     }
     report += "\n"
+    for index in known.indices {
+        grades.append(["day": day, "q": known[index].q, "kind": known[index].kind, "known": known[index].day,
+                       "memory": index < plainGrades.count ? plainGrades[index] : "?",
+                       "recall": index < searchedGrades.count ? searchedGrades[index] : "?"])
+    }
+    profiles.append(["day": day, "lines": memory.cover().map { unit -> [Int] in
+        switch unit {
+        case let .note(note): [Int((date(day).timeIntervalSince(note.time) / 86400).rounded()), 1]
+        case let .summary(summary): [Int((date(day).timeIntervalSince(summary.from) / 86400).rounded()),
+                                     Memory.span(level: summary.level, index: summary.index).count]
+        }
+    }])
     scores.append(["day": day, "asked": known.count, "memory": score(plainGrades), "recall": score(searchedGrades), "searches": recalls])
     print("day \(day): \(score(plainGrades))/\(known.count) memory alone, \(score(searchedGrades)) with recall")
 }
@@ -279,10 +294,10 @@ try tree.write(to: out.appendingPathComponent("summaries.txt"), atomically: true
 try report.write(to: out.appendingPathComponent("report.md"), atomically: true, encoding: .utf8)
 try JSONEncoder().encode(memory).write(to: out.appendingPathComponent("memory.json"))
 let result: [String: Any] = [
-    "model": summaryModel, "effort": summaryEffort, "legacy": legacy, "policy": policy,
+    "model": summaryModel, "effort": summaryEffort, "legacy": legacy, "policy": policy, "cover": "\(Memory.coverRule)",
     "notes": memory.notes.count, "summaries": memory.summaries.count, "requests": s.requests,
     "overFirstTry": over, "retries": retries, "failures": failures, "empties": empties,
-    "inputTokens": s.input, "outputTokens": s.output, "dollars": s.dollars, "scores": scores,
+    "inputTokens": s.input, "outputTokens": s.output, "dollars": s.dollars, "scores": scores, "grades": grades, "profiles": profiles,
 ]
 try JSONSerialization.data(withJSONObject: result, options: [.prettyPrinted, .sortedKeys]).write(to: out.appendingPathComponent("result.json"))
 print(String(format: "%@: %d summaries, %d requests, %d retries, %d failures, $%.4f", summaryModel, memory.summaries.count, s.requests, retries, failures, s.dollars))

@@ -2,7 +2,7 @@
 
 Fills Lobby's memory with three months of made-up calls (`persona.txt`: 70 calls, 83 notes,
 with a move, a job change and a cancelled trip) using the app's own `Memory` struct, writes the
-summaries with real `gpt-5.4-mini` requests, and quizzes a model on `quiz.txt` at days 30, 60
+summaries with real OpenAI requests (`gpt-6.2-sol` by default), and quizzes a model on `quiz.txt` at days 30, 60
 and 89. Each quiz is asked twice: from the start-of-call memory alone, and with the `recall` tool.
 
 ```sh
@@ -11,11 +11,12 @@ native/ios/scripts/memory-sim/run.sh <out-dir> [lobby|eager|never]
 
 - `lobby` is the app's policy, `eager` summarizes after every call that saved a note, and
   `never` writes no summaries.
-- Settings: `SUMMARY_MODEL` and `SUMMARY_EFFORT` (default: the app's), `QUIZ_MODEL` (default `gpt-5.6-terra`, the model calls use), `GRADE_MODEL` (default `gpt-6.1-terra`), `BUDGET=12 SUMMARIZE_AT=8` (squeezes the memory as about 280 notes would at the app's 40 lines), and `LEGACY=1` (the first version: 8 notes per summary, long lines cut).
+- Settings: `SUMMARY_MODEL` and `SUMMARY_EFFORT` (default: the app's), `QUIZ_MODEL` (default `gpt-5.6-terra`, the model calls use), `GRADE_MODEL` (default `gpt-6.1-terra`), `COVER=fading` (OptMem's start-of-call rule, see below; default `even`), `BUDGET=12 SUMMARIZE_AT=8` (squeezes the memory as about 280 notes would at the app's 40 lines), and `LEGACY=1` (the first version: 8 notes per summary, long lines cut).
 - `quiz.txt` has 35 questions; prices are in `main.swift`.
 - The key comes from `OPENAI_API_KEY`, else from `server/.env`. It is never printed.
 - Each run writes `report.md`, `calls.tsv` (one row per call), `summaries.txt`, the
-  start-of-call text at each checkpoint, and `memory.json`.
+  start-of-call text at each checkpoint, `memory.json`, and `result.json` (every question's
+  grade, and each checkpoint's lines as days old and notes covered).
 - To load a run's `memory.json` onto the phone (back up the phone's own first), use
   `devicectl device copy to` with `Library/Application Support/memory.json`, then launch with
   `--memory-summarize`.
@@ -53,3 +54,23 @@ every model scored 35/35 from memory alone. To tell the models apart, the memory
 - **Recall covers most gaps:** 33–35 out of 35 with every model. The summaries matter most for
   what Lobby knows without searching.
 - **Quiz noise:** scores move by about ±2 between runs.
+
+**Round 4, OptMem's own rule (2026-11-23).** OptMem doesn't keep lines even: a line may cover
+more notes the older they are (`fading`), so detail fades with age, and the newest notes stay
+word for word. Notes per line at day 89, oldest first, and quiz results (two runs each, sol medium):
+
+| budget | rule | notes per line | memory alone | with recall |
+|---|---|---|---|---|
+| 40 | even | 4 ×8, 2 ×19, 1 ×13 | 35, 35 | 35, 35 |
+| 40 | fading | 4 ×11, 2 ×10, 1 ×19 | 35, 35 | 35, 35 |
+| 12 | even | 16, 16, 16, 16, 8, 4, 2, 1 ×5 | 30, 31 | 35, 35 |
+| 12 | fading | 32, 16, 8, 8, 8, 4, 2, 1 ×5 | 30, 30 | 33, 34 |
+
+- Same scores, different losses. Squeezed, fading forgot the oldest facts said once and never
+  again (sister's birthday, weekday wake time, half the anniversary: the first 12 days, all in
+  one 32-note line) and remembered more from the middle (moving company, landlord deal,
+  dentist), which even forgot.
+- Facts that changed later (city, job, drink, trip, vet) were right with both rules: the newer
+  note is recent and wins.
+- Fading is what we want (old things that don't come up again fade, recent ones stay sharp), so
+  it's only as good as the refreshing: Lobby saving a fact again when it comes up again.

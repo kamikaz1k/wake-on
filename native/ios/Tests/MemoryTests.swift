@@ -81,6 +81,24 @@ final class MemoryTests: XCTestCase {
         XCTAssertEqual(memory.summaryInput(level: 2, index: 0).count, 2)
     }
 
+    /// The fading rule matches OptMem's `cover()` (memo, Nov 2026): notes per line, oldest first.
+    func testFadingCoverMatchesOptMem() {
+        func sizes(_ count: Int, _ budget: Int) -> [Int] {
+            var memory = memory(count)
+            summarizeAll(&memory)
+            return memory.cover(budget: budget, rule: .fading).map { unit in
+                if case let .summary(summary) = unit { return Memory.span(level: summary.level, index: summary.index).count }
+                return 1
+            }
+        }
+        XCTAssertEqual(sizes(18, 5), [8, 4, 4, 1, 1])
+        XCTAssertEqual(sizes(83, 40), Array(repeating: 4, count: 11) + Array(repeating: 2, count: 10) + Array(repeating: 1, count: 19))
+        XCTAssertEqual(sizes(83, 12), [32, 16, 8, 8, 4, 4, 4, 2, 2, 1, 1, 1])
+        XCTAssertEqual(sizes(280, 40), [32, 32] + Array(repeating: 16, count: 7) + Array(repeating: 8, count: 7)
+                       + Array(repeating: 4, count: 6) + Array(repeating: 2, count: 6) + Array(repeating: 1, count: 12))
+        XCTAssertEqual(sizes(30, 40), Array(repeating: 1, count: 30), "Under budget, every note word for word")
+    }
+
     func testDeletingAChatDropsItsNotesAndTheirSummaries() {
         var memory = memory(16)
         memory.add("from B", call: callB)

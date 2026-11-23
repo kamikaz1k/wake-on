@@ -110,7 +110,24 @@ struct Memory: Codable, Equatable {
     }
 
     private func notes(in span: ClosedRange<Int>) -> [Note] {
-        notes.filter { span.contains($0.id) }
+        var index = firstNote(atLeast: span.lowerBound), found: [Note] = []
+        while index < notes.count, notes[index].id <= span.upperBound { found.append(notes[index]); index += 1 }
+        return found
+    }
+
+    private func hasNotes(in span: ClosedRange<Int>) -> Bool {
+        let index = firstNote(atLeast: span.lowerBound)
+        return index < notes.count && notes[index].id <= span.upperBound
+    }
+
+    /// Notes are kept in id order, so blocks are found by binary search.
+    private func firstNote(atLeast id: Int) -> Int {
+        var low = 0, high = notes.count
+        while low < high {
+            let middle = (low + high) / 2
+            if notes[middle].id < id { low = middle + 1 } else { high = middle }
+        }
+        return low
     }
 
     /// The smallest level whose first block holds every note number so far.
@@ -136,13 +153,61 @@ struct Memory: Codable, Equatable {
     /// Every note, as compressed as the summaries so far allow, oldest first.
     var roots: [Unit] { notes.isEmpty ? [] : units(topLevel, 0) }
 
-    /// What a call starts with: the roots, then summaries opened up while it fits the budget,
-    /// the one covering the most notes first (the newest of those), so no line has to hold far
-    /// more than the others and recent things end up in full. Opening only the newest first
-    /// left the oldest 16 notes in one line and lost their details (see memory-sim). Over
-    /// budget, the oldest lines are left out (still found by `recall`) until the summaries
-    /// catch up.
-    func cover(budget: Int = Memory.budget) -> [Unit] {
+    /// How the start-of-call memory spends its lines.
+    enum CoverRule: String { case fading, even }
+    static let coverRule = CoverRule.even
+
+    /// What a call starts with, at most `budget` lines. Over budget, the oldest lines are left
+    /// out (still found by `recall`) until the summaries catch up.
+    func cover(budget: Int = Memory.budget, rule: CoverRule = Memory.coverRule) -> [Unit] {
+        switch rule {
+        case .even: evenCover(budget)
+        case .fading: fadingCover(budget)
+        }
+    }
+
+    /// OptMem's rule: detail fades with age. A line may cover at most `alpha` times as many
+    /// notes as its oldest note is old (in notes saved since), with the smallest `alpha` that
+    /// fits the budget; lines left over open the newest summaries.
+    private func fadingCover(_ budget: Int) -> [Unit] {
+        if notes.count <= budget { return notes.map(Unit.note) }
+        func tiles(_ alpha: Double) -> [Unit] {
+            func walk(_ level: Int, _ index: Int) -> [Unit] {
+                let span = Self.span(level: level, index: index)
+                guard hasNotes(in: span) else { return [] }
+                if span.upperBound < nextID, Double(span.count) <= alpha * Double(nextID - span.lowerBound),
+                   let summary = summary(level, index) {
+                    return [.summary(summary)]
+                }
+                if level == 1 { return notes(in: span).map(Unit.note) }
+                return walk(level - 1, index * 2) + walk(level - 1, index * 2 + 1)
+            }
+            return walk(topLevel, 0)
+        }
+        var lines = tiles(1)
+        if lines.count < budget {
+            var low = 0.0, high = 1.0
+            for _ in 0..<40 {
+                let middle = (low + high) / 2
+                if tiles(middle).count > budget { low = middle } else { high = middle }
+            }
+            lines = tiles(high)
+        }
+        // Sizes jump in powers of two, so spend what's left on the newest.
+        while let position = lines.indices.last(where: { position in
+            guard case let .summary(summary) = lines[position] else { return false }
+            return lines.count - 1 + children(summary.level, summary.index).count <= budget
+        }), case let .summary(summary) = lines[position] {
+            lines.replaceSubrange(position...position, with: children(summary.level, summary.index))
+        }
+        return Array(lines.suffix(budget))
+    }
+
+    /// Even: the roots, then summaries opened up while it fits the budget, the one covering the
+    /// most notes first (the newest of those), so no line has to hold far more than the others.
+    /// Opening only the newest first, without OptMem's limit by age, left the oldest 32 notes in
+    /// one line and lost their details (see memory-sim).
+    private func evenCover(_ budget: Int) -> [Unit] {
         var lines = roots
         while true {
             var best: (position: Int, level: Int, inside: [Unit])?
