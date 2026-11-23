@@ -6,8 +6,8 @@ import UIKit
 /// over them, so a call can start with the whole history in a few dozen lines: recent notes
 /// word for word, older ones folded into summaries. `recall` still searches every note.
 ///
-/// The tree is fixed by note number: a level-1 summary covers one block of `block` notes, and
-/// each level up covers two of the level below. A summary is written only once its block is
+/// The tree is fixed by note number, as in OptMem: a level-1 summary merges two notes, and each
+/// level up merges two summaries of the level below. A summary is written only once its block is
 /// full, and only when the start-of-call memory is getting long (see `MemoryJob`), so short
 /// calls cost nothing. Each note keeps the call it came from; deleting a chat can delete its
 /// notes, and any summary that covered them is dropped and written again later.
@@ -43,7 +43,9 @@ struct Memory: Codable, Equatable {
     var summaries: [Summary] = []
     var nextID = 0
 
-    static let block = 8
+    /// Notes per level-1 summary. Two, as in OptMem: merging more at once made the model write
+    /// past the limit and lose facts (see native/ios/scripts/memory-sim).
+    static let block = 2
     /// OptMem's note size.
     static let noteBytes = 280
     /// Lines at the start of a call (about 2–3k tokens).
@@ -134,23 +136,23 @@ struct Memory: Codable, Equatable {
     /// Every note, as compressed as the summaries so far allow, oldest first.
     var roots: [Unit] { notes.isEmpty ? [] : units(topLevel, 0) }
 
-    /// What a call starts with: the roots, then the newest summaries opened up while it fits
-    /// the budget, so recent things are in full. Over budget, the oldest lines are left out
-    /// (still found by `recall`) until the summaries catch up.
+    /// What a call starts with: the roots, then summaries opened up while it fits the budget,
+    /// the one covering the most notes first (the newest of those), so no line has to hold far
+    /// more than the others and recent things end up in full. Opening only the newest first
+    /// left the oldest 16 notes in one line and lost their details (see memory-sim). Over
+    /// budget, the oldest lines are left out (still found by `recall`) until the summaries
+    /// catch up.
     func cover(budget: Int = Memory.budget) -> [Unit] {
         var lines = roots
-        var opened = true
-        while opened {
-            opened = false
-            for position in lines.indices.reversed() {
-                guard case let .summary(summary) = lines[position] else { continue }
+        while true {
+            var best: (position: Int, level: Int, inside: [Unit])?
+            for position in lines.indices {
+                guard case let .summary(summary) = lines[position], summary.level >= (best?.level ?? 0) else { continue }
                 let inside = children(summary.level, summary.index)
-                if lines.count - 1 + inside.count <= budget {
-                    lines.replaceSubrange(position...position, with: inside)
-                    opened = true
-                    break
-                }
+                if lines.count - 1 + inside.count <= budget { best = (position, summary.level, inside) }
             }
+            guard let best else { break }
+            lines.replaceSubrange(best.position...best.position, with: best.inside)
         }
         return Array(lines.suffix(budget))
     }
@@ -192,13 +194,17 @@ struct Memory: Codable, Equatable {
         children(level, index).map(Self.text)
     }
 
-    mutating func setSummary(level: Int, index: Int, text: String) {
+    /// Saves a summary. A line over `noteBytes` is refused, never cut (cutting lost facts): ask
+    /// again with `tooLong`.
+    @discardableResult
+    mutating func setSummary(level: Int, index: Int, text: String) -> Bool {
         let covered = notes(in: Self.span(level: level, index: index))
-        guard let first = covered.first, let last = covered.last else { return }
-        let line = Self.oneLine(text)
-        guard !line.isEmpty else { return }
+        guard let first = covered.first, let last = covered.last else { return false }
+        let line = text.split(whereSeparator: \.isNewline).joined(separator: " ").trimmingCharacters(in: .whitespaces)
+        guard !line.isEmpty, Self.tooLong(line) == nil else { return false }
         summaries.removeAll { $0.level == level && $0.index == index }
         summaries.append(Summary(level: level, index: index, text: line, from: first.time, to: last.time))
+        return true
     }
 
     /// Notes with every word of the query (else any word), newest first.
@@ -296,13 +302,41 @@ struct Memory: Codable, Equatable {
     Pixie under Settings, Memory.
     """
 
+    // MARK: Summaries
+
+    /// Writes the summaries (with an OpenAI key; the server uses the same for an invite code).
+    static let summaryModel = "gpt-6.2-sol"
+    static let summaryEffort = "medium"
+    /// Tries per summary: the first, then up to two after "too long".
+    static let summaryTries = 3
+
     /// How a summary is written (here for an OpenAI key, on the server for an invite code).
+    /// After OptMem's merge prompt.
     static let summaryInstructions = """
-    You compress a voice assistant's memory of its user. Merge the lines you're given, oldest \
-    first, into one line of at most 280 characters. Keep names, dates, places, preferences, \
-    plans and decisions that could matter later; drop the rest. When lines disagree, the later \
-    one wins. Reply with the line only.
+    You compress a voice assistant's memory of its user. Compress the memories you're given, \
+    oldest first, into one line of at most 280 bytes. Keep what has lasting effect, drop what \
+    does not. Invent nothing. When they disagree, the later one wins. Reply with the line only.
     """
+
+    /// What to say back when a summary is over the limit (as OptMem does); nil when it fits.
+    static func tooLong(_ text: String) -> String? {
+        let bytes = text.utf8.count
+        guard bytes > noteBytes else { return nil }
+        return "Too long: \(bytes) bytes, limit \(noteBytes). Accented characters cost 2 bytes. Compress it further."
+    }
+
+    /// A Responses API request for one summary. `attempts` are earlier replies that were too long.
+    static func summaryRequest(_ lines: [String], attempts: [String] = [],
+                               model: String = summaryModel, effort: String = summaryEffort) -> [String: Any] {
+        var input: [[String: Any]] = [["role": "user", "content": lines.joined(separator: "\n")]]
+        for attempt in attempts {
+            input.append(["role": "assistant", "content": attempt])
+            input.append(["role": "user", "content": tooLong(attempt) ?? "Compress it further."])
+        }
+        // Room for reasoning: at 400, low reasoning sometimes left no text at all.
+        return ["model": model, "instructions": summaryInstructions, "input": input, "store": false,
+                "max_output_tokens": 2000, "reasoning": ["effort": effort]]
+    }
 }
 
 /// The memory on this iPhone, in Application Support/memory.json.
@@ -372,8 +406,11 @@ final class MemoryStore: ObservableObject {
     func delete(noteIDs: Set<Int>) { change { $0.delete(noteIDs: noteIDs) } }
     func delete(calls: Set<UUID>) { change { $0.delete(calls: calls) } }
     func deleteAll() { change { $0.deleteAll() } }
-    func setSummary(level: Int, index: Int, text: String) {
-        change { $0.setSummary(level: level, index: index, text: text) }
+    @discardableResult
+    func setSummary(level: Int, index: Int, text: String) -> Bool {
+        var saved = false
+        change { saved = $0.setSummary(level: level, index: index, text: text) }
+        return saved
     }
 
     func noteCount(fromCalls calls: Set<UUID>) -> Int {

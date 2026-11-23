@@ -16,7 +16,7 @@
 //   GLOBAL_DAILY_CALLS   calls per UTC day across everyone (default 300)
 //   ALLOWED_MODELS       comma-separated voice models (default gpt-live-1.1,gpt-live-1)
 //   ALLOWED_BACKEND_MODELS comma-separated delegation models (default gpt-5.6-terra)
-//   DAILY_SUMMARIES      memory summaries per code per UTC day (default 60)
+//   DAILY_SUMMARIES      memory summaries per code per UTC day (default 200; about one per note)
 //
 // Invite codes are signed, so checking one needs no storage: `<name>-<key id>-<signature>`,
 // e.g. `alex-1-7k2mq9xd4r8w`, where the signature is the first 60 bits of
@@ -26,13 +26,16 @@
 const OPENAI_URL = "https://api.openai.com/v1/live/sessions";
 const MAX_BODY_BYTES = 256 * 1024;
 const RESPONSES_URL = "https://api.openai.com/v1/responses";
-const SUMMARY_MODEL = "gpt-5.4-mini";
-// The app's Memory.summaryInstructions, kept here so a code can only ask for a summary.
+const SUMMARY_MODEL = "gpt-6.2-sol";
+// Kept here so a code can only ask for a summary.
+const SUMMARY_EFFORT = "medium";
+// The app's Memory.summaryInstructions, after OptMem's merge prompt.
 const SUMMARY_INSTRUCTIONS =
-  "You compress a voice assistant's memory of its user. Merge the lines you're given, oldest " +
-  "first, into one line of at most 280 characters. Keep names, dates, places, preferences, " +
-  "plans and decisions that could matter later; drop the rest. When lines disagree, the later " +
-  "one wins. Reply with the line only.";
+  "You compress a voice assistant's memory of its user. Compress the memories you're given, " +
+  "oldest first, into one line of at most 280 bytes. Keep what has lasting effect, drop what " +
+  "does not. Invent nothing. When they disagree, the later one wins. Reply with the line only.";
+const SUMMARY_BYTES = 280;
+const SUMMARY_TRIES = 3;
 const MAX_SUMMARY_LINES = 16;
 const MAX_SUMMARY_LINE = 400;
 
@@ -150,24 +153,34 @@ async function summarize(request, env, upstream, ctx) {
   }
   const key = `summaries:${new Date().toISOString().slice(0, 10)}:${check.name}`;
   const used = await count(env, key);
-  if (used >= Number(env.DAILY_SUMMARIES || 60)) return error(429, "daily_limit", "Enough summaries for today.");
-  const response = await upstream(RESPONSES_URL, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${env.OPENAI_API_KEY}`,
-      "Content-Type": "application/json",
-      "OpenAI-Safety-Identifier": (await sha256(check.name)).slice(0, 32),
-    },
-    body: JSON.stringify({
-      model: SUMMARY_MODEL, instructions: SUMMARY_INSTRUCTIONS, input: lines.join("\n"),
-      store: false, max_output_tokens: 400, reasoning: { effort: "low" },
-    }),
-  });
-  if (!response.ok) return error(502, "upstream", `OpenAI answered ${response.status}.`);
-  const reply = await response.json();
-  const text = (reply.output || []).flatMap((item) => item.content || [])
-    .filter((part) => part.type === "output_text").map((part) => part.text).join("").trim();
-  if (!text) return error(502, "upstream", "OpenAI sent no text.");
+  if (used >= Number(env.DAILY_SUMMARIES || 200)) return error(429, "daily_limit", "Enough summaries for today.");
+  // A line over the limit is sent back with "too long" and written again (as OptMem does), never cut.
+  const input = [{ role: "user", content: lines.join("\n") }];
+  let text = "";
+  for (let attempt = 0; attempt < SUMMARY_TRIES; attempt++) {
+    const response = await upstream(RESPONSES_URL, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${env.OPENAI_API_KEY}`,
+        "Content-Type": "application/json",
+        "OpenAI-Safety-Identifier": (await sha256(check.name)).slice(0, 32),
+      },
+      body: JSON.stringify({
+        model: SUMMARY_MODEL, instructions: SUMMARY_INSTRUCTIONS, input,
+        store: false, max_output_tokens: 2000, reasoning: { effort: SUMMARY_EFFORT },
+      }),
+    });
+    if (!response.ok) return error(502, "upstream", `OpenAI answered ${response.status}.`);
+    const reply = await response.json();
+    text = (reply.output || []).flatMap((item) => item.content || [])
+      .filter((part) => part.type === "output_text").map((part) => part.text).join("").trim();
+    if (!text) return error(502, "upstream", "OpenAI sent no text.");
+    const bytes = new TextEncoder().encode(text).length;
+    if (bytes <= SUMMARY_BYTES) break;
+    if (attempt === SUMMARY_TRIES - 1) return error(502, "too_long", "The summary stayed too long.");
+    input.push({ role: "assistant", content: text },
+      { role: "user", content: `Too long: ${bytes} bytes, limit ${SUMMARY_BYTES}. Accented characters cost 2 bytes. Compress it further.` });
+  }
   ctx.waitUntil(env.USAGE.put(key, String(used + 1), { expirationTtl: 3 * 24 * 3600 }));
   return json(200, { text });
 }

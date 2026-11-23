@@ -21,3 +21,18 @@ What book is the user reading now? | Klara and the Sun | 8 | update
 When is Priya's birthday and what gift idea? | November 30, a ceramics class | 75 | recent
 When is the user's mom visiting? | Grace, December 22 to 28 for Christmas | 78 | recent
 What did the user ask to be reminded about? | Booking a ryokan in Kyoto | 89 | recent
+Which days and time does the user go to the gym now? | Tuesday and Thursday at 6pm, Crossfit Mile End | 65 | update
+When is the user's niece's birthday? | Zoe, September 2 (turns 5) | 28 | detail
+Who is the user's manager now? | Andre at Figma (was Lena at Shopify) | 27 | update
+When is the user's dentist appointment? | October 8 at 2pm | 34 | detail
+Which moving company did the user book? | Déménagement Express, October 15 | 55 | detail
+What did the user agree with the old landlord? | Broke the lease early, pays one extra month (Mr. Chen) | 58 | detail
+What's the user's street in Montreal? | Rue Saint-Viateur, Mile End | 56 | detail
+Who insures the user's car? | Desjardins (renewed with a Quebec insurer) | 85 | recent
+What's the user's best 10 km practice time? | 53 minutes | 88 | recent
+What is the user working on at Figma? | Redesigning FigJam's sticky notes | 82 | recent
+When are the user's French classes? | Monday evenings | 71 | detail
+What's the user's favourite café in Montreal? | Café Olimpico | 70 | detail
+What seat does the user like on flights? | Aisle | 23 | detail
+What time does the user wake up on weekdays? | 6:30 | 12 | detail
+What does Sam's mom do on Sundays? | Grace calls on Sundays (she lives in Ottawa) | 7 | detail

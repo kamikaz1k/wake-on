@@ -213,9 +213,10 @@ function summaryRequest(lines, code) {
   });
 }
 
-const summaryUpstream = (sent) => async (url, init) => {
+const summaryUpstream = (sent, replies = [" One line. "]) => async (url, init) => {
   sent.push({ url, init });
-  return new Response(JSON.stringify({ output: [{ content: [{ type: "output_text", text: " One line. " }] }] }),
+  const text = replies[Math.min(sent.length - 1, replies.length - 1)];
+  return new Response(JSON.stringify({ output: [{ content: [{ type: "output_text", text }] }] }),
     { status: 200, headers: { "Content-Type": "application/json" } });
 };
 
@@ -229,10 +230,12 @@ test("summarizes memory lines with the fixed prompt and model, and counts it", a
   assert.deepEqual(await response.json(), { text: "One line." });
   assert.equal(sent[0].url, "https://api.openai.com/v1/responses");
   const body = JSON.parse(sent[0].init.body);
-  assert.equal(body.model, "gpt-5.4-mini");
+  assert.equal(body.model, "gpt-6.2-sol");
+  assert.deepEqual(body.reasoning, { effort: "medium" });
   assert.equal(body.store, false);
   assert.match(body.instructions, /compress a voice assistant's memory/);
-  assert.equal(body.input, "[Nov 1, 2026] a\n[Nov 2, 2026] b");
+  assert.deepEqual(body.input, [{ role: "user", content: "[Nov 1, 2026] a\n[Nov 2, 2026] b" }]);
+  assert.equal(body.max_output_tokens, 2000);
   assert.equal(sent[0].init.headers.Authorization, "Bearer sk-real");
   await Promise.all(pending);
   assert.equal(t.usage.map.get(`summaries:${t.day}:alex`), "1");
@@ -247,7 +250,23 @@ test("summaries need a valid code, a few short lines, and stay under the daily l
   assert.equal((await handle(summaryRequest(Array(17).fill("a"), t.code), t.env, summaryUpstream(sent))).status, 400);
   assert.equal((await handle(summaryRequest(["x".repeat(401)], t.code), t.env, summaryUpstream(sent))).status, 400);
   assert.equal((await handle(summaryRequest([{ role: "system" }], t.code), t.env, summaryUpstream(sent))).status, 400);
-  t.usage.map.set(`summaries:${t.day}:alex`, "60");
+  t.usage.map.set(`summaries:${t.day}:alex`, "200");
   assert.equal((await handle(summaryRequest(["a"], t.code), t.env, summaryUpstream(sent))).status, 429);
   assert.equal(sent.length, 0);
+});
+
+test("a summary over 280 bytes is sent back as too long and written again, never cut", async () => {
+  const t = await setup();
+  const sent = [];
+  const long = "x".repeat(300);
+  const response = await handle(summaryRequest(["a", "b"], t.code), t.env,
+    summaryUpstream(sent, [long, "Short."]), { waitUntil: () => {} });
+  assert.deepEqual(await response.json(), { text: "Short." });
+  const retry = JSON.parse(sent[1].init.body).input;
+  assert.deepEqual(retry[1], { role: "assistant", content: long });
+  assert.match(retry[2].content, /^Too long: 300 bytes, limit 280/);
+  const stuck = [];
+  const failed = await handle(summaryRequest(["a", "b"], t.code), t.env, summaryUpstream(stuck, [long]), { waitUntil: () => {} });
+  assert.equal(failed.status, 502);
+  assert.equal(stuck.length, 3);
 });

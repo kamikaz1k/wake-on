@@ -6,8 +6,9 @@ import Foundation
 /// while the iPhone charges; once it's over budget, it also runs right after the call.
 enum MemoryJob {
     static let identifier = "com.kamikaz1k.wakeon.memory"
-    /// Summaries per run, so a long backlog can't run up a bill in one go.
-    static let maxPerRun = 24
+    /// Summaries per run, so a long backlog can't run up a bill in one go. About one per note
+    /// (summaries merge two at a time), so this covers a backlog of over a hundred notes.
+    static let maxPerRun = 128
 
     /// Before the app finishes launching (BGTaskScheduler's rule).
     static func register() {
@@ -62,7 +63,10 @@ enum MemoryJob {
                 let text = try await MemorySummarizer.summarize(input, credential: credential)
                 // A note deleted meanwhile: its summary would bring it back.
                 guard MemoryStore.shared.memory.summaryInput(level: next.level, index: next.index) == input else { continue }
-                MemoryStore.shared.setSummary(level: next.level, index: next.index, text: text)
+                guard MemoryStore.shared.setSummary(level: next.level, index: next.index, text: text) else {
+                    VoiceSessionController.appLog("memory_job refused bytes=\(text.utf8.count)")
+                    break
+                }
                 written += 1
             } catch {
                 VoiceSessionController.appLog("memory_job failed \(error)")
@@ -74,25 +78,33 @@ enum MemoryJob {
 }
 
 /// One summary line: with an OpenAI key straight from OpenAI, with an invite code from the
-/// Lobby server (which holds the prompt, so it can't be used for anything else).
+/// Lobby server (which holds the prompt, so it can't be used for anything else, and asks again
+/// itself when a line is too long).
 enum MemorySummarizer {
-    static let model = "gpt-5.4-mini"
     static let openAI = URL(string: "https://api.openai.com/v1/responses")!
 
     static func summarize(_ lines: [String], credential: String) async throws -> String {
-        var request: URLRequest
         if LobbyServer.isInviteCode(credential) {
             guard let server = LobbyServer.url else { throw VoiceError.message("No Lobby server in this build.") }
-            request = URLRequest(url: server.appendingPathComponent("v1/memory/summarize"))
-            request.httpBody = try JSONSerialization.data(withJSONObject: ["lines": lines])
-        } else {
-            request = URLRequest(url: openAI)
-            request.httpBody = try JSONSerialization.data(withJSONObject: body(lines))
+            return try await post(server.appendingPathComponent("v1/memory/summarize"), ["lines": lines], credential)
         }
+        // Too long: say so and ask again, as OptMem does, instead of cutting the line.
+        var attempts: [String] = []
+        for _ in 0..<Memory.summaryTries {
+            let text = try await post(openAI, Memory.summaryRequest(lines, attempts: attempts), credential)
+            if Memory.tooLong(text) == nil { return text }
+            attempts.append(text)
+        }
+        throw VoiceError.message("summary too long after \(Memory.summaryTries) tries")
+    }
+
+    private static func post(_ url: URL, _ body: [String: Any], _ credential: String) async throws -> String {
+        var request = URLRequest(url: url)
         request.httpMethod = "POST"
         request.timeoutInterval = 60
         request.setValue("Bearer \(credential)", forHTTPHeaderField: "Authorization")
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.httpBody = try JSONSerialization.data(withJSONObject: body)
         let (data, response) = try await URLSession.shared.data(for: request)
         let status = (response as? HTTPURLResponse)?.statusCode ?? 0
         guard status == 200, let json = try JSONSerialization.jsonObject(with: data) as? [String: Any],
@@ -100,12 +112,6 @@ enum MemorySummarizer {
             throw VoiceError.message("summary failed: HTTP \(status)")
         }
         return text
-    }
-
-    static func body(_ lines: [String]) -> [String: Any] {
-        ["model": model, "instructions": Memory.summaryInstructions,
-         "input": lines.joined(separator: "\n"), "store": false, "max_output_tokens": 400,
-         "reasoning": ["effort": "low"]]
     }
 
     /// The reply's text: the server's `text`, or a Responses API reply's output_text parts.

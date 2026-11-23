@@ -45,10 +45,11 @@ final class MemoryTests: XCTestCase {
         XCTAssertEqual(memory.need, .none, "Under the threshold: nothing runs")
     }
 
-    func testSummariesWaitForAFullBlock() {
-        XCTAssertTrue(memory(7).ready.isEmpty)
-        XCTAssertEqual(memory(8).ready.map(\.level), [1])
-        XCTAssertEqual(memory(8).ready.map(\.index), [0])
+    func testSummariesMergeTwoAtATime() {
+        XCTAssertTrue(memory(1).ready.isEmpty)
+        XCTAssertEqual(memory(2).ready.map(\.level), [1])
+        XCTAssertEqual(memory(2).ready.map(\.index), [0])
+        XCTAssertEqual(memory(2).summaryInput(level: 1, index: 0).count, 2)
     }
 
     func testNeedGrowsWithTheStartOfCallMemory() {
@@ -68,14 +69,15 @@ final class MemoryTests: XCTestCase {
         XCTAssertTrue(memory.callText()!.contains("Older notes left out"))
     }
 
-    func testTreeFoldsUpAndTheNewestOpensFirst() {
+    func testTreeFoldsUpAndTheBiggestOpensFirst() {
         var memory = memory(18)
         summarizeAll(&memory)
-        // Blocks 0-7 and 8-15 summarized, then merged; 16 and 17 are still notes.
-        XCTAssertEqual(texts(memory.roots), ["S2.0", "note 16", "note 17"])
-        XCTAssertEqual(texts(memory.cover(budget: 5)), ["S1.0", "S1.1", "note 16", "note 17"])
-        XCTAssertEqual(texts(memory.cover(budget: 11)), ["S1.0"] + (8...17).map { "note \($0)" },
-                       "The newer half opens first")
+        // Notes 0-15 fold into one level-4 summary; 16 and 17 into a level-1 one.
+        XCTAssertEqual(texts(memory.roots), ["S4.0", "S1.8"])
+        XCTAssertEqual(texts(memory.cover(budget: 5)), ["S2.0", "S2.1", "S2.2", "S2.3", "S1.8"],
+                       "The summary covering the most notes opens first, so lines stay even")
+        XCTAssertEqual(texts(memory.cover(budget: 11)), (0...6).map { "S1.\($0)" } + (14...17).map { "note \($0)" },
+                       "Among equals the newest opens first")
         XCTAssertEqual(memory.summaryInput(level: 2, index: 0).count, 2)
     }
 
@@ -84,13 +86,14 @@ final class MemoryTests: XCTestCase {
         memory.add("from B", call: callB)
         for n in 0..<7 { memory.add("more \(n)", call: callA) }
         summarizeAll(&memory)
-        XCTAssertEqual(texts(memory.roots), ["S2.0", "S1.2"])
+        XCTAssertEqual(texts(memory.roots), ["S4.0", "S3.2"])
         XCTAssertEqual(memory.notes(fromCalls: [callB]).count, 1)
         memory.delete(calls: [callB])
         XCTAssertFalse(memory.notes.contains { $0.text == "from B" })
-        XCTAssertEqual(texts(memory.roots).first, "S2.0", "Other blocks keep their summaries")
-        XCTAssertTrue(texts(memory.roots).contains("more 0"), "Its block is notes again until summarized")
-        XCTAssertEqual(memory.ready.map(\.index), [2])
+        XCTAssertEqual(texts(memory.roots), ["S4.0", "more 0", "S1.9", "S2.5"],
+                       "Other blocks keep their summaries; its block is a note again until summarized")
+        XCTAssertEqual(memory.ready.map(\.level), [1])
+        XCTAssertEqual(memory.ready.map(\.index), [8])
     }
 
     func testDeleteAllKeepsNumbering() {
@@ -130,11 +133,28 @@ final class MemoryTests: XCTestCase {
         XCTAssertTrue(names.contains("remember") && names.contains("recall"))
     }
 
+    func testLongSummaryIsRefusedNotCut() {
+        var memory = memory(2)
+        XCTAssertFalse(memory.setSummary(level: 1, index: 0, text: String(repeating: "x", count: 300)))
+        XCTAssertTrue(memory.summaries.isEmpty)
+        XCTAssertEqual(Memory.tooLong(String(repeating: "x", count: 300)),
+                       "Too long: 300 bytes, limit 280. Accented characters cost 2 bytes. Compress it further.")
+        XCTAssertNil(Memory.tooLong(String(repeating: "é", count: 140)), "280 bytes fits")
+        XCTAssertNotNil(Memory.tooLong(String(repeating: "é", count: 141)))
+        XCTAssertTrue(memory.setSummary(level: 1, index: 0, text: "Both notes."))
+    }
+
     func testSummaryRequestAndReply() {
-        let body = MemorySummarizer.body(["a", "b"])
-        XCTAssertEqual(body["model"] as? String, "gpt-5.4-mini")
-        XCTAssertEqual(body["input"] as? String, "a\nb")
+        let body = Memory.summaryRequest(["a", "b"])
+        XCTAssertEqual(body["model"] as? String, Memory.summaryModel)
+        XCTAssertEqual((body["input"] as? [[String: Any]])?.first?["content"] as? String, "a\nb")
         XCTAssertEqual(body["store"] as? Bool, false)
+        XCTAssertEqual(body["max_output_tokens"] as? Int, 2000)
+        let long = String(repeating: "x", count: 300)
+        let retry = Memory.summaryRequest(["a", "b"], attempts: [long])["input"] as? [[String: Any]] ?? []
+        XCTAssertEqual(retry.map { $0["role"] as? String }, ["user", "assistant", "user"])
+        XCTAssertEqual(retry[1]["content"] as? String, long)
+        XCTAssertTrue((retry[2]["content"] as? String ?? "").hasPrefix("Too long: 300 bytes"))
         XCTAssertEqual(MemorySummarizer.outputText(["text": " One line. "]), "One line.")
         let reply: [String: Any] = ["output": [["type": "reasoning"],
                                                ["content": [["type": "output_text", "text": "Merged."]]]]]
@@ -156,5 +176,7 @@ final class MemoryTests: XCTestCase {
         }
         let joined = source.components(separatedBy: "\" +\n  \"").joined()
         XCTAssertTrue(joined.contains(Memory.summaryInstructions), "Keep the app and server prompts the same")
+        XCTAssertTrue(source.contains("const SUMMARY_MODEL = \"\(Memory.summaryModel)\""), "Same summary model")
+        XCTAssertTrue(source.contains("const SUMMARY_EFFORT = \"\(Memory.summaryEffort)\""), "Same reasoning effort")
     }
 }

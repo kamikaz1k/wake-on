@@ -1,24 +1,38 @@
 // Simulates Lobby's memory filling up over months of calls, with the app's own `Memory` code
-// (copied out of WakeOn/Memory.swift by run.sh) and real summaries from OpenAI.
+// (copied out of WakeOn/Memory.swift by run.sh) and real summaries from OpenAI. See README.md.
 //
 //   run.sh <out-dir> [lobby|eager|never]
 //
 // lobby: the app's policy (MemoryJob): nothing after a call that saved no note, an overnight run
 //        once the start-of-call memory passes 24 lines, a run right after the call past 40.
-// eager: summarize everything ready after every call that saved a note (the cost ceiling).
-// never: no summaries (the memory a phone would have before its first run).
+// eager: summarize everything ready after every call that saved a note.
+// never: no summaries.
 //
-// At days 30, 60 and the last day, a model answers quiz.txt from the start-of-call memory
-// alone (no recall) and a second model grades the answers.
+// Environment: SUMMARY_MODEL, SUMMARY_EFFORT (default: the app's), QUIZ_MODEL (the call's
+// backend model), GRADE_MODEL, LEGACY=1 (the first version: one try, the line cut at 280 bytes;
+// run.sh also sets 8 notes per block for it).
 import Foundation
 
 let args = CommandLine.arguments
 let folder = URL(fileURLWithPath: args[1])
 let out = URL(fileURLWithPath: args[2])
 let policy = args.count > 3 ? args[3] : "lobby"
-let key = ProcessInfo.processInfo.environment["OPENAI_API_KEY"] ?? ""
-let model = "gpt-5.4-mini"
+let env = ProcessInfo.processInfo.environment
+let key = env["OPENAI_API_KEY"] ?? ""
+let summaryModel = env["SUMMARY_MODEL"] ?? Memory.summaryModel
+let summaryEffort = env["SUMMARY_EFFORT"] ?? Memory.summaryEffort
+let quizModel = env["QUIZ_MODEL"] ?? "gpt-5.6-terra"
+let gradeModel = env["GRADE_MODEL"] ?? "gpt-6.1-terra"
+let legacy = env["LEGACY"] == "1"
 try FileManager.default.createDirectory(at: out, withIntermediateDirectories: true)
+
+/// Dollars per million tokens: input, cached input, output (developers.openai.com/api/docs/pricing, Nov 22 2026).
+let prices: [String: (Double, Double, Double)] = [
+    "gpt-5.4-mini": (0.75, 0.075, 4.50), "gpt-5.4": (2.50, 0.25, 15.00), "gpt-5.5": (5.00, 0.50, 30.00),
+    "gpt-5.6-luna": (0.20, 0.02, 1.20), "gpt-5.6-terra": (2.00, 0.20, 12.00), "gpt-5.6-sol": (4.00, 0.40, 20.00),
+    "gpt-6-luna": (0.10, 0.01, 0.50), "gpt-6.1-terra": (1.00, 0.05, 5.00), "gpt-6.2-sol": (2.00, 0.10, 10.00),
+    "gpt-6.2-astra": (8.00, 0.40, 40.00),
+]
 
 // MARK: Inputs
 
@@ -42,54 +56,79 @@ func date(_ day: Int) -> Date { start.addingTimeInterval(Double(day) * 86400) }
 
 // MARK: OpenAI
 
-var tokens = ["summary": 0, "quiz": 0]
+struct Usage { var requests = 0, input = 0, cached = 0, output = 0, dollars = 0.0 }
+var usage: [String: Usage] = [:]
 var empties = 0
-var requests = ["summary": 0, "quiz": 0]
 
-func respond(_ body: [String: Any], kind: String) async throws -> String {
-    let json = try await respondJSON(body, kind: kind)
-    let parts = (json["output"] as? [[String: Any]] ?? []).flatMap { $0["content"] as? [[String: Any]] ?? [] }
-    return parts.compactMap { $0["text"] as? String }.joined().trimmingCharacters(in: .whitespacesAndNewlines)
-}
-
-func respondJSON(_ body: [String: Any], kind: String) async throws -> [String: Any] {
+func respond(_ body: [String: Any], kind: String) async throws -> [String: Any] {
     var request = URLRequest(url: URL(string: "https://api.openai.com/v1/responses")!)
     request.httpMethod = "POST"
-    request.timeoutInterval = 120
+    request.timeoutInterval = 180
     request.setValue("Bearer \(key)", forHTTPHeaderField: "Authorization")
     request.setValue("application/json", forHTTPHeaderField: "Content-Type")
     request.httpBody = try JSONSerialization.data(withJSONObject: body)
-    let (data, response) = try await URLSession.shared.data(for: request)
-    let json = try JSONSerialization.jsonObject(with: data) as? [String: Any] ?? [:]
-    guard (response as? HTTPURLResponse)?.statusCode == 200 else {
-        throw NSError(domain: "openai", code: 1, userInfo: [NSLocalizedDescriptionKey: String(data: data, encoding: .utf8) ?? ""])
+    var lastError = ""
+    for _ in 0..<3 {
+        let (data, response) = try await URLSession.shared.data(for: request)
+        let json = try JSONSerialization.jsonObject(with: data) as? [String: Any] ?? [:]
+        guard (response as? HTTPURLResponse)?.statusCode == 200 else {
+            lastError = String(data: data, encoding: .utf8) ?? ""
+            try await Task.sleep(nanoseconds: 3_000_000_000)
+            continue
+        }
+        let model = body["model"] as? String ?? ""
+        let used = json["usage"] as? [String: Any] ?? [:]
+        let input = used["input_tokens"] as? Int ?? 0, output = used["output_tokens"] as? Int ?? 0
+        let cached = (used["input_tokens_details"] as? [String: Any])?["cached_tokens"] as? Int ?? 0
+        let price = prices[model] ?? (0, 0, 0)
+        var entry = usage[kind] ?? Usage()
+        entry.requests += 1; entry.input += input; entry.cached += cached; entry.output += output
+        entry.dollars += (Double(input - cached) * price.0 + Double(cached) * price.1 + Double(output) * price.2) / 1e6
+        usage[kind] = entry
+        return json
     }
-    tokens[kind, default: 0] += (json["usage"] as? [String: Any])?["total_tokens"] as? Int ?? 0
-    requests[kind, default: 0] += 1
-    let types = (json["output"] as? [[String: Any]] ?? []).flatMap { ($0["content"] as? [[String: Any]] ?? []).compactMap { $0["type"] as? String } + [$0["type"] as? String ?? ""] }
-    if !types.contains("output_text") && !types.contains("function_call") {
-        empties += 1
-        FileHandle.standardError.write("empty \(kind) reply: status=\(json["status"] ?? "") \(json["incomplete_details"] ?? "") usage=\(json["usage"] ?? "")\n".data(using: .utf8)!)
-    }
-    return json
+    throw NSError(domain: "openai", code: 1, userInfo: [NSLocalizedDescriptionKey: lastError])
 }
 
-/// SUMMARY_PROMPT (a file) tries another prompt; otherwise the app's.
-let summaryPrompt = ProcessInfo.processInfo.environment["SUMMARY_PROMPT"]
-    .flatMap { try? String(contentsOfFile: $0, encoding: .utf8) } ?? Memory.summaryInstructions
+func replyText(_ json: [String: Any]) -> String {
+    let parts = (json["output"] as? [[String: Any]] ?? []).flatMap { $0["content"] as? [[String: Any]] ?? [] }
+    let text = parts.filter { $0["type"] as? String == "output_text" }.compactMap { $0["text"] as? String }.joined()
+    if text.isEmpty { empties += 1 }
+    return text.trimmingCharacters(in: .whitespacesAndNewlines)
+}
 
-/// The same request as MemorySummarizer.body in the app.
-var rawBytes: [Int] = []
-func summarize(_ lines: [String]) async throws -> String {
-    let text = try await respondRaw(lines)
-    rawBytes.append(text.utf8.count)
-    return text
+// MARK: Summaries (as MemorySummarizer in the app)
+
+var firstTries: [Int] = []
+var retries = 0, failures = 0
+
+let legacyPrompt = """
+You compress a voice assistant's memory of its user. Merge the lines you're given, oldest first, into one line of at most 280 characters. Keep names, dates, places, preferences, plans and decisions that could matter later; drop the rest. When lines disagree, the later one wins. Reply with the line only.
+"""
+
+/// The app's request and retry; nil when it stayed too long.
+func summarize(_ lines: [String]) async throws -> String? {
+    if legacy {
+        let body: [String: Any] = ["model": summaryModel, "instructions": legacyPrompt, "input": lines.joined(separator: "\n"),
+                                   "store": false, "max_output_tokens": 400, "reasoning": ["effort": summaryEffort]]
+        let line = replyText(try await respond(body, kind: "summary"))
+        firstTries.append(line.utf8.count)
+        let cut = Memory.oneLine(line)
+        return cut.isEmpty ? nil : cut
+    }
+    var attempts: [String] = []
+    for _ in 0..<Memory.summaryTries {
+        let body = Memory.summaryRequest(lines, attempts: attempts, model: summaryModel, effort: summaryEffort)
+        let line = replyText(try await respond(body, kind: "summary"))
+        if attempts.isEmpty { firstTries.append(line.utf8.count) } else { retries += 1 }
+        if !line.isEmpty, Memory.tooLong(line) == nil { return line }
+        attempts.append(line)
+    }
+    failures += 1
+    return nil
 }
-func respondRaw(_ lines: [String]) async throws -> String {
-    try await respond(["model": model, "instructions": summaryPrompt,
-                       "input": lines.joined(separator: "\n"), "store": false, "max_output_tokens": 400,
-                       "reasoning": ["effort": "low"]], kind: "summary")
-}
+
+// MARK: Quiz
 
 func schema(_ name: String, _ item: [String: Any]) -> [String: Any] {
     ["format": ["type": "json_schema", "name": name, "strict": true,
@@ -97,59 +136,35 @@ func schema(_ name: String, _ item: [String: Any]) -> [String: Any] {
                            "properties": ["items": ["type": "array", "items": item]]]]]
 }
 
-/// Answers from the start-of-call memory; with `recall`, the model may also search every note
-/// with the app's recall tool, as Lobby can in a call.
-func ask(_ questions: [Question], memory text: String, recall: Bool) async throws -> [String] {
-    // With recall, one question per request in plain text, as in a call (a JSON reply format
-    // over many questions at once kept the model from searching at all).
-    if recall {
-        var answers: [String] = []
-        for question in questions { answers.append(try await askOne(question.q, memory: text)) }
-        return answers
-    }
-    let item: [String: Any] = ["type": "string"]
-    var input: [[String: Any]] = [["role": "user", "content":
-        questions.enumerated().map { "\($0.offset + 1). \($0.element.q)" }.joined(separator: "\n")]]
-    var body: [String: Any] = [
-        "model": model, "store": false, "reasoning": ["effort": "low"],
-        "instructions": "You are Lobby, a voice assistant. Answer each question about the user in a few words, from what you remember" + (recall ? " or find with recall (search as needed)" : " only") + ". If you can't find it, answer \"don't know\".\n\n" + text,
-        "text": schema("answers", item),
-    ]
-    if recall { body["tools"] = [Memory.tools[1]] }
-    for _ in 0..<4 {
-        body["input"] = input
-        let json = try await respondJSON(body, kind: "quiz")
-        let output = json["output"] as? [[String: Any]] ?? []
-        let calls = output.filter { $0["type"] as? String == "function_call" }
-        if calls.isEmpty {
-            let parts = output.flatMap { $0["content"] as? [[String: Any]] ?? [] }
-            let reply = parts.compactMap { $0["text"] as? String }.joined()
-            let items = ((try? JSONSerialization.jsonObject(with: Data(reply.utf8))) as? [String: Any])?["items"] as? [String] ?? []
-            return questions.indices.map { $0 < items.count ? items[$0] : "" }
-        }
-        for call in calls {
-            input.append(call)
-            let arguments = (try? JSONSerialization.jsonObject(with: Data((call["arguments"] as? String ?? "{}").utf8))) as? [String: Any]
-            let query = arguments?["query"] as? String ?? ""
-            recalls += 1
-            input.append(["type": "function_call_output", "call_id": call["call_id"] as? String ?? "",
-                          "output": Memory.recallText(memory.recall(query))])
-        }
-    }
-    return questions.map { _ in "" }
+func items(_ reply: String) -> [String] {
+    ((try? JSONSerialization.jsonObject(with: Data(reply.utf8))) as? [String: Any])?["items"] as? [String] ?? []
 }
+
+/// All questions at once, from the start-of-call memory only.
+func askFromMemory(_ questions: [Question], memory text: String) async throws -> [String] {
+    let reply = replyText(try await respond([
+        "model": quizModel, "store": false, "reasoning": ["effort": "low"],
+        "instructions": "You are Lobby, a voice assistant. Answer each question about the user from the memory below only, in a few words. If the memory doesn't say, answer \"don't know\".\n\n" + text,
+        "input": questions.enumerated().map { "\($0.offset + 1). \($0.element.q)" }.joined(separator: "\n"),
+        "text": schema("answers", ["type": "string"]),
+    ], kind: "quiz"))
+    let answers = items(reply)
+    return questions.indices.map { $0 < answers.count ? answers[$0] : "" }
+}
+
 var recalls = 0
 
-func askOne(_ question: String, memory text: String) async throws -> String {
+/// One question, as in a call: the memory plus the app's recall tool.
+func askWithRecall(_ question: String, memory text: String) async throws -> String {
     var input: [[String: Any]] = [["role": "user", "content": question]]
     let body: [String: Any] = [
-        "model": model, "store": false, "reasoning": ["effort": "low"], "tools": [Memory.tools[1]],
+        "model": quizModel, "store": false, "reasoning": ["effort": "low"], "tools": [Memory.tools[1]],
         "instructions": "You are Lobby, a voice assistant. Answer the user's question about themselves in a few words. " + Memory.delegationInstructions + " If you still can't find it, say you don't know.\n\n" + text,
     ]
     for _ in 0..<4 {
         var request = body
         request["input"] = input
-        let output = try await respondJSON(request, kind: "quiz")["output"] as? [[String: Any]] ?? []
+        let output = try await respond(request, kind: "quiz")["output"] as? [[String: Any]] ?? []
         let calls = output.filter { $0["type"] as? String == "function_call" }
         if calls.isEmpty {
             return output.flatMap { $0["content"] as? [[String: Any]] ?? [] }.compactMap { $0["text"] as? String }.joined()
@@ -168,12 +183,11 @@ func askOne(_ question: String, memory text: String) async throws -> String {
 func grade(_ questions: [Question], _ answers: [String]) async throws -> [String] {
     let item: [String: Any] = ["type": "string", "enum": ["right", "partly", "stale", "wrong", "missing"]]
     let input = questions.indices.map { "\($0 + 1). Q: \(questions[$0].q)\nExpected: \(questions[$0].expected)\nGot: \(answers[$0])" }
-    let text = try await respond([
-        "model": model, "store": false, "reasoning": ["effort": "low"],
+    return items(replyText(try await respond([
+        "model": gradeModel, "store": false, "reasoning": ["effort": "low"],
         "instructions": "Grade each answer against the expected one. right: gets the main fact the question asks for (extra detail in the expected answer, in parentheses or after a semicolon, is optional). partly: half of a two-part answer. stale: gives an answer that was true earlier but changed (the expected answer says what it changed from). wrong: otherwise incorrect. missing: says it doesn't know.",
         "input": input.joined(separator: "\n\n"), "text": schema("grades", item),
-    ], kind: "quiz")
-    return ((try? JSONSerialization.jsonObject(with: Data(text.utf8))) as? [String: Any])?["items"] as? [String] ?? []
+    ], kind: "quiz")))
 }
 
 // MARK: The run
@@ -182,13 +196,14 @@ var memory = Memory()
 var log: [String] = ["day\tcall\tsaved\tnotes\tsummaries\troots\tcover\tleft_out\tchars\tneed\tran\twritten"]
 var overnight = false
 var checkpoints = [30, 60, calls.last!.day]
-var report = "# Memory simulation: \(policy)\n\n"
+var report = "# Memory simulation: \(policy), \(legacy ? "first version" : "OptMem merges"), summaries by \(summaryModel) (\(summaryEffort))\n\n"
+var scores: [[String: Any]] = []
 
 func runJob() async throws -> Int {
     var written = 0
-    while written < 24, let next = memory.ready.first {
+    while written < 128, let next = memory.ready.first {
         let input = memory.summaryInput(level: next.level, index: next.index)
-        memory.setSummary(level: next.level, index: next.index, text: try await summarize(input))
+        guard let line = try await summarize(input), memory.setSummary(level: next.level, index: next.index, text: line) else { break }
         written += 1
     }
     return written
@@ -199,10 +214,11 @@ func quizAt(_ day: Int, final: Bool) async throws {
     let known = quiz.filter { $0.day <= day && (final || $0.kind != "update") }
     let text = memory.callText() ?? ""
     try text.write(to: out.appendingPathComponent("call-start-day\(day).txt"), atomically: true, encoding: .utf8)
-    let plain = try await ask(known, memory: text, recall: false)
+    let plain = try await askFromMemory(known, memory: text)
     let plainGrades = try await grade(known, plain)
     recalls = 0
-    let searched = try await ask(known, memory: text, recall: true)
+    var searched: [String] = []
+    for question in known { searched.append(try await askWithRecall(question.q, memory: text)) }
     let searchedGrades = try await grade(known, searched)
     let score = { (grades: [String]) in grades.filter { $0 == "right" }.count }
     report += "## Day \(day): \(score(plainGrades)) of \(known.count) right from memory alone, \(score(searchedGrades)) with recall (\(recalls) searches)\n\n"
@@ -210,9 +226,10 @@ func quizAt(_ day: Int, final: Bool) async throws {
     report += "| kind | question | memory alone | with recall |\n|---|---|---|---|\n"
     for index in known.indices {
         let a = index < plainGrades.count ? plainGrades[index] : "?", b = index < searchedGrades.count ? searchedGrades[index] : "?"
-        report += "| \(known[index].kind) | \(known[index].q) | \(plain[index]) (\(a)) | \(searched[index]) (\(b)) |\n"
+        report += "| \(known[index].kind) | \(known[index].q) | \(plain[index]) (\(a)) | \(searched[index].replacingOccurrences(of: "\n", with: " ")) (\(b)) |\n"
     }
     report += "\n"
+    scores.append(["day": day, "asked": known.count, "memory": score(plainGrades), "recall": score(searchedGrades), "searches": recalls])
     print("day \(day): \(score(plainGrades))/\(known.count) memory alone, \(score(searchedGrades)) with recall")
 }
 
@@ -251,12 +268,21 @@ for summary in memory.summaries.sorted(by: { ($0.level, $0.index) < ($1.level, $
     let span = Memory.span(level: summary.level, index: summary.index)
     tree += "L\(summary.level) #\(summary.index) notes \(span.lowerBound)-\(span.upperBound) (\(summary.text.utf8.count) bytes): \(summary.text)\n"
 }
-let cut = rawBytes.filter { $0 > Memory.noteBytes }.count
-report += "## Summary lengths\n\nAs written: \(rawBytes.sorted()) bytes; \(cut) of \(rawBytes.count) over \(Memory.noteBytes) and cut.\n\n"
-report += "## Cost\n\n\(empties) empty replies. \(requests["summary"]!) summaries, \(tokens["summary"]!) tokens; quiz \(tokens["quiz"]!) tokens.\n"
+let s = usage["summary"] ?? Usage()
+let over = firstTries.filter { $0 > Memory.noteBytes }.count
+report += "## Summaries\n\n\(s.requests) requests for \(memory.summaries.count) summaries: \(over) of \(firstTries.count) first tries over \(Memory.noteBytes) bytes, \(retries) retries, \(failures) still too long after \(Memory.summaryTries) tries, \(empties) empty replies.\n\n"
+report += "First tries, bytes: \(firstTries.sorted())\n\n"
+report += String(format: "Tokens: %d in (%d cached), %d out. Cost: $%.4f for %d notes, $%.4f per 100 notes.\n",
+                 s.input, s.cached, s.output, s.dollars, memory.notes.count, s.dollars / Double(max(1, memory.notes.count)) * 100)
 try log.joined(separator: "\n").write(to: out.appendingPathComponent("calls.tsv"), atomically: true, encoding: .utf8)
 try tree.write(to: out.appendingPathComponent("summaries.txt"), atomically: true, encoding: .utf8)
 try report.write(to: out.appendingPathComponent("report.md"), atomically: true, encoding: .utf8)
-let encoder = JSONEncoder()
-try encoder.encode(memory).write(to: out.appendingPathComponent("memory.json"))
-print("\(memory.notes.count) notes, \(memory.summaries.count) summaries; \(requests["summary"]!) summary requests, \(tokens["summary"]!) tokens")
+try JSONEncoder().encode(memory).write(to: out.appendingPathComponent("memory.json"))
+let result: [String: Any] = [
+    "model": summaryModel, "effort": summaryEffort, "legacy": legacy, "policy": policy,
+    "notes": memory.notes.count, "summaries": memory.summaries.count, "requests": s.requests,
+    "overFirstTry": over, "retries": retries, "failures": failures, "empties": empties,
+    "inputTokens": s.input, "outputTokens": s.output, "dollars": s.dollars, "scores": scores,
+]
+try JSONSerialization.data(withJSONObject: result, options: [.prettyPrinted, .sortedKeys]).write(to: out.appendingPathComponent("result.json"))
+print(String(format: "%@: %d summaries, %d requests, %d retries, %d failures, $%.4f", summaryModel, memory.summaries.count, s.requests, retries, failures, s.dollars))
