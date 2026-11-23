@@ -13,7 +13,7 @@ struct MemoryView: View {
         List {
             if notes.isEmpty {
                 ContentUnavailableView("Nothing remembered yet", systemImage: "brain",
-                                       description: Text("Ask Lobby to remember something, like “remember that Ella’s birthday is March 3”."))
+                                       description: Text("What Lobby learns in your calls will show up here."))
             } else {
                 Section {
                     ForEach(notes) { note in
