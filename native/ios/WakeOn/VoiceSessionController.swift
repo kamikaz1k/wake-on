@@ -866,6 +866,9 @@ final class VoiceSessionController: ObservableObject {
             let found = MemoryStore.shared.memory.recall(arguments["query"] as? String ?? "")
             result = Memory.recallText(found)
             action = ["kind": "recall", "found": found.count]
+        } else if name == Memory.zoomTool {
+            result = MemoryStore.shared.memory.zoom(arguments["id"] as? String ?? "")
+            action = ["kind": "zoom", "id": arguments["id"] as? String ?? ""]
         } else if name == ShowVisual.toolName {
             let title = arguments["title"] as? String ?? ""
             let html = arguments["html"] as? String ?? ""

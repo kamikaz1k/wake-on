@@ -300,7 +300,7 @@ struct Memory: Codable, Equatable {
         switch unit {
         case let .note(note): "[\(day.string(from: note.time))] \(note.text)"
         case let .summary(summary):
-            "[\(day.string(from: summary.from)) to \(day.string(from: summary.to)), summary] \(summary.text)"
+            "[\(day.string(from: summary.from)) to \(day.string(from: summary.to)), summary #\(id(summary))] \(summary.text)"
         }
     }
 
@@ -313,6 +313,22 @@ struct Memory: Codable, Equatable {
             + left + lines.map { "- " + Self.text($0) }.joined(separator: "\n")
     }
 
+    /// A summary's id for `zoom`, as OptMem prints it: its first and last note numbers.
+    static func id(_ summary: Summary) -> String {
+        let span = span(level: summary.level, index: summary.index)
+        return "\(span.lowerBound)-\(span.upperBound)"
+    }
+
+    /// OptMem's zoom: a summary opened into the lines it was written from (its two halves, down
+    /// to the notes), each with its own id.
+    func zoom(_ id: String) -> String {
+        let bounds = id.trimmingCharacters(in: CharacterSet(charactersIn: "# ")).split(separator: "-").compactMap { Int($0) }
+        guard bounds.count == 2, let summary = summaries.first(where: { Self.id($0) == "\(bounds[0])-\(bounds[1])" }) else {
+            return "No summary #\(id). Use the id of a summary line, such as #0-15."
+        }
+        return children(summary.level, summary.index).map(Self.text).joined(separator: "\n")
+    }
+
     static func recallText(_ notes: [Note]) -> String {
         notes.isEmpty ? "Nothing in memory matches."
             : notes.map { "[\(day.string(from: $0.time))] \($0.text)" }.joined(separator: "\n")
@@ -322,6 +338,7 @@ struct Memory: Codable, Equatable {
 
     static let rememberTool = "remember"
     static let recallTool = "recall"
+    static let zoomTool = "zoom"
 
     static let tools: [[String: Any]] = [
         [
@@ -355,6 +372,20 @@ struct Memory: Codable, Equatable {
                 "additionalProperties": false,
             ] as [String: Any],
         ],
+        [
+            "type": "function",
+            "name": zoomTool,
+            "description": "Open a summary line from what you remember into the two more detailed lines it was written from, down to the notes themselves.",
+            "strict": true,
+            "parameters": [
+                "type": "object",
+                "properties": [
+                    "id": ["type": "string", "description": "The summary's id, from \"summary #…\" in its line, e.g. \"0-15\"."],
+                ],
+                "required": ["id"],
+                "additionalProperties": false,
+            ] as [String: Any],
+        ],
     ]
 
     static let delegationInstructions = """
@@ -364,12 +395,15 @@ struct Memory: Codable, Equatable {
     later calls: people in their life, where they live, their preferences, plans and decisions. \
     Never for small talk or for what you looked up. Remembering is not saving to their notes: \
     a request to note something down or add to a list goes to their notes, if you can. When a \
-    question is about an earlier conversation and the answer isn't in what you remember, call recall.
+    question is about an earlier conversation and the answer isn't in what you remember, call recall. \
+    A summary line (summary #first-last) folds several notes into one; when it's too vague to \
+    answer, call zoom with its id to open it, down to the notes.
     """
 
     static let voiceInstructions = """
     Delegate requests to remember something, and questions about earlier conversations whose \
-    answer you don't know from what you remember. To forget something, the user deletes it in \
+    answer you don't know from what you remember; while memory is searched, say so, such as \
+    "Let me check my memory", so the user can stop you. To forget something, the user deletes it in \
     Pixie under Settings, Memory.
     """
 

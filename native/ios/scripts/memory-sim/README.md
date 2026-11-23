@@ -11,7 +11,7 @@ native/ios/scripts/memory-sim/run.sh <out-dir> [lobby|eager|never]
 
 - `lobby` is the app's policy, `eager` summarizes after every call that saved a note, and
   `never` writes no summaries.
-- Settings: `SUMMARY_MODEL` and `SUMMARY_EFFORT` (default: the app's), `QUIZ_MODEL` (default `gpt-5.6-terra`, the model calls use), `GRADE_MODEL` (default `gpt-6.1-terra`), `RAW_MAX` (blocks up to this many notes are summarized from the notes; default 16 as in OptMem, `RAW_MAX=2` for the earlier way), `COVER=fading` (OptMem's start-of-call rule, see below; default `even`), `BUDGET=12 SUMMARIZE_AT=8` (squeezes the memory as about 280 notes would at the app's 40 lines), and `LEGACY=1` (the first version: 8 notes per summary, long lines cut).
+- Settings: `SUMMARY_MODEL` and `SUMMARY_EFFORT` (default: the app's), `QUIZ_MODEL` (default `gpt-5.6-terra`, the model calls use), `GRADE_MODEL` (default `gpt-6.1-terra`), `DATA` (a folder with another `persona.txt` and `quiz.txt`), `START` (day 0's date), `CHECKPOINTS` (quiz days, e.g. `11,22,33`), `TOOLS` (`recall`, or `recall,zoom`), `RAW_MAX` (blocks up to this many notes are summarized from the notes; default 16 as in OptMem, `RAW_MAX=2` for the earlier way), `COVER=fading` (OptMem's start-of-call rule, see below; default `even`), `BUDGET=12 SUMMARIZE_AT=8` (squeezes the memory as about 280 notes would at the app's 40 lines), and `LEGACY=1` (the first version: 8 notes per summary, long lines cut).
 - `quiz.txt` has 35 questions; prices are in `main.swift`.
 - The key comes from `OPENAI_API_KEY`, else from `server/.env`. It is never printed.
 - Each run writes `report.md`, `calls.tsv` (one row per call), `summaries.txt`, the
@@ -94,3 +94,25 @@ alone out of 35 (sol medium):
 - At 40 lines, still 35/35 with both rules. Cost about 10% more ($0.08–0.11 per run).
 - Time to first reply (gpt-5.6-terra, low, 8 calls each, nothing cached): 40 full-length lines,
   3.9k tokens, 624 ms median; 96 lines (OptMem's default), 9.4k tokens, 768 ms. Kept at 40.
+
+**Round 6, a real history (2026-11-23).** The Wake On development thread itself (Oct 21 to Nov 23,
+383 exchanges): gpt-5.6-terra (low) took notes on each exchange with OptMem's note rule, seeing its
+last 40 notes so it skips repeats (414 notes, $2.61); sol wrote 61 questions from the notes (27
+detail, 17 changed later, 8 recent, 7 recurring, 2 early). The data stays out of the repo. Replayed at
+the app's real 40 lines, sol medium summaries, quiz on day 33, two runs each, out of 61:
+
+| rule | memory alone | with recall | with recall and zoom |
+|---|---|---|---|
+| even | 37, 34, 39, 38 | 38, 35 | **43, 42** |
+| fading | 29, 31, 27, 27 | 35, 31 | 34, 31 |
+
+By age, right answers from memory alone summed over the four runs (oldest third of the timeline,
+middle, newest): even 30, 48, 70 of 80, 80, 84; fading 13, 32, 69.
+
+- Fading didn't buy recency here: the newest third came out the same (70 against 69), because 40
+  lines already hold the newest notes word for word either way. It only lost the older two thirds,
+  recurring facts included (20 against 15 of 28).
+- Zoom helped with even (+6) and not with fading, whose old lines cover 32 to 64 notes: two levels
+  of zooming don't get back to a fact.
+- 414 notes made 393 summaries for $0.72 to $0.79 a run ($0.18 per 100 notes), with 51 to 82 retries
+  for length and 0 to 3 still too long.

@@ -157,7 +157,19 @@ final class MemoryTests: XCTestCase {
         XCTAssertTrue((responses["instructions"] as! String).contains("lives in Toronto"))
         XCTAssertTrue((responses["instructions"] as! String).contains("call remember"))
         let names = (responses["tools"] as! [[String: Any]]).compactMap { $0["name"] as? String }
-        XCTAssertTrue(names.contains("remember") && names.contains("recall"))
+        XCTAssertTrue(names.contains("remember") && names.contains("recall") && names.contains("zoom"))
+        XCTAssertTrue((session["instructions"] as! String).contains("Let me check my memory"))
+    }
+
+    func testZoomOpensASummaryDownToTheNotes() {
+        var memory = memory(8)
+        summarizeAll(&memory)
+        XCTAssertTrue(memory.callText(budget: 1)!.contains("summary #0-7] S3.0"))
+        XCTAssertEqual(memory.zoom("0-7").split(separator: "\n").map { $0.split(separator: "] ").last! }, ["S2.0", "S2.1"])
+        XCTAssertTrue(memory.zoom("#0-3").contains("summary #2-3] S1.1"))
+        XCTAssertEqual(memory.zoom("0-1").split(separator: "\n").count, 2)
+        XCTAssertTrue(memory.zoom("0-1").contains("] note 1"))
+        XCTAssertTrue(memory.zoom("3-9").hasPrefix("No summary"))
     }
 
     func testLongSummaryIsRefusedNotCut() {

@@ -10,11 +10,12 @@
 //
 // Environment: SUMMARY_MODEL, SUMMARY_EFFORT (default: the app's), QUIZ_MODEL (the call's
 // backend model), GRADE_MODEL, COVER (run.sh: even or fading), LEGACY=1 (the first version: one try, the line cut at 280 bytes;
-// run.sh also sets 8 notes per block for it).
+// run.sh also sets 8 notes per block for it), DATA (a folder with its own persona.txt and quiz.txt),
+// TOOLS (recall, or recall,zoom), START (day 0, e.g. 2026-10-21), CHECKPOINTS (quiz days, e.g. 10,20,33; the last asks everything).
 import Foundation
 
 let args = CommandLine.arguments
-let folder = URL(fileURLWithPath: args[1])
+let folder = URL(fileURLWithPath: ProcessInfo.processInfo.environment["DATA"] ?? args[1])
 let out = URL(fileURLWithPath: args[2])
 let policy = args.count > 3 ? args[3] : "lobby"
 let env = ProcessInfo.processInfo.environment
@@ -24,6 +25,9 @@ let summaryEffort = env["SUMMARY_EFFORT"] ?? Memory.summaryEffort
 let quizModel = env["QUIZ_MODEL"] ?? "gpt-5.6-terra"
 let gradeModel = env["GRADE_MODEL"] ?? "gpt-6.1-terra"
 let legacy = env["LEGACY"] == "1"
+/// Memory tools the quiz may use with recall: recall, or recall,zoom.
+let toolNames = (env["TOOLS"] ?? "recall").split(separator: ",").map(String.init)
+var zooms = 0
 try FileManager.default.createDirectory(at: out, withIntermediateDirectories: true)
 
 /// Dollars per million tokens: input, cached input, output (developers.openai.com/api/docs/pricing, Nov 22 2026).
@@ -51,7 +55,7 @@ let quiz: [Question] = try String(contentsOf: folder.appendingPathComponent("qui
         return Question(q: parts[0], expected: parts[1], day: Int(parts[2])!, kind: parts[3])
     }
 
-let start = ISO8601DateFormatter().date(from: "2026-08-01T18:00:00Z")!
+let start = ISO8601DateFormatter().date(from: (env["START"] ?? "2026-08-01") + "T18:00:00Z")!
 func date(_ day: Int) -> Date { start.addingTimeInterval(Double(day) * 86400) }
 
 // MARK: OpenAI
@@ -158,10 +162,10 @@ var recalls = 0
 func askWithRecall(_ question: String, memory text: String) async throws -> String {
     var input: [[String: Any]] = [["role": "user", "content": question]]
     let body: [String: Any] = [
-        "model": quizModel, "store": false, "reasoning": ["effort": "low"], "tools": [Memory.tools[1]],
+        "model": quizModel, "store": false, "reasoning": ["effort": "low"], "tools": Memory.tools.filter { toolNames.contains($0["name"] as? String ?? "") },
         "instructions": "You are Lobby, a voice assistant. Answer the user's question about themselves in a few words. " + Memory.delegationInstructions + " If you still can't find it, say you don't know.\n\n" + text,
     ]
-    for _ in 0..<4 {
+    for _ in 0..<6 {
         var request = body
         request["input"] = input
         let output = try await respond(request, kind: "quiz")["output"] as? [[String: Any]] ?? []
@@ -172,9 +176,15 @@ func askWithRecall(_ question: String, memory text: String) async throws -> Stri
         for call in calls {
             input.append(call)
             let arguments = (try? JSONSerialization.jsonObject(with: Data((call["arguments"] as? String ?? "{}").utf8))) as? [String: Any]
-            recalls += 1
-            input.append(["type": "function_call_output", "call_id": call["call_id"] as? String ?? "",
-                          "output": Memory.recallText(memory.recall(arguments?["query"] as? String ?? ""))])
+            let output: String
+            if call["name"] as? String == Memory.zoomTool {
+                zooms += 1
+                output = memory.zoom(arguments?["id"] as? String ?? "")
+            } else {
+                recalls += 1
+                output = Memory.recallText(memory.recall(arguments?["query"] as? String ?? ""))
+            }
+            input.append(["type": "function_call_output", "call_id": call["call_id"] as? String ?? "", "output": output])
         }
     }
     return ""
@@ -195,7 +205,7 @@ func grade(_ questions: [Question], _ answers: [String]) async throws -> [String
 var memory = Memory()
 var log: [String] = ["day\tcall\tsaved\tnotes\tsummaries\troots\tcover\tleft_out\tchars\tneed\tran\twritten"]
 var overnight = false
-var checkpoints = [30, 60, calls.last!.day]
+var checkpoints = env["CHECKPOINTS"].map { $0.split(separator: ",").compactMap { Int($0) } } ?? [30, 60, calls.last!.day]
 var report = "# Memory simulation: \(policy), \(legacy ? "first version" : "OptMem merges"), \(Memory.coverRule) cover, blocks up to \(Memory.rawMax) notes from the notes, summaries by \(summaryModel) (\(summaryEffort))\n\n"
 var scores: [[String: Any]] = []
 /// Every question's grades, and each checkpoint's lines (days since the oldest note, notes covered).
@@ -219,12 +229,12 @@ func quizAt(_ day: Int, final: Bool) async throws {
     try text.write(to: out.appendingPathComponent("call-start-day\(day).txt"), atomically: true, encoding: .utf8)
     let plain = try await askFromMemory(known, memory: text)
     let plainGrades = try await grade(known, plain)
-    recalls = 0
+    recalls = 0; zooms = 0
     var searched: [String] = []
     for question in known { searched.append(try await askWithRecall(question.q, memory: text)) }
     let searchedGrades = try await grade(known, searched)
     let score = { (grades: [String]) in grades.filter { $0 == "right" }.count }
-    report += "## Day \(day): \(score(plainGrades)) of \(known.count) right from memory alone, \(score(searchedGrades)) with recall (\(recalls) searches)\n\n"
+    report += "## Day \(day): \(score(plainGrades)) of \(known.count) right from memory alone, \(score(searchedGrades)) with \(toolNames.joined(separator: " and ")) (\(recalls) searches, \(zooms) zooms)\n\n"
     report += "\(memory.notes.count) notes, \(memory.summaries.count) summaries, \(memory.cover().count) lines at call start (\(text.count) characters).\n\n"
     report += "| kind | question | memory alone | with recall |\n|---|---|---|---|\n"
     for index in known.indices {
@@ -244,7 +254,7 @@ func quizAt(_ day: Int, final: Bool) async throws {
                                      Memory.span(level: summary.level, index: summary.index).count]
         }
     }])
-    scores.append(["day": day, "asked": known.count, "memory": score(plainGrades), "recall": score(searchedGrades), "searches": recalls])
+    scores.append(["day": day, "asked": known.count, "memory": score(plainGrades), "recall": score(searchedGrades), "searches": recalls, "zooms": zooms])
     print("day \(day): \(score(plainGrades))/\(known.count) memory alone, \(score(searchedGrades)) with recall")
 }
 
@@ -294,7 +304,7 @@ try tree.write(to: out.appendingPathComponent("summaries.txt"), atomically: true
 try report.write(to: out.appendingPathComponent("report.md"), atomically: true, encoding: .utf8)
 try JSONEncoder().encode(memory).write(to: out.appendingPathComponent("memory.json"))
 let result: [String: Any] = [
-    "model": summaryModel, "effort": summaryEffort, "legacy": legacy, "policy": policy, "cover": "\(Memory.coverRule)", "rawMax": Memory.rawMax,
+    "model": summaryModel, "effort": summaryEffort, "legacy": legacy, "policy": policy, "cover": "\(Memory.coverRule)", "tools": toolNames, "rawMax": Memory.rawMax,
     "notes": memory.notes.count, "summaries": memory.summaries.count, "requests": s.requests,
     "overFirstTry": over, "retries": retries, "failures": failures, "empties": empties,
     "inputTokens": s.input, "outputTokens": s.output, "dollars": s.dollars, "scores": scores, "grades": grades, "profiles": profiles,
