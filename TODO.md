@@ -118,6 +118,12 @@ results belong in `docs/`; this file tracks what remains.
   signed with the newest key in a response header, and the app replaces the saved code
   silently. Then `invite.sh keys retire` only affects friends who made no call since
   `keys new`. Revocation stays by name, so it still holds.
+- [ ] Call server: cap what a call can cost from the worker, not just the app. (1) Add
+  `session.idle_timeout_s` (5–60 s) to every forwarded call so quiet time bills at standby
+  ($0.02/min instead of $0.05); test the wake from standby on the phone first. (2) Attach
+  over the sideband (`wss://api.openai.com/v1/live/sessions/{id}/attach`, needs a Durable
+  Object) to count seconds and tokens exactly and `session.close` calls over a time cap; the
+  app's `/v1/usage` report can then go. GPT-Live documents no maximum session length.
 
 ## Completed foundations
 
