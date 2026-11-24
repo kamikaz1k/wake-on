@@ -39,8 +39,7 @@ call so Lobby knows them.
 The summaries are written by OpenAI from those notes, usually overnight while your iPhone
 charges, and only once there are enough notes to need them. With your own key this goes
 straight to OpenAI; with an invite code it goes through the Lobby server, which passes the
-notes on and keeps nothing but a count of summaries per invite per day, deleted after 3
-days.
+notes on without keeping them. It counts the summaries and the tokens they used (see below).
 
 You can see and delete notes in Settings › Memory. Deleting a chat also deletes what Lobby
 remembered from it, unless you choose to keep it.
@@ -51,7 +50,13 @@ If you use an invite code instead of your own OpenAI key, each call is set up th
 small server (run on Cloudflare) that adds the app's OpenAI key. The server receives the
 call's set-up request: your invite code, the call settings, and the network details needed
 to connect. It does not receive your audio or what is said in the call. It keeps a count of
-calls per invite per day, deleted after 3 days, to apply daily limits. Cloudflare may keep
+calls per invite per day, deleted after 3 days, to apply daily limits.
+
+When a call with an invite code ends, the app sends the server how much it used: the voice
+seconds OpenAI billed and the number of tokens Lobby's lookups used. Nothing else: no
+transcript, audio, notes, call time or device details. The server adds these up per invite
+per day (calls, voice seconds, tokens, and memory summaries with their tokens) to see what
+Lobby costs to run, and deletes each day's totals after 90 days. Cloudflare may keep
 standard request logs under its own privacy policy.
 
 If you use your own OpenAI key, calls go straight to OpenAI under your own account and the
