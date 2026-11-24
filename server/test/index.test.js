@@ -75,6 +75,7 @@ test("forwards a valid call with the real key and counts it", async () => {
   assert.equal(forwarded.transport.sdp, "v=0");
   assert.equal(t.usage.map.get(`count:${t.day}:alex`), "1");
   assert.equal(t.usage.map.get(`count:${t.day}:all`), "1");
+  assert.deepEqual(JSON.parse(t.usage.map.get(`stats:${t.day}:alex`)), { calls: 1 });
 });
 
 test("the invite code itself is never sent to OpenAI or stored", async () => {
@@ -216,7 +217,8 @@ function summaryRequest(lines, code) {
 const summaryUpstream = (sent, replies = [" One line. "]) => async (url, init) => {
   sent.push({ url, init });
   const text = replies[Math.min(sent.length - 1, replies.length - 1)];
-  return new Response(JSON.stringify({ output: [{ content: [{ type: "output_text", text }] }] }),
+  return new Response(JSON.stringify({ output: [{ content: [{ type: "output_text", text }] }],
+    usage: { input_tokens: 300, output_tokens: 40 } }),
     { status: 200, headers: { "Content-Type": "application/json" } });
 };
 
@@ -239,6 +241,8 @@ test("summarizes memory lines with the fixed prompt and model, and counts it", a
   assert.equal(sent[0].init.headers.Authorization, "Bearer sk-real");
   await Promise.all(pending);
   assert.equal(t.usage.map.get(`summaries:${t.day}:alex`), "1");
+  assert.deepEqual(JSON.parse(t.usage.map.get(`stats:${t.day}:alex`)),
+    { summaries: 1, summary_input_tokens: 300, summary_output_tokens: 40 });
 });
 
 test("summaries need a valid code, a few short lines, and stay under the daily limit", async () => {
@@ -269,4 +273,44 @@ test("a summary over 280 bytes is sent back as too long and written again, never
   const failed = await handle(summaryRequest(["a", "b"], t.code), t.env, summaryUpstream(stuck, [long]), { waitUntil: () => {} });
   assert.equal(failed.status, 502);
   assert.equal(stuck.length, 3);
+});
+
+const usageRequest = (body, code) => new Request("https://worker.example/v1/usage", {
+  method: "POST",
+  headers: code ? { Authorization: `Bearer ${code}` } : {},
+  body: JSON.stringify(body),
+});
+
+test("a call's reported seconds and tokens add up per person per day, kept 90 days", async () => {
+  const t = await setup();
+  const ttls = [];
+  const put = t.usage.put;
+  t.usage.put = (key, value, options) => { ttls.push(options && options.expirationTtl); return put(key, value); };
+  const report = { seconds: 63.3, input_tokens: 2400, cached_tokens: 2000, output_tokens: 160 };
+  for (let i = 0; i < 2; i++) {
+    const pending = [];
+    const response = await handle(usageRequest(report, t.code), t.env, t.upstream, { waitUntil: (p) => pending.push(p) });
+    assert.equal(response.status, 200);
+    await Promise.all(pending);
+  }
+  assert.deepEqual(JSON.parse(t.usage.map.get(`stats:${t.day}:alex`)),
+    { reports: 2, seconds: 126.6, input_tokens: 4800, cached_tokens: 4000, output_tokens: 320 });
+  assert.deepEqual(ttls, [90 * 24 * 3600, 90 * 24 * 3600]);
+  assert.equal(t.sent.length, 0);
+});
+
+test("usage reports need a valid code and numbers, and are capped", async () => {
+  const t = await setup();
+  assert.equal((await handle(usageRequest({ seconds: 1 }), t.env, t.upstream)).status, 401);
+  assert.equal((await handle(usageRequest({ seconds: 1 }, "alex-2-wrongwrongwr"), t.env, t.upstream)).status, 401);
+  const bad = { seconds: -1, input_tokens: 0, cached_tokens: 0, output_tokens: 0 };
+  assert.equal((await handle(usageRequest(bad, t.code), t.env, t.upstream)).status, 400);
+  assert.equal((await handle(usageRequest({ seconds: "x" }, t.code), t.env, t.upstream)).status, 400);
+  const pending = [];
+  const huge = { seconds: 1e9, input_tokens: 1e12, cached_tokens: 0, output_tokens: 0 };
+  assert.equal((await handle(usageRequest(huge, t.code), t.env, t.upstream, { waitUntil: (p) => pending.push(p) })).status, 200);
+  await Promise.all(pending);
+  const stats = JSON.parse(t.usage.map.get(`stats:${t.day}:alex`));
+  assert.equal(stats.seconds, 4 * 3600);
+  assert.equal(stats.input_tokens, 5_000_000);
 });

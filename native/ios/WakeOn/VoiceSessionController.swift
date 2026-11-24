@@ -35,6 +35,11 @@ final class VoiceSessionController: ObservableObject {
     /// The largest lookup request this call, measured by OpenAI (instructions, tools and
     /// transcript). The voice model itself only reports seconds.
     private var lookupInputTokens = 0
+    /// Everything the backend used this call, summed over its answers (sent to the Lobby
+    /// server at hang-up for calls with an invite code, see `UsageReport`).
+    private var lookupUsage = UsageReport.Tokens()
+    /// The call's invite code or key, for the usage report.
+    private var callCredential: String?
 
     /// `input_tokens` from a backend `response.completed` event.
     nonisolated static func inputTokens(_ json: [String: Any]) -> Int? {
@@ -243,6 +248,8 @@ final class VoiceSessionController: ObservableObject {
         self.resuming = resuming
         historyTokens = ChatTokens.estimate(history)
         lookupInputTokens = 0
+        lookupUsage = UsageReport.Tokens()
+        callCredential = nil
         pausedThread = nil
         stopReason = nil
         self.provider = provider
@@ -317,6 +324,7 @@ final class VoiceSessionController: ObservableObject {
             return
         }
         keySource = source.rawValue
+        callCredential = key
         Task { await self.connect(apiKey: key, provider: provider, permitted: permitted) }
     }
 
@@ -742,6 +750,9 @@ final class VoiceSessionController: ObservableObject {
             if nested == "response.completed", phase == .live { status = "Live · speak now" }
             if nested == "response.completed", let tokens = Self.inputTokens(json) {
                 lookupInputTokens = max(lookupInputTokens, tokens)
+            }
+            if nested == "response.completed", let tokens = UsageReport.Tokens(json) {
+                lookupUsage.add(tokens)
             }
         case "session.usage.updated":
             usageSeconds = (json["usage"] as? [String: Any])?["seconds"] as? Double
@@ -1333,6 +1344,10 @@ final class VoiceSessionController: ObservableObject {
         log("server_events " + serverEventCounts.sorted { $0.key < $1.key }.map { "\($0.key)=\($0.value)" }.joined(separator: " "))
         #endif
         let callMs = Double(DispatchTime.now().uptimeNanoseconds - callStarted) / 1e6
+        if let credential = callCredential, usageSeconds != nil || lookupUsage.input > 0 {
+            UsageReport.send(seconds: usageSeconds ?? 0, tokens: lookupUsage, credential: credential)
+        }
+        callCredential = nil
         log(String(format: "ended reason=%@ callMs=%.0f usageSeconds=%.1f", reason, callMs, usageSeconds ?? -1))
         phase = .idle
         timeline = pendingTimeline

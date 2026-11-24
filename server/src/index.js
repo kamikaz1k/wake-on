@@ -11,7 +11,8 @@
 //   INVITE_KEYS          secret, JSON {"<key id>": "<signing secret>"}: codes signed with a
 //                        listed key work; remove a key and its codes stop working
 //   REVOKED              secret, comma-separated names whose codes are turned off
-//   USAGE                KV namespace: daily counters only
+//   USAGE                KV namespace: daily counters, and per-person daily totals
+//                        (`stats:<day>:<name>`, kept 90 days; scripts/usage.mjs prints them)
 //   DAILY_CALLS          calls per code per UTC day (default 40)
 //   GLOBAL_DAILY_CALLS   calls per UTC day across everyone (default 300)
 //   ALLOWED_MODELS       comma-separated voice models (default gpt-live-1.1,gpt-live-1)
@@ -63,6 +64,9 @@ export async function handle(request, env, upstream, ctx = { waitUntil: () => {}
   }
   if (url.pathname === "/v1/memory/summarize" && request.method === "POST") {
     return summarize(request, env, upstream, ctx);
+  }
+  if (url.pathname === "/v1/usage" && request.method === "POST") {
+    return reportUsage(request, env, ctx);
   }
   if (url.pathname !== "/v1/live/sessions") return error(404, "not_found", "Unknown path.");
   if (request.method !== "POST") return error(405, "method_not_allowed", "Use POST.");
@@ -121,6 +125,7 @@ export async function handle(request, env, upstream, ctx = { waitUntil: () => {}
     ctx.waitUntil(Promise.all([
       env.USAGE.put(codeKey, String(codeCount + 1), ttl),
       env.USAGE.put(allKey, String(allCount + 1), ttl),
+      addStats(env, name, { calls: 1 }),
     ]));
   }
   const headers = new Headers({ "Content-Type": response.headers.get("Content-Type") || "application/json" });
@@ -157,6 +162,7 @@ async function summarize(request, env, upstream, ctx) {
   // A line over the limit is sent back with "too long" and written again (as OptMem does), never cut.
   const input = [{ role: "user", content: lines.join("\n") }];
   let text = "";
+  const tokens = { summaries: 1, summary_input_tokens: 0, summary_output_tokens: 0 };
   for (let attempt = 0; attempt < SUMMARY_TRIES; attempt++) {
     const response = await upstream(RESPONSES_URL, {
       method: "POST",
@@ -172,6 +178,8 @@ async function summarize(request, env, upstream, ctx) {
     });
     if (!response.ok) return error(502, "upstream", `OpenAI answered ${response.status}.`);
     const reply = await response.json();
+    tokens.summary_input_tokens += (reply.usage && reply.usage.input_tokens) || 0;
+    tokens.summary_output_tokens += (reply.usage && reply.usage.output_tokens) || 0;
     text = (reply.output || []).flatMap((item) => item.content || [])
       .filter((part) => part.type === "output_text").map((part) => part.text).join("").trim();
     if (!text) return error(502, "upstream", "OpenAI sent no text.");
@@ -181,8 +189,54 @@ async function summarize(request, env, upstream, ctx) {
     input.push({ role: "assistant", content: text },
       { role: "user", content: `Too long: ${bytes} bytes, limit ${SUMMARY_BYTES}. Accented characters cost 2 bytes. Compress it further.` });
   }
-  ctx.waitUntil(env.USAGE.put(key, String(used + 1), { expirationTtl: 3 * 24 * 3600 }));
+  ctx.waitUntil(Promise.all([
+    env.USAGE.put(key, String(used + 1), { expirationTtl: 3 * 24 * 3600 }),
+    addStats(env, check.name, tokens),
+  ]));
   return json(200, { text });
+}
+
+// The most one call can report; anything above is cut to this (a call is at most a few hours).
+const USAGE_LIMITS = { seconds: 4 * 3600, input_tokens: 5_000_000, cached_tokens: 5_000_000, output_tokens: 500_000 };
+
+/** The app's report at hang-up of what a call used: the voice model's billed seconds and the
+ * backend's tokens. Reported by the app, so a changed app could send less; the call limits
+ * don't depend on it. */
+async function reportUsage(request, env, ctx) {
+  const code = (request.headers.get("Authorization") || "").replace(/^Bearer\s+/i, "").trim();
+  if (!code) return error(401, "missing_code", PROBLEMS.invalid_code);
+  const check = await checkCode(code, env);
+  if (check.problem) return error(401, check.problem, PROBLEMS[check.problem]);
+  let body;
+  try {
+    body = await request.json();
+  } catch {
+    return error(400, "bad_json", "Request body isn't JSON.");
+  }
+  const add = { reports: 1 };
+  for (const [field, limit] of Object.entries(USAGE_LIMITS)) {
+    const value = Number(body && body[field]);
+    if (!Number.isFinite(value) || value < 0) return error(400, "not_allowed", `${field} must be a number of at least 0.`);
+    add[field] = Math.min(value, limit);
+  }
+  ctx.waitUntil(addStats(env, check.name, add));
+  return json(200, { ok: true });
+}
+
+/** Adds to a person's totals for today. Two writes at the same moment can lose one; fine for
+ * a rough count. */
+export async function addStats(env, name, add, day = new Date().toISOString().slice(0, 10)) {
+  const key = `stats:${day}:${name}`;
+  let stats = {};
+  try {
+    stats = JSON.parse((await env.USAGE.get(key)) || "{}");
+  } catch {
+    stats = {};
+  }
+  for (const [field, value] of Object.entries(add)) {
+    stats[field] = Math.round(((stats[field] || 0) + value) * 10) / 10;
+  }
+  await env.USAGE.put(key, JSON.stringify(stats), { expirationTtl: 90 * 24 * 3600 });
 }
 
 const PROBLEMS = {
