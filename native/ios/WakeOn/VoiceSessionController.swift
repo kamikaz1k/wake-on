@@ -124,8 +124,8 @@ final class VoiceSessionController: ObservableObject {
     private var lastActivity: Double?
     /// The longest a call runs, a fail-safe in case the hang-ups above never fire; Lobby is told
     /// `maxCallWarningSeconds` before so it can say so.
-    static let maxCallSeconds = 30.0 * 60
-    static let maxCallWarningSeconds = 60.0
+    nonisolated static let maxCallSeconds = 30.0 * 60
+    nonisolated static let maxCallWarningSeconds = 60.0
     private var liveSince: Double?
     private var maxCallWarned = false
     private var nudgedAt: Double?
