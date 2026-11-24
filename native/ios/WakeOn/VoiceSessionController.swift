@@ -120,7 +120,14 @@ final class VoiceSessionController: ObservableObject {
         let value = UserDefaults.standard.object(forKey: idleSecondsKey) as? Double ?? 10
         return max(0, value)
     }
+    /// Lobby talking or a lookup running (the user's words are `lastUserWordsAt`).
     private var lastActivity: Double?
+    /// The longest a call runs, a fail-safe in case the hang-ups above never fire; Lobby is told
+    /// `maxCallWarningSeconds` before so it can say so.
+    static let maxCallSeconds = 30.0 * 60
+    static let maxCallWarningSeconds = 60.0
+    private var liveSince: Double?
+    private var maxCallWarned = false
     private var nudgedAt: Double?
     /// Lobby has started speaking its check-in since the nudge.
     private var checkInSpoken = false
@@ -306,6 +313,8 @@ final class VoiceSessionController: ObservableObject {
         lastLobbyActive = nil
         lastUserWordsAt = nil
         lastActivity = nil
+        liveSince = nil
+        maxCallWarned = false
         nudgedAt = nil
         checkInSpoken = false
         browserStepsRunning = 0
@@ -1173,6 +1182,20 @@ final class VoiceSessionController: ObservableObject {
     /// Ends the call after a goodbye followed by silence; checks in, then ends, when idle.
     private func checkInactivity(at time: Double) {
         guard phase == .live, sessionStarted else { return }
+        if liveSince == nil { liveSince = time }
+        switch Self.maxLengthStep(elapsed: time - (liveSince ?? time), warned: maxCallWarned) {
+        case .warn:
+            maxCallWarned = true
+            log("max_length warning")
+            provider?.sendCommentary("This call ends automatically in about a minute (it has reached its "
+                + "\(Int(Self.maxCallSeconds / 60))-minute limit). Tell the user in one short sentence, "
+                + "and that they can call again.")
+        case .end:
+            log("ending at max length")
+            stop(reason: "max_length")
+            return
+        case .none: break
+        }
         // A lookup counts as activity, but never for more than 30 s.
         let lookingUp = lookingUpSince.map { time - $0 < 30 } ?? false
         if tracker.assistant.active || lastLobbyActive == nil { lastLobbyActive = time }
@@ -1186,14 +1209,14 @@ final class VoiceSessionController: ObservableObject {
             }
             return
         }
-        if tracker.microphone.active || tracker.assistant.active || lookingUp || lastActivity == nil {
-            // Mic sound only delays the hang-up; it can be echo or noise. Cancelling waits for
-            // words: the transcript (see the transcript events).
+        // Mic sound doesn't count: it can be noise, echo or a side conversation, which GPT-Live
+        // doesn't transcribe. Only the user's transcribed words, Lobby talking, or a lookup do.
+        if tracker.assistant.active || lookingUp || lastActivity == nil {
             lastActivity = time
             return
         }
         guard let last = lastActivity else { return }
-        let quiet = time - last
+        let quiet = Self.quietSeconds(now: time, lobbyOrLookup: last, userWords: lastUserWordsAt)
         let idle = Self.idleSeconds
         guard idle > 0, !goodbyeHeard else { return }
         if let nudged = nudgedAt {
@@ -1252,6 +1275,21 @@ final class VoiceSessionController: ObservableObject {
     }
     private var lastLobbyActive: Double?
     private var lastUserWordsAt: Double?
+
+    /// How long the call has been idle: since Lobby last talked or looked something up, or the
+    /// user last said words, whichever was later. Mic sound alone is not activity.
+    nonisolated static func quietSeconds(now: Double, lobbyOrLookup: Double, userWords: Double?) -> Double {
+        now - max(lobbyOrLookup, userWords ?? -.infinity)
+    }
+
+    enum MaxLengthStep: Equatable { case none, warn, end }
+
+    /// The fail-safe call limit: warn Lobby a minute before `maxCallSeconds`, then hang up.
+    nonisolated static func maxLengthStep(elapsed: Double, warned: Bool) -> MaxLengthStep {
+        if elapsed >= maxCallSeconds { return .end }
+        if !warned, elapsed >= maxCallSeconds - maxCallWarningSeconds { return .warn }
+        return .none
+    }
 
     /// True when an assistant line ends by asking "Anything else?" (or "anything more").
     nonisolated static func endsWithCheckIn(_ text: String) -> Bool {

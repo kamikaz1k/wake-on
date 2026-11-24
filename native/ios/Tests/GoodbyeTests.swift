@@ -37,4 +37,23 @@ final class GoodbyeTests: XCTestCase {
         XCTAssertFalse(VoiceSessionController.endsWithCheckIn("Anything else, just ask."))
         XCTAssertGreaterThan(VoiceSessionController.checkInSilenceSeconds, VoiceSessionController.endSilenceSeconds)
     }
+
+    func testIdleCountsWordsNotMicSound() {
+        // Lobby last talked at 10 s; mic sound alone never moves the clock.
+        XCTAssertEqual(VoiceSessionController.quietSeconds(now: 25, lobbyOrLookup: 10, userWords: nil), 15)
+        // The user's transcribed words at 20 s do.
+        XCTAssertEqual(VoiceSessionController.quietSeconds(now: 25, lobbyOrLookup: 10, userWords: 20), 5)
+        XCTAssertEqual(VoiceSessionController.quietSeconds(now: 25, lobbyOrLookup: 22, userWords: 20), 3)
+    }
+
+    func testCallsEndAtTheLimitAfterAWarning() {
+        let limit = VoiceSessionController.maxCallSeconds
+        let warning = VoiceSessionController.maxCallWarningSeconds
+        XCTAssertEqual(limit, 30 * 60)
+        XCTAssertEqual(VoiceSessionController.maxLengthStep(elapsed: limit - warning - 1, warned: false), .none)
+        XCTAssertEqual(VoiceSessionController.maxLengthStep(elapsed: limit - warning, warned: false), .warn)
+        XCTAssertEqual(VoiceSessionController.maxLengthStep(elapsed: limit - 1, warned: true), .none)
+        XCTAssertEqual(VoiceSessionController.maxLengthStep(elapsed: limit, warned: true), .end)
+        XCTAssertEqual(VoiceSessionController.maxLengthStep(elapsed: limit, warned: false), .end)
+    }
 }
