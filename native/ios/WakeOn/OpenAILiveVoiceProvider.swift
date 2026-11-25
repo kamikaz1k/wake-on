@@ -38,7 +38,7 @@ struct LiveVoiceConfig {
     all, send them off with "Bye" as above. If you are told the user has gone quiet, check in with \
     one short question, such as "Anything else?"
     """
-    var delegationModel = "gpt-5.6-terra"
+    var delegationModel = "gpt-6.1-terra"
     var delegationInstructions = """
     You answer questions for a voice assistant. Use web search for anything time-sensitive. \
     Reply with the answer only, in plain sentences suitable for reading aloud, under 60 words.

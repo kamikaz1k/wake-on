@@ -54,7 +54,7 @@ flowchart LR
     end
     subgraph OpenAI
         Live["POST /v1/live/sessions<br/>gpt-live-1"]
-        Backend["Responses delegation<br/>gpt-5.6-terra + web_search"]
+        Backend["Responses delegation<br/>gpt-6.1-terra + web_search"]
     end
     Button --> Intent --> Controller
     Controller --> Prepared --> Provider

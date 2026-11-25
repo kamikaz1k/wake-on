@@ -1,6 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { handle, sign } from "../src/index.js";
+import { readFileSync } from "node:fs";
+import { handle, sign, checkSession } from "../src/index.js";
 
 /** In-memory stand-in for a KV namespace. */
 function kv(entries = {}) {
@@ -54,7 +55,7 @@ const goodBody = () => ({
     model: "gpt-live-1.1",
     instructions: "You are Pixie.",
     audio: { output: { voice: "marin" } },
-    delegation: { type: "responses", responses: { model: "gpt-5.6-terra", tools: [{ type: "web_search" }] } },
+    delegation: { type: "responses", responses: { model: "gpt-6.1-terra", tools: [{ type: "web_search" }] } },
   },
   transport: { type: "webrtc", sdp: "v=0" },
 });
@@ -313,4 +314,17 @@ test("usage reports need a valid code and numbers, and are capped", async () => 
   const stats = JSON.parse(t.usage.map.get(`stats:${t.day}:alex`));
   assert.equal(stats.seconds, 4 * 3600);
   assert.equal(stats.input_tokens, 5_000_000);
+});
+
+test("the app's delegation model is allowed, and builds still on the older model keep working", () => {
+  const swift = readFileSync(new URL("../../native/ios/WakeOn/OpenAILiveVoiceProvider.swift", import.meta.url), "utf8");
+  const appModel = swift.match(/var delegationModel = "([^"]+)"/)[1];
+  const toml = readFileSync(new URL("../wrangler.toml", import.meta.url), "utf8");
+  const deployed = { ALLOWED_BACKEND_MODELS: toml.match(/^ALLOWED_BACKEND_MODELS = "([^"]+)"/m)[1] };
+  for (const model of [appModel, "gpt-5.6-terra"]) {
+    const body = goodBody();
+    body.session.delegation.responses.model = model;
+    assert.equal(checkSession(body, {}), null, `${model} with the default list`);
+    assert.equal(checkSession(body, deployed), null, `${model} with wrangler.toml`);
+  }
 });

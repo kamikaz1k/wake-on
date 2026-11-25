@@ -16,7 +16,7 @@
 //   DAILY_CALLS          calls per code per UTC day (default 40)
 //   GLOBAL_DAILY_CALLS   calls per UTC day across everyone (default 300)
 //   ALLOWED_MODELS       comma-separated voice models (default gpt-live-1.1,gpt-live-1)
-//   ALLOWED_BACKEND_MODELS comma-separated delegation models (default gpt-5.6-terra)
+//   ALLOWED_BACKEND_MODELS comma-separated delegation models (default gpt-6.1-terra,gpt-5.6-terra)
 //   DAILY_SUMMARIES      memory summaries per code per UTC day (default 200; about one per note)
 //
 // Invite codes are signed, so checking one needs no storage: `<name>-<key id>-<signature>`,
@@ -294,7 +294,7 @@ export function checkSession(body, env) {
   const delegation = session.delegation;
   if (delegation) {
     const backend = delegation.responses && delegation.responses.model;
-    const backends = list(env.ALLOWED_BACKEND_MODELS, "gpt-5.6-terra");
+    const backends = list(env.ALLOWED_BACKEND_MODELS, "gpt-6.1-terra,gpt-5.6-terra");
     if (delegation.type !== "responses" || !backends.includes(backend)) {
       return `Backend model ${backend} isn't allowed.`;
     }

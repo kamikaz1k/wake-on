@@ -8,7 +8,8 @@ workers_dev = true
 DAILY_CALLS = "40"
 GLOBAL_DAILY_CALLS = "300"
 ALLOWED_MODELS = "gpt-live-1.1,gpt-live-1"
-ALLOWED_BACKEND_MODELS = "gpt-5.6-terra"
+# The app's model first; the older one stays for builds installed before the switch.
+ALLOWED_BACKEND_MODELS = "gpt-6.1-terra,gpt-5.6-terra"
 
 [[kv_namespaces]]
 binding = "USAGE"

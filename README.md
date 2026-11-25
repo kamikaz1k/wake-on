@@ -13,7 +13,7 @@ testing without network usage.
 
 The main client is now a native iPhone app (`native/ios`). Press the Action Button or say
 **"Hey Pixie"** and you're talking to `gpt-live-1.1` over WebRTC. A second model
-(`gpt-5.6-terra`) does web search and the app's tools: Spotify, YouTube, media controls,
+(`gpt-6.1-terra`) does web search and the app's tools: Spotify, YouTube, media controls,
 volume, Google Maps, an in-app browser, visuals and Obsidian notes.
 
 <p>

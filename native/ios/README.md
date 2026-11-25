@@ -287,7 +287,7 @@ Raw measurements: [docs/measurements/2026-10-25-ios-voice](../../docs/measuremen
 
 **Talk to Pixie** starts a two-way voice conversation with OpenAI's `gpt-live-1`
 over WebRTC, straight from the phone. There is no relay server. Questions that
-need current information are delegated to `gpt-5.6-terra` with hosted web
+need current information are delegated to `gpt-6.1-terra` with hosted web
 search. This uses an **OpenAI API key** and is billed per use to that API
 account, not to a ChatGPT subscription. A WebRTC session bills at least
 15 seconds of audio.
