@@ -18,7 +18,8 @@ struct HomeView: View {
     @State private var openKeySetup = ProcessInfo.processInfo.arguments.contains("-key-setup")
     @State private var showSettings = ProcessInfo.processInfo.arguments.contains("-settings")
     /// The idle orb (the start button) and the call screen's orb are one view to SwiftUI, so
-    /// starting a chat moves and grows the orb into place.
+    /// starting a chat moves and grows the orb into place. Only the way up is animated: the phone
+    /// hung (watchdog kill) right as a call ended and the orb animated back down, 2026-11-24.
     @Namespace private var orbSpace
 
     private var visualizer: VoiceVisualizer {
@@ -35,7 +36,6 @@ struct HomeView: View {
                     idle
                 }
             }
-            .animation(.spring(duration: 0.55, bounce: 0.2), value: voice.phase == .idle)
             .navigationTitle("Pixie")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -72,7 +72,7 @@ struct HomeView: View {
                 // `-orb-tap-demo`: press the orb 2 s after launch, for recording the transition.
                 guard ProcessInfo.processInfo.arguments.contains("-orb-tap-demo") else { return }
                 try? await Task.sleep(for: .seconds(2))
-                voice.start(trigger: "in_app")
+                withAnimation(Self.orbFlight) { voice.start(trigger: "in_app") }
             }
             #endif
         }
@@ -143,13 +143,14 @@ struct HomeView: View {
             }
         }
         .padding(.horizontal).padding(.vertical, 10)
-        .background(.bar)
+        // The orb sits on the page's own background, not in a grey bar.
+        .background(Color(.systemBackground))
     }
 
     /// The start button: the call's orb at rest. Tapping it starts a chat, and the orb grows into
     /// the top of the call screen (iOS 18 and later; iOS 17 has no live chat view).
     private var orbButton: some View {
-        Button { voice.start(trigger: "in_app") } label: {
+        Button { withAnimation(Self.orbFlight) { voice.start(trigger: "in_app") } } label: {
             visualizer
                 .matchedGeometryEffect(id: "orb", in: orbSpace)
                 .frame(width: 150, height: 130)
@@ -159,6 +160,8 @@ struct HomeView: View {
         .accessibilityLabel("Start chat")
         .accessibilityIdentifier("simple-talk")
     }
+
+    static let orbFlight = Animation.spring(duration: 0.55, bounce: 0.2)
 
     private func bigButton(_ title: String, id: String, action: @escaping () -> Void) -> some View {
         Button(action: action) {
