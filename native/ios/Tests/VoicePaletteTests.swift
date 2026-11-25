@@ -35,6 +35,31 @@ final class VoicePaletteTests: XCTestCase {
         }
     }
 
+    /// Colors looked like an average of the two speakers: they dipped toward rest between
+    /// syllables and blended whenever both levels were up. Through a turn they must stay at the
+    /// speaker's full color (reported 2026-11-24).
+    @MainActor
+    func testColorsStayAtTheSpeakersFullColorThroughATurn() {
+        let signal = VoiceSignal.simulated()  // user 1.5–5 s, thinking, assistant 6.8–11.3 s
+        let palette = VoicePalette.sunset
+        let start = Date(timeIntervalSinceReferenceDate: 1_000_000)
+        var worstUser: Float = 0, worstAssistant: Float = 0
+        for i in 0...Int(11.2 * 60) {
+            let t = Double(i) / 60
+            let frame = signal.frame(at: start.addingTimeInterval(t))
+            if t > 2.2 && t < 5 {
+                worstUser = max(worstUser, simd_distance(palette.current(frame), palette.user))
+                worstUser = max(worstUser, simd_distance(palette.sky(frame), palette.user))
+            }
+            if t > 7.5 && t < 11.2 {
+                worstAssistant = max(worstAssistant, simd_distance(palette.current(frame), palette.assistant))
+                worstAssistant = max(worstAssistant, simd_distance(palette.sky(frame), palette.assistant))
+            }
+        }
+        XCTAssertLessThan(worstUser, 0.05)
+        XCTAssertLessThan(worstAssistant, 0.05)
+    }
+
     func testSkyOrbTakesTheSpeakersColorWhileTalking() {
         var frame = VoiceFrame()
         frame.level = 1

@@ -11,16 +11,20 @@ struct VoiceVisualizerGallery: View {
     @AppStorage(VoiceVisualizerSettings.styleKey) private var style: VoiceVisualizerStyle = .skyOrb
     @AppStorage(VoiceVisualizerSettings.paletteKey) private var paletteName = VoicePalette.default.name
     @StateObject private var player = SampleConversationPlayer()
+    /// Until the sample plays, the previews loop a made-up exchange (rest, user, thinking, Pixie)
+    /// so every style shows both speakers' colors.
+    @State private var demo = VoiceSignal.simulated()
     /// Start the sample conversation as soon as the screen opens.
     var autoplay = false
 
     private var palette: VoicePalette { VoicePalette.named(paletteName) }
+    private var signal: VoiceSignal { player.isPlaying ? player.signal : demo }
 
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 16) {
                 VStack(spacing: 0) {
-                    VoiceVisualizer(style: style, palette: palette, signal: player.signal)
+                    VoiceVisualizer(style: style, palette: palette, signal: signal)
                         .frame(height: 300)
                     Text(player.caption.isEmpty ? "Play the sample to hear a two-voice conversation." : player.caption)
                         .font(.callout)
@@ -58,7 +62,7 @@ struct VoiceVisualizerGallery: View {
                     ForEach(VoiceVisualizerStyle.allCases) { option in
                         Button { style = option } label: {
                             VStack(alignment: .leading, spacing: 4) {
-                                VoiceVisualizer(style: option, palette: palette, signal: player.signal)
+                                VoiceVisualizer(style: option, palette: palette, signal: signal)
                                     .frame(height: 130)
                                 Text(option.title).font(.subheadline.weight(.semibold)).foregroundStyle(.white)
                                 Text(option.summary).font(.caption).foregroundStyle(.gray).lineLimit(2)

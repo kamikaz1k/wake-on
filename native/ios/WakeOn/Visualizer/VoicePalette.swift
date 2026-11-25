@@ -34,9 +34,9 @@ struct VoicePalette: Hashable, Identifiable, Sendable {
 
     static func named(_ name: String) -> VoicePalette { presets.first { $0.name == name } ?? .default }
 
-    /// The color for this moment: the speaker's color while someone talks, idle otherwise.
+    /// The color for this moment: the speaker's full color for the whole turn, idle otherwise.
     func current(_ frame: VoiceFrame) -> SIMD3<Float> {
-        let speaking = min(1, frame.level * 3)
+        let speaking = max(min(1, frame.level * 3), frame.turn)
         let base = user + (assistant - user) * frame.mix
         return idle + (base - idle) * max(speaking, frame.thinking * 0.8)
     }
@@ -45,7 +45,7 @@ struct VoicePalette: Hashable, Identifiable, Sendable {
     /// toward idle, instead of the grey idle color, so the chosen palette shows when nobody is
     /// talking. (An average of both speakers washes out to grey for pairs like Aurora's.)
     func sky(_ frame: VoiceFrame) -> SIMD3<Float> {
-        let speaking = min(1, frame.level * 3)
+        let speaking = max(min(1, frame.level * 3), frame.turn)
         let base = user + (assistant - user) * frame.mix
         return skyRest + (base - skyRest) * max(speaking, frame.thinking * 0.8)
     }

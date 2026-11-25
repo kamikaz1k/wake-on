@@ -15,6 +15,9 @@ struct VoiceFrame: Sendable {
     var level: Float = 0
     /// Who is talking: 0 = user, 1 = assistant (eased, so colors cross-fade).
     var mix: Float = 0
+    /// 0…1 while someone is mid-turn. Holds through the gaps between words (0.8 s), so colors stay
+    /// at the speaker's full color for the whole turn instead of dipping toward rest.
+    var turn: Float = 0
     /// 0…1 while the assistant is expected to answer.
     var thinking: Float = 0
     /// A spring that follows `level` with overshoot: the "bounce".
@@ -114,6 +117,7 @@ final class VoiceSignal {
     private var speechStart: Double?
     private var lastVoice: Double = 0
     private var awaitingReplySince: Double?
+    private var lastSpoke: Double = -.infinity
 
     init(source: VoiceAudioSource?) {
         self.source = source
@@ -165,8 +169,14 @@ final class VoiceSignal {
         }
         f.level = max(f.userLevel, f.assistantLevel)
         let total = f.userLevel + f.assistantLevel
-        let targetMix = total > 0.05 ? f.assistantLevel / total : f.mix
+        // Decisive: whoever is clearly louder owns the color (a plain ratio blended the two colors
+        // whenever both were audible, e.g. the assistant's echo in the mic).
+        let targetMix = total > 0.05 ? min(1, max(0, 0.5 + (f.assistantLevel - f.userLevel) * 3)) : f.mix
         f.mix += (targetMix - f.mix) * Self.ease(7, dt)
+
+        if f.level > 0.1 { lastSpoke = now }
+        let inTurn: Float = now - lastSpoke < 0.8 ? 1 : 0
+        f.turn += (inTurn - f.turn) * Self.ease(inTurn > f.turn ? 14 : 3, dt)
 
         let thinking = thinkingOverride ?? inferThinking(now: now, user: f.userLevel, assistant: f.assistantLevel)
         f.thinking += ((thinking ? 1 : 0) - f.thinking) * Self.ease(5, dt)
