@@ -1,7 +1,7 @@
 import SwiftUI
 
 enum VoiceVisualizerStyle: String, CaseIterable, Identifiable, Sendable {
-    case skyOrb, waveOrb, pills, particleSphere, ringTunnel, saturn, terrain, torus, radialSpectrum
+    case skyOrb, waveOrb, bloomOrb, pills, particleSphere, ringTunnel, saturn, terrain, torus, radialSpectrum
 
     var id: String { rawValue }
 
@@ -9,6 +9,7 @@ enum VoiceVisualizerStyle: String, CaseIterable, Identifiable, Sendable {
         switch self {
         case .skyOrb: "Sky orb"
         case .waveOrb: "Wave orb"
+        case .bloomOrb: "Bloom orb"
         case .pills: "Bouncing pills"
         case .particleSphere: "Particle sphere"
         case .ringTunnel: "Ring tunnel"
@@ -23,6 +24,7 @@ enum VoiceVisualizerStyle: String, CaseIterable, Identifiable, Sendable {
         switch self {
         case .skyOrb: "Cloud sphere that scales with the voice"
         case .waveOrb: "Live spectrum as waves on a glass sphere"
+        case .bloomOrb: "Crimson flower that opens with the voice"
         case .pills: "Four bars, one per frequency range"
         case .particleSphere: "Each band of dots follows one frequency"
         case .ringTunnel: "Rings carry the recent waveform"
@@ -37,7 +39,7 @@ enum VoiceVisualizerStyle: String, CaseIterable, Identifiable, Sendable {
 /// An animated voice visualizer for a two-way conversation.
 ///
 /// `VoiceVisualizer()` is the sky orb driven by the live call audio. Pick another
-/// `style`, `palette` (not used by the sky orb), or `signal` (for example
+/// `style`, `palette` (not used by the sky or bloom orbs), or `signal` (for example
 /// `VoiceSignal.simulated()` in previews).
 struct VoiceVisualizer: View {
     var style: VoiceVisualizerStyle = .skyOrb
@@ -53,6 +55,7 @@ struct VoiceVisualizer: View {
                 switch style {
                 case .skyOrb: SkyOrbView(frame: frame)
                 case .waveOrb: WaveOrbView(frame: frame, palette: palette)
+                case .bloomOrb: BloomOrbView(frame: frame)
                 default:
                     Canvas { context, size in
                         VisualizerPainter(style: style, frame: frame, palette: palette, motion: motion)
@@ -85,6 +88,20 @@ private struct SkyOrbView: View {
             .fill(.black)
             .visualEffect { content, proxy in
                 content.colorEffect(ShaderLibrary.voiceSkyOrb(
+                    .float2(proxy.size), .float(f.time.truncatingRemainder(dividingBy: 3600)), .float(f.skyFlow),
+                    .float(f.level), .float(f.spring), .float(f.thinking), .float(f.mix)))
+            }
+    }
+}
+
+private struct BloomOrbView: View {
+    let frame: VoiceFrame
+    var body: some View {
+        let f = frame
+        Rectangle()
+            .fill(.black)
+            .visualEffect { content, proxy in
+                content.colorEffect(ShaderLibrary.voiceBloomOrb(
                     .float2(proxy.size), .float(f.time.truncatingRemainder(dividingBy: 3600)), .float(f.skyFlow),
                     .float(f.level), .float(f.spring), .float(f.thinking), .float(f.mix)))
             }
@@ -157,7 +174,7 @@ private struct VisualizerPainter {
         case .terrain: terrain(&ctx, size)
         case .torus: torus(&ctx, size)
         case .radialSpectrum: radial(&ctx, size, steps)
-        case .skyOrb, .waveOrb: break
+        case .skyOrb, .waveOrb, .bloomOrb: break
         }
     }
 

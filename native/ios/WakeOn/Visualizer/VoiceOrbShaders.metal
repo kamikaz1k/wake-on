@@ -178,3 +178,112 @@ using namespace voiceorb;
     col += current * think * 0.3 * exp(-pow((front.y - sin(t * 2.0)) * 6.0, 2.0));
     return half4(half3(col * mask + current * halo), half(mask + halo));
 }
+
+namespace voiceorb {
+
+float hash1(float n) { return fract(sin(n * 12.9898) * 43758.5453); }
+
+/// Which of `count` petals around the circle a point is in, and where across it (-0.5…0.5).
+float2 petalCell(float angle, float count) {
+    float a = angle * count / (2.0 * M_PI_F) + 0.5;
+    float id = fmod(floor(a) + count * 64.0, count);
+    return float2(id, fract(a) - 0.5);
+}
+
+/// Coverage of a pointed petal from `inner` to `len`; `width` is its share of the cell at the widest.
+float petalMask(float across, float r, float inner, float len, float width, float aa, thread float &along) {
+    along = (r - inner) / max(len - inner, 1e-3);
+    if (along <= 0.0 || along >= 1.0) { return 0.0; }
+    float half_ = width * 0.5 * pow(sin(M_PI_F * pow(along, 0.62)), 0.85);
+    float edge = aa / max(r, 0.05) * 0.5;
+    return smoothstep(half_ + edge, half_ - edge, abs(across));
+}
+
+} // namespace voiceorb
+
+/// A crimson bloom with a dark spiral seed head and pale rays behind it (inspired by the cover of
+/// Protest the Hero's Kezia). Petals open with the voice; the pale rays brighten for the user and
+/// the crimson for the assistant.
+[[ stitchable ]] half4 voiceBloomOrb(float2 position, half4 color, float2 size, float t, float flow,
+                                     float level, float spring, float think, float speakerMix) {
+    float2 p = centered(position, size);
+    float r = length(p);
+    float th = atan2(p.y, p.x);
+    float aa = 2.0 / min(size.x, size.y);
+    float open = 1.0 + spring * 0.16 + sin(t * 0.9) * 0.01;
+    float R = 0.66 * open;
+    float rs = 0.25 * (1.0 + spring * 0.05 + think * sin(t * 3.0) * 0.04);
+    float spin = flow * 0.05;
+    float user = (1.0 - speakerMix) * level, lobby = speakerMix * level;
+    float grain = 0.9 + 0.1 * hash1(dot(floor(position), float2(1.0, 157.0)));
+
+    float3 col = float3(0.0);
+    float alpha = 0.0;
+
+    // Pale rays behind the bloom (the white daisies).
+    {
+        const float N = 26.0;
+        float2 cell = petalCell(th - spin * 0.6 + 0.3, N);
+        float h = hash1(cell.x + 3.0);
+        float along;
+        float len = R * (1.07 + 0.13 * h) + user * 0.06;
+        float m = petalMask(cell.y, r, rs * 0.9, len, 0.62 + 0.25 * h, aa, along);
+        float streak = 0.78 + 0.22 * snoise(float3(cell.y * 12.0, r * 5.0, cell.x * 1.7));
+        float3 ray = mix(float3(0.55, 0.53, 0.53), float3(1.0, 0.98, 0.96), smoothstep(0.0, 0.6, along))
+                   * streak * (0.8 + user * 0.4);
+        col = mix(col, ray, m);
+        alpha = max(alpha, m);
+    }
+
+    // Two layers of crimson petals, the back one darker and offset by half a petal.
+    for (int layer = 0; layer < 2; layer++) {
+        const float N = 19.0;
+        float front = float(layer);
+        float sway = sin(t * 0.7 + front * 2.0) * 0.015;
+        float2 cell = petalCell(th - spin + front * (M_PI_F / N) + sway, N);
+        float h = hash1(cell.x * 7.0 + front * 31.0);
+        float len = R * (0.86 + 0.16 * h - front * 0.07) + lobby * 0.07;
+        float along = (r - rs * 0.8) / max(len - rs * 0.8, 1e-3);
+        float across = cell.y + (h - 0.5) * 0.35 * along * along; // a slight twist toward the tip
+        float m = petalMask(across, r, rs * 0.8, len, 0.92, aa, along);
+        if (m <= 0.0) { continue; }
+        float3 base = float3(0.16, 0.0, 0.02), midc = float3(0.70, 0.03, 0.08), tip = float3(0.95, 0.24, 0.27);
+        float3 pc = mix(base, midc, smoothstep(0.0, 0.35, along));
+        pc = mix(pc, tip, smoothstep(0.55, 1.0, along) * 0.8);
+        float w = max(0.46 * pow(sin(M_PI_F * pow(along, 0.62)), 0.85), 1e-3);
+        float e = abs(across) / w;                                // 0 at the vein, 1 at the edge
+        pc *= 1.0 - 0.45 * exp(-e * e * 60.0);                     // dark central vein
+        pc = mix(pc, float3(1.0, 0.82, 0.82), smoothstep(0.78, 1.0, e) * 0.45 * along); // pale rim
+        pc *= 0.72 + 0.28 * snoise(float3(across * 16.0, r * 5.0, cell.x * 2.3 + front * 11.0))
+             * (0.85 + 0.15 * snoise(float3(across * 40.0, r * 60.0, cell.x)));
+        pc *= mix(0.5, 1.0, front) * (0.85 + lobby * 0.6);
+        col = mix(col, pc, m);
+        alpha = max(alpha, m);
+    }
+
+    // Shadow the petals where they meet the seed head.
+    col *= smoothstep(rs * 0.95, rs * 1.35, r) * 0.6 + 0.4;
+
+    // Seed head: florets on the two Fibonacci spirals (21 one way, 34 the other).
+    float seed = smoothstep(rs + aa, rs - aa, r);
+    if (seed > 0.0) {
+        float a = th + flow * 0.03;
+        float lr = log(max(r, 1e-3));
+        const float k = 26.72; // sqrt(21 × 34): keeps the florets square
+        float u = 21.0 * a + k * lr, v = 34.0 * a - k * lr;
+        float bump = (cos(u) * 0.5 + 0.5) * (cos(v) * 0.5 + 0.5);
+        float floret = smoothstep(0.22, 0.75, bump) * (0.55 + 0.45 * snoise(float3(p * 18.0, 1.0)));
+        float x = r / rs;
+        float ripple = exp(-pow(x - fract(t * 0.45), 2.0) * 30.0) * (level * 1.2 + think * 0.6);
+        float3 sc = mix(float3(0.03, 0.005, 0.01), float3(0.40, 0.05, 0.07) * (0.8 + ripple), floret);
+        sc += float3(0.9, 0.35, 0.3) * pow(floret, 6.0) * (0.12 + ripple * 0.5) * smoothstep(0.1, 0.9, x);
+        sc *= smoothstep(1.05, 0.55, x) * 0.5 + 0.5;               // darker toward the rim
+        col = mix(col, sc, seed);
+        alpha = max(alpha, seed);
+    }
+
+    col *= grain;
+    float halo = exp(-max(r - R * 0.7, 0.0) * 5.0) * (0.05 + level * 0.22) * (1.0 - alpha);
+    float3 haloColor = mix(float3(0.75, 0.72, 0.72), float3(0.75, 0.03, 0.08), speakerMix);
+    return half4(half3(col * alpha + haloColor * halo), half(alpha + halo));
+}
