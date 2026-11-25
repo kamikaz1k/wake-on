@@ -577,6 +577,17 @@
 				</array>
 			</dict>
 		</dict>
+		<key>28C20FC22D1D985879833384</key>
+		<dict>
+			<key>isa</key>
+			<string>PBXFileReference</string>
+			<key>lastKnownFileType</key>
+			<string>sourcecode.swift</string>
+			<key>path</key>
+			<string>Tests/VoicePaletteTests.swift</string>
+			<key>sourceTree</key>
+			<string>&lt;group&gt;</string>
+		</dict>
 		<key>2A360B901BD7C9951074CD18</key>
 		<dict>
 			<key>fileRef</key>
@@ -1472,6 +1483,13 @@
 			<key>sourceTree</key>
 			<string>&lt;group&gt;</string>
 		</dict>
+		<key>6194BC79FB28EAF013AEBE1E</key>
+		<dict>
+			<key>fileRef</key>
+			<string>28C20FC22D1D985879833384</string>
+			<key>isa</key>
+			<string>PBXBuildFile</string>
+		</dict>
 		<key>61AF5D6BEA2D148C6F2833BF</key>
 		<dict>
 			<key>buildConfigurations</key>
@@ -1683,6 +1701,7 @@
 				<string>63CDF3A8F36B21C7BD7B9408</string>
 				<string>D20988A742E8A10B39F7CB23</string>
 				<string>5D951E7614C0C6E073261858</string>
+				<string>6194BC79FB28EAF013AEBE1E</string>
 				<string>0F3BF8A23D1FDE6611CE4A9A</string>
 				<string>90753FC2075A845797E6B92C</string>
 				<string>06EC84C75A1861F3AB6AD29C</string>
@@ -3410,6 +3429,7 @@
 				<string>2FB39F71DAD294447B28A350</string>
 				<string>D9C92472F248312173947DD4</string>
 				<string>52D89FA008323E37BA1BDF3D</string>
+				<string>28C20FC22D1D985879833384</string>
 				<string>4F39308818B726E435B8F2A1</string>
 				<string>2E545DB2B33544DCA737631F</string>
 				<string>579F4EE51E22157FC1503151</string>

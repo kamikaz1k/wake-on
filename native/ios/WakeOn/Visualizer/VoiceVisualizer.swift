@@ -84,7 +84,7 @@ private struct SkyOrbView: View {
     let frame: VoiceFrame
     let palette: VoicePalette
     var body: some View {
-        let f = frame, sky = palette.current(frame)
+        let f = frame, sky = palette.sky(frame)
         Rectangle()
             .fill(.black)
             .visualEffect { content, proxy in

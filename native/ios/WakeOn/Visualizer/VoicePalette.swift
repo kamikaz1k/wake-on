@@ -36,6 +36,17 @@ struct VoicePalette: Hashable, Identifiable, Sendable {
         return idle + (base - idle) * max(speaking, frame.thinking * 0.8)
     }
 
+    /// The sky orb's color: like `current`, but at rest it shows Pixie's color, softened toward idle,
+    /// instead of the grey idle color, so the chosen palette shows when nobody is talking. (An
+    /// average of both speakers washes out to grey for complementary pairs like Aurora's.)
+    func sky(_ frame: VoiceFrame) -> SIMD3<Float> {
+        let speaking = min(1, frame.level * 3)
+        let base = user + (assistant - user) * frame.mix
+        return skyRest + (base - skyRest) * max(speaking, frame.thinking * 0.8)
+    }
+
+    var skyRest: SIMD3<Float> { idle + (assistant - idle) * 0.75 }
+
     static func color(_ c: SIMD3<Float>, opacity: Double = 1) -> Color {
         Color(.sRGB, red: Double(c.x), green: Double(c.y), blue: Double(c.z), opacity: opacity)
     }
