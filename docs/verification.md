@@ -105,6 +105,7 @@ When a check is redone, add a new row rather than editing the old one.
 
 | Since | What | Why not |
 | --- | --- | --- |
+| 2026-11-24 | CPU and energy of the always-animating orb on the home screen, in an optimized (Release) build | Follow-up for later. Only measured on the simulator in Debug (16–18% CPU), which overstates it; possible cuts: no spectrum work when not in a call, 30 fps at rest, no per-frame buffer copies |
 | 2026-11-24 | Ending a call on the phone with the orb start button doesn't hang | Phone hang not reproduced on the simulator; fix inferred from the crash report |
 | 2026-11-22 | Memory summaries on the phone: the overnight BGProcessingTask firing, the after-call run past 40 lines | The background task can't be forced from the CLI; in the simulation the after-call run was never needed |
 | 2026-11-22 | Lobby noting lasting facts unasked (not just "remember that…") | Only a direct request was tried |

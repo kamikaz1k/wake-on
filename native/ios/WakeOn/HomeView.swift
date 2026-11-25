@@ -130,7 +130,8 @@ struct HomeView: View {
                 bigButton("Add Invite Code or Key", id: "simple-add-key") { openKeySetup = true }
             case .idle:
                 orbButton
-                Text("Tap the orb, or press the Action Button. Say “bye” to hang up.")
+                Text("Tap the orb, or press the Action Button.\nSay “bye” to hang up.")
+                    .multilineTextAlignment(.center)
                     .font(.footnote).foregroundStyle(.secondary)
             case .connecting, .live, .ending:
                 // iOS 17 has no live chat view: plain call controls.
