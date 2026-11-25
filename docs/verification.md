@@ -13,6 +13,7 @@ When a check is redone, add a new row rather than editing the old one.
 
 | Date | SHA | Check | How | Where | Result | Files |
 | --- | --- | --- | --- | --- | --- | --- |
+| 2026-11-24 | 45b8ea7 | Ending a call no longer hangs the app; no grey box behind the orb | App suite (171); simulator recording with `-orb-tap-demo` (fake key) and the phone's real chat logs | sim (iPhone 17, iOS 26) | Orb still flies up; bar is plain. The phone hang (watchdog 0x8BADF00D after End) was NOT reproduced on the simulator, so the fix is unproven until you end a few calls on the phone | `native/ios/WakeOn/HomeView.swift` |
 | 2026-11-24 | ad4453d | Orb replaces Start chat; tapping it flies the orb up into the call screen | App suite (171); simulator recording with `-orb-tap-demo` and a fake test key, frames every 80–100 ms | sim (iPhone 17, iOS 26) | Pass: the orb rises into the top panel in about 0.4 s and the panel fades in. With the mic prompt showing for the first time, the animation stalled about 1 s mid-way. A real call wasn't connected (fake key). Not seen on the phone | `native/ios/WakeOn/HomeView.swift` |
 | 2026-11-24 | 6b01ceb | Visualizers show each speaker's full color through a turn; gallery demo alternates both | `VoicePaletteTests` (fails before: 0.48 off the speaker color; passes after) + app suite (171); 28 simulator frames, Sunset, demo loop and sample | sim (iPhone 17, iOS 26) | Pass: frames alternate full amber (user) and full pink (Pixie), with a muted rest at the start of the loop | `native/ios/WakeOn/Visualizer/VoiceSignal.swift`, `native/ios/WakeOn/Visualizer/VoicePalette.swift`, `native/ios/WakeOn/Visualizer/VoiceVisualizerGallery.swift` |
 | 2026-11-24 | decb693 | Sky orb rests at each palette's own color; Meadow (green) added | `VoicePaletteTests` + app suite (170); simulator screenshots of the gallery at rest in all seven palettes | sim (iOS 26) | Pass: Daylight blue, Mint and lavender mint, Meadow green, Ocean cyan, Sunset pink, Aurora purple, Mono grey, all distinct | `native/ios/WakeOn/Visualizer/VoicePalette.swift` |
@@ -104,6 +105,7 @@ When a check is redone, add a new row rather than editing the old one.
 
 | Since | What | Why not |
 | --- | --- | --- |
+| 2026-11-24 | Ending a call on the phone with the orb start button doesn't hang | Phone hang not reproduced on the simulator; fix inferred from the crash report |
 | 2026-11-22 | Memory summaries on the phone: the overnight BGProcessingTask firing, the after-call run past 40 lines | The background task can't be forced from the CLI; in the simulation the after-call run was never needed |
 | 2026-11-22 | Lobby noting lasting facts unasked (not just "remember that…") | Only a direct request was tried |
 | 2026-11-12 | How the live call screen looks and scrolls in a real call; a Hey Lobby call | Waiting on your verdict; only an Action Button call so far |
