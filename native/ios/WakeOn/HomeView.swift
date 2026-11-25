@@ -17,17 +17,25 @@ struct HomeView: View {
     /// invite link (screenshot launch argument: -key-setup).
     @State private var openKeySetup = ProcessInfo.processInfo.arguments.contains("-key-setup")
     @State private var showSettings = ProcessInfo.processInfo.arguments.contains("-settings")
+    /// The idle orb (the start button) and the call screen's orb are one view to SwiftUI, so
+    /// starting a chat moves and grows the orb into place.
+    @Namespace private var orbSpace
+
+    private var visualizer: VoiceVisualizer {
+        VoiceVisualizer(style: visualizerStyle, palette: .named(visualizerPalette))
+    }
 
     var body: some View {
         NavigationStack {
             Group {
                 if #available(iOS 18.0, *), voice.phase != .idle, let chat = voice.liveChat {
-                    LiveCallScreen(voice: voice, transcript: chat.transcript,
-                                   visualizer: VoiceVisualizer(style: visualizerStyle, palette: .named(visualizerPalette)))
+                    LiveCallScreen(voice: voice, transcript: chat.transcript, visualizer: visualizer,
+                                   orbSpace: orbSpace)
                 } else {
                     idle
                 }
             }
+            .animation(.spring(duration: 0.55, bounce: 0.2), value: voice.phase == .idle)
             .navigationTitle("Pixie")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -59,6 +67,14 @@ struct HomeView: View {
                 }
             }
             .onChange(of: invite.code) { _, code in if code != nil { openKeySetup = true } }
+            #if DEBUG
+            .task {
+                // `-orb-tap-demo`: press the orb 2 s after launch, for recording the transition.
+                guard ProcessInfo.processInfo.arguments.contains("-orb-tap-demo") else { return }
+                try? await Task.sleep(for: .seconds(2))
+                voice.start(trigger: "in_app")
+            }
+            #endif
         }
     }
 
@@ -113,8 +129,8 @@ struct HomeView: View {
                 // Nothing to call with yet: the main button sets that up instead.
                 bigButton("Add Invite Code or Key", id: "simple-add-key") { openKeySetup = true }
             case .idle:
-                bigButton("Start chat", id: "simple-talk") { voice.start(trigger: "in_app") }
-                Text("Or press the Action Button. Say “bye” to hang up.")
+                orbButton
+                Text("Tap the orb, or press the Action Button. Say “bye” to hang up.")
                     .font(.footnote).foregroundStyle(.secondary)
             case .connecting, .live, .ending:
                 // iOS 17 has no live chat view: plain call controls.
@@ -128,6 +144,20 @@ struct HomeView: View {
         }
         .padding(.horizontal).padding(.vertical, 10)
         .background(.bar)
+    }
+
+    /// The start button: the call's orb at rest. Tapping it starts a chat, and the orb grows into
+    /// the top of the call screen (iOS 18 and later; iOS 17 has no live chat view).
+    private var orbButton: some View {
+        Button { voice.start(trigger: "in_app") } label: {
+            visualizer
+                .matchedGeometryEffect(id: "orb", in: orbSpace)
+                .frame(width: 150, height: 130)
+                .contentShape(Circle().inset(by: 25))
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("Start chat")
+        .accessibilityIdentifier("simple-talk")
     }
 
     private func bigButton(_ title: String, id: String, action: @escaping () -> Void) -> some View {
@@ -258,20 +288,32 @@ struct LiveCallScreen: View {
     @ObservedObject var voice: VoiceSessionController
     @ObservedObject var transcript: ChatTranscript
     let visualizer: VoiceVisualizer
+    var orbSpace: Namespace.ID?
+    /// The black panel fades in while the orb flies up from the start button.
+    @State private var panelShown = false
 
     var body: some View {
         VStack(spacing: 0) {
-            visualizer
+            orb
                 .frame(height: 180)
                 .frame(maxWidth: .infinity)
-                .background(Color.black, in: RoundedRectangle(cornerRadius: 20))
+                .background(Color.black.opacity(panelShown ? 1 : 0), in: RoundedRectangle(cornerRadius: 20))
                 .padding(.horizontal)
+                .onAppear { withAnimation(.easeOut(duration: 0.4)) { panelShown = true } }
             ChatTranscriptView(items: transcript.items, call: transcript.call, showsHeader: false)
                 .accessibilityIdentifier("live-chat")
             ChatLengthWarning(tokens: voice.threadTokens)
             controls
         }
         .navigationBarTitleDisplayMode(.inline)
+    }
+
+    @ViewBuilder private var orb: some View {
+        if let orbSpace {
+            visualizer.matchedGeometryEffect(id: "orb", in: orbSpace)
+        } else {
+            visualizer
+        }
     }
 
     private var controls: some View {
