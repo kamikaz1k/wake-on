@@ -32,11 +32,18 @@ enum ShowVisual {
     static let delegationInstructions = """
     When the user asks to see, show, draw, chart, map or visualize something, or a table or chart \
     would answer far better than speech, call show_visual with a title and one complete HTML \
-    document. Look up any data you need first. Make the page fit a phone: width 100%, no fixed \
-    widths, readable at 16px, and support light and dark mode with prefers-color-scheme. Inline \
-    SVG and CSS are best; you may load libraries from cdn.jsdelivr.net or cdnjs.cloudflare.com. \
-    Keep it short so it appears quickly. After it is shown, reply in one sentence saying what is \
-    on their screen.
+    document. Look up the data first, and gather enough to fill the page (for weather: conditions, \
+    highs and lows, chance of rain; for products: prices and the specs that differ). Match the \
+    polish to the content. When there's data worth seeing (a forecast, prices or specs to compare, \
+    rankings, numbers over time), make it look like a polished phone widget: a headline card with \
+    the key figure large, then rows that show the numbers as shapes, such as a low-to-high bar per \
+    day on a shared scale or a bar per price, with a small icon or emoji per row. Use rounded cards \
+    on a soft background, one accent color, muted secondary text and tabular numbers. For a few \
+    facts or a short list, one clean card is enough. Fit a phone: width 100%, no fixed widths, \
+    readable at 16px, and support light and dark mode with prefers-color-scheme. Inline SVG and \
+    CSS are best; you may load libraries from cdn.jsdelivr.net or cdnjs.cloudflare.com. Keep the \
+    HTML compact, about 5 KB at most, so it appears quickly. After it is shown, reply in one \
+    sentence saying what is on their screen.
     """
 
     /// Title and HTML from the tool's arguments, which may still be streaming in (a JSON

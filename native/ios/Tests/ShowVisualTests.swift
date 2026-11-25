@@ -63,4 +63,15 @@ final class ShowVisualTests: XCTestCase {
         let offTools = ((off.requestBody(sdp: "")["session"] as? [String: Any])?["delegation"] as? [String: Any])?["responses"] as? [String: Any]
         XCTAssertFalse((offTools?["tools"] as? [[String: Any]] ?? []).contains { $0["name"] as? String == "show_visual" })
     }
+
+    /// A bare brief got plain tables from real calls (Toronto's week as a text table, 2026-11-25).
+    /// Rich data should get the widget treatment, short answers a plain card, and the size cap stays.
+    func testBriefAsksForPolishOnRichDataAndStaysCompact() {
+        let brief = ShowVisual.delegationInstructions
+        XCTAssertTrue(brief.contains("Match the polish to the content"))
+        XCTAssertTrue(brief.contains("low-to-high bar per day"))
+        XCTAssertTrue(brief.contains("one clean card is enough"))
+        XCTAssertTrue(brief.contains("about 5 KB at most"))
+        XCTAssertTrue(brief.contains("prefers-color-scheme"))
+    }
 }
