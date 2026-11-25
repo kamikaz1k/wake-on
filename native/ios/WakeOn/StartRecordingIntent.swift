@@ -20,12 +20,12 @@ struct StartRecordingIntent: AppIntent {
 
 struct WakeShortcuts: AppShortcutsProvider {
     static var appShortcuts: [AppShortcut] {
-        AppShortcut(intent: TalkIntent(), phrases: ["Talk to Lobby with \(.applicationName)"],
-                    shortTitle: "Talk to Lobby", systemImageName: "waveform")
-        AppShortcut(intent: FastTalkIntent(), phrases: ["Fast talk to Lobby with \(.applicationName)"],
-                    shortTitle: "Talk to Lobby (fast start)", systemImageName: "bolt.fill")
-        AppShortcut(intent: EndTalkIntent(), phrases: ["End the Lobby call in \(.applicationName)"],
-                    shortTitle: "End Lobby call", systemImageName: "phone.down.fill")
+        AppShortcut(intent: TalkIntent(), phrases: ["Talk to \(.applicationName)"],
+                    shortTitle: "Talk to Pixie", systemImageName: "waveform")
+        AppShortcut(intent: FastTalkIntent(), phrases: ["Fast talk to \(.applicationName)"],
+                    shortTitle: "Talk to Pixie (fast start)", systemImageName: "bolt.fill")
+        AppShortcut(intent: EndTalkIntent(), phrases: ["End the \(.applicationName) call"],
+                    shortTitle: "End Pixie call", systemImageName: "phone.down.fill")
         AppShortcut(intent: StartRecordingIntent(), phrases: ["Start recording with \(.applicationName)"],
                     shortTitle: "Start recording", systemImageName: "mic.fill")
     }

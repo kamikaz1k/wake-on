@@ -79,10 +79,10 @@ final class LabPlayer: ChatTranscript {
     private var extraTasks: [Task<Void, Never>] = []
     private var turnCount = 0
 
-    /// Adds a spoken turn from you plus a streamed Lobby reply right now, on top of whatever
+    /// Adds a spoken turn from you plus a streamed Pixie reply right now, on top of whatever
     /// is playing, so you can position the view first and then see how a library reacts.
     func newTurn() {
-        // Talking over Lobby interrupts it (B3): cut off any reply that is still streaming.
+        // Talking over Pixie interrupts it (B3): cut off any reply that is still streaming.
         for index in items.indices {
             if case let .message(.lobby, text, .streaming) = items[index].kind {
                 items[index].kind = .message(.lobby, text: text, state: .cutOff)

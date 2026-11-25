@@ -54,7 +54,7 @@ final class ChatLogStoreTests: XCTestCase {
     func testTitleAndSource() {
         let lobbyOnly = ChatLog(started: Date(), ended: Date(), trigger: "app_intent_fast",
                                 lines: [.init(speaker: "Lobby", text: "Anything else?")])
-        XCTAssertEqual(lobbyOnly.title, "Lobby only")
+        XCTAssertEqual(lobbyOnly.title, "\(Agent.name) only")
         XCTAssertEqual(lobbyOnly.source, "Action Button")
     }
 

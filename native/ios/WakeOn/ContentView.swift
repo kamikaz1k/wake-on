@@ -33,7 +33,7 @@ struct ContentView: View {
                 }
             }
         }
-        // Lobby's browser, or yours from the Simple page: full screen so its top bar can take
+        // Pixie's browser, or yours from the Simple page: full screen so its top bar can take
         // the page's colour behind the status bar, as Safari and Chrome do.
         .fullScreenCover(isPresented: $browser.isOpen) {
             BrowserSheet(browser: browser)
@@ -49,7 +49,7 @@ struct ContentView: View {
         #endif
         #if DEBUG
         // `-browser <address or words>`, then `-browser-step <action> <text>` (repeatable):
-        // Lobby's browser steps without a call, results in the voice log.
+        // Pixie's browser steps without a call, results in the voice log.
         .task {
             let args = ProcessInfo.processInfo.arguments
             guard let index = args.firstIndex(of: "-browser"), index + 1 < args.count else { return }
@@ -80,7 +80,7 @@ struct AdvancedView: View {
                     Label(controller.status, systemImage: controller.enabled ? "mic.fill" : "mic.slash")
                         .font(.headline)
                         .accessibilityIdentifier("wake-status")
-                    Text("Say “Hey Lobby”, then keep speaking. Audio stays on this iPhone.")
+                    Text("Say “\(Agent.wakePhrase)”, then keep speaking. Audio stays on this iPhone.")
                         .foregroundStyle(.secondary)
                     NavigationLink {
                         BatteryView(monitor: BatteryMonitor.shared, wake: controller)

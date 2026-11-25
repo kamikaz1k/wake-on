@@ -34,9 +34,9 @@ final class WakeController: NSObject, ObservableObject, UNUserNotificationCenter
     private var bridging = false // worker-queue confined
     /// 16 kHz sample offset, in the chunk being ingested, where the bridge starts.
     private var bridgeStart16k: Int? // worker-queue confined
-    /// The detector fires ~0.25–0.36 s after "Hey Lobby" ends (measured on recordings/positive),
+    /// The detector fires ~0.25–0.36 s after "Hey Pixie" ends (measured on recordings/positive),
     /// so the call's audio starts this much before the detection point. Otherwise a word said
-    /// straight after the phrase ("Hey Lobby, what's…") is lost. Guarded by WakeHandoverTests.
+    /// straight after the phrase ("Hey Pixie, what's…") is lost. Guarded by WakeHandoverTests.
     static let bridgeLookback = 0.4
     /// Recent microphone chunks at the device rate, newest last.
     private var recentPCM: [(AVAudioPCMBuffer, AVAudioTime)] = [] // worker-queue confined
@@ -62,7 +62,7 @@ final class WakeController: NSObject, ObservableObject, UNUserNotificationCenter
     @Published var error: String?
     @Published var notificationNote = ""
     @Published var isPlaying = false
-    /// "Hey Lobby" detections since launch (onboarding's practice step watches it).
+    /// "Hey Pixie" detections since launch (onboarding's practice step watches it).
     @Published private(set) var detections = 0
     private let queue = DispatchQueue(label: "wake.audio", qos: .userInitiated)
     private var engine = AVAudioEngine()
@@ -260,7 +260,7 @@ final class WakeController: NSObject, ObservableObject, UNUserNotificationCenter
         let waiters = readyWaiters
         readyWaiters.removeAll()
         waiters.forEach { $0.resume() }
-        status = queue.sync { direct } ? "Recording · speak now" : "Listening for Hey Lobby"
+        status = queue.sync { direct } ? "Recording · speak now" : "Listening for \(Agent.wakePhrase)"
         UIImpactFeedbackGenerator(style: .light).impactOccurred()
         metric.mark("ready_haptic_requested")
     }
@@ -284,7 +284,7 @@ final class WakeController: NSObject, ObservableObject, UNUserNotificationCenter
                     self.trace?.finish("permission_denied")
                     self.busy = false
                     self.status = "Microphone access needed"
-                    self.error = "Enable microphone access in Settings to listen for Hey Lobby."
+                    self.error = "Enable microphone access in Settings to listen for \(Agent.wakePhrase)."
                     return
                 }
                 self.trace?.mark("permission_end", fields: ["granted": true])
@@ -315,7 +315,13 @@ final class WakeController: NSObject, ObservableObject, UNUserNotificationCenter
                 self.lastAudioSampleEnd = nil
                 self.missingInputFrames = 0
                 self.workerTrace?.mark("model_begin")
+                #if DEBUG
+                // The bundled fixture is a "Hey Lobby" recording, made before the rename.
+                let fixture = ProcessInfo.processInfo.arguments.contains("--fixture")
+                self.detector = try fixture ? WakeDetector(phrase: "Hey Lobby") : WakeDetector()
+                #else
                 self.detector = try WakeDetector()
+                #endif
                 self.workerTrace?.mark("model_end")
                 self.buffer = HandoffBuffer()
                 self.recentPCM = []
@@ -674,7 +680,7 @@ final class WakeController: NSObject, ObservableObject, UNUserNotificationCenter
         stopReplay()
         handoff = nil
         wakeLocation = ""
-        status = "Listening for Hey Lobby"
+        status = "Listening for \(Agent.wakePhrase)"
         let metric = LatencyTrace(source: "wake_rearm")
         trace?.finish("superseded")
         trace = metric
@@ -717,7 +723,7 @@ final class WakeController: NSObject, ObservableObject, UNUserNotificationCenter
 
     private func notifyWake() {
         let content = UNMutableNotificationContent()
-        content.title = "Hey Lobby heard you"
+        content.title = "\(Agent.wakePhrase) heard you"
         content.body = "Your audio handoff is being captured. Tap to open Pixie."
         // Silent: do not inject a notification sound into the post-wake recording.
         UNUserNotificationCenter.current().add(UNNotificationRequest(identifier: "wake-handoff", content: content, trigger: nil))
@@ -894,7 +900,7 @@ extension WakeController {
 #if DEBUG
 /// What the listener's microphone receives, logged every 2 s (`listen_input`): average and
 /// peak level of 20 ms blocks, the share of exact zeros (iOS feeding silence), and whether
-/// iOS reports other audio playing. For debugging "Hey Lobby" over music.
+/// iOS reports other audio playing. For debugging "Hey Pixie" over music.
 struct ListenerInputMeter {
     private var energy = 0.0, peakBlock = -120.0, samples = 0, zeros = 0, block: [Float] = []
 
@@ -1005,7 +1011,7 @@ extension WakeController {
         pausedNoticePosted = true
         let content = UNMutableNotificationContent()
         content.title = "Listening paused"
-        content.body = "Another app took the microphone. Tap to resume listening for Hey Lobby."
+        content.body = "Another app took the microphone. Tap to resume listening for \(Agent.wakePhrase)."
         UNUserNotificationCenter.current().add(UNNotificationRequest(identifier: "listener-paused", content: content, trigger: nil))
         VoiceSessionController.appLog("wake_listener_paused_notice posted")
     }
@@ -1045,7 +1051,7 @@ extension WakeController {
     }
 }
 
-/// Finds the user's first pause after "Hey Lobby" from listener chunk levels (dBFS), so a
+/// Finds the user's first pause after "Hey Pixie" from listener chunk levels (dBFS), so a
 /// wake-word call starts its audio engine in a pause instead of mid-sentence. Guarded by
 /// WakeHandoverTests.
 struct PauseDetector {

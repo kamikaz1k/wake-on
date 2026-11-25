@@ -3,7 +3,7 @@ import WebKit
 
 /// Which sites the in-app browser keeps you signed in to. Everything else is wiped when the
 /// app starts and whenever the browser closes, so other sites leave no cookies behind.
-/// You type passwords yourself; Lobby never enters them.
+/// You type passwords yourself; Pixie never enters them.
 enum BrowserSignIns {
     static let key = "browser.signInDomains"
     static let defaultDomains = ["spotify.com"]
@@ -106,7 +106,7 @@ struct BrowserSignInsView: View {
                         .disabled(BrowserSignIns.normalize(draft) == nil)
                 }
             } footer: {
-                Text("The browser keeps you signed in to these sites (and their subdomains). Every other site's cookies are deleted when the browser closes. Lobby can browse these sites while you're signed in, but never types passwords.")
+                Text("The browser keeps you signed in to these sites (and their subdomains). Every other site's cookies are deleted when the browser closes. \(Agent.name) can browse these sites while you're signed in, but never types passwords.")
             }
             Section {
                 Button("Sign Out of All Sites", role: .destructive) { confirmSignOut = true }

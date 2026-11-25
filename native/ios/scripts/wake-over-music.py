@@ -1,4 +1,4 @@
-"""How well the phone's wake detector hears "Hey Lobby" over music.
+"""How well the phone's wake detector hears the wake phrase over music.
 
 Usage: .venv/bin/python -I native/ios/scripts/wake-over-music.py <work dir>
 Music comes from GarageBand's Apple Loops on this Mac (converted into <work dir>/music);
@@ -8,7 +8,7 @@ Mixes each saved positive recording with a music bed at several voice-to-music l
 (SNR, dB: speech loudness while speaking vs. music loudness) and runs sherpa-onnx with the
 phone's settings, plus more sensitive thresholds. Also counts false wakes on music alone.
 """
-import json, subprocess, sys, wave
+import json, os, subprocess, sys, tempfile, wave
 from pathlib import Path
 import numpy as np
 import sherpa_onnx
@@ -60,11 +60,26 @@ def bed(prefix, seconds=90):
     mix = np.sum(stems, axis=0)
     return mix / rms(mix) * 0.1
 
+# The positives in recordings/ say "Hey Lobby" (recorded before the rename to Pixie).
+PHRASE = os.environ.get("WAKE_PHRASE", "Hey Lobby")
+
+def keywords_file():
+    """The phrase as the model's sounds, from the app's lexicon (as WakePhrase.swift does)."""
+    words = PHRASE.upper().split()
+    sounds = {}
+    for line in (RES / "lexicon.txt").read_text().splitlines():
+        word, _, rest = line.partition(" ")
+        if word in words and word not in sounds:
+            sounds[word] = rest.strip()
+    path = Path(tempfile.gettempdir()) / "wake-over-music-keywords.txt"
+    path.write_text(" ".join(sounds[w] for w in words) + " @" + "_".join(words) + "\n")
+    return str(path)
+
 def spotter(threshold, score):
     return sherpa_onnx.KeywordSpotter(
         tokens=str(RES / "tokens.txt"), encoder=str(RES / "encoder.onnx"),
         decoder=str(RES / "decoder.onnx"), joiner=str(RES / "joiner.onnx"),
-        num_threads=1, max_active_paths=16, keywords_file=str(RES / "hey-lobby.txt"),
+        num_threads=1, max_active_paths=16, keywords_file=keywords_file(),
         keywords_score=score, keywords_threshold=threshold, num_trailing_blanks=0, provider="cpu")
 
 def detections(kws, audio):

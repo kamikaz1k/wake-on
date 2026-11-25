@@ -1,16 +1,16 @@
 import ActivityKit
 import Foundation
 
-/// The Live Activity shown while the "Hey Lobby" listener runs: the sky orb in the
+/// The Live Activity shown while the "Hey Pixie" listener runs: the sky orb in the
 /// Dynamic Island and on the Lock Screen. Shared by the app and the widget extension.
 struct ListeningActivityAttributes: ActivityAttributes {
     struct ContentState: Codable, Hashable {
         enum Mode: String, Codable, Hashable {
-            /// Waiting for "Hey Lobby".
+            /// Waiting for "Hey Pixie".
             case listening
-            /// Just heard "Hey Lobby"; the conversation is connecting.
+            /// Just heard "Hey Pixie"; the conversation is connecting.
             case heard
-            /// In a conversation with Lobby.
+            /// In a conversation with Pixie.
             case talking
             /// Another app has the microphone; listening comes back by itself.
             case paused

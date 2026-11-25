@@ -16,7 +16,7 @@ class ChatTranscript: ObservableObject {
     @Published var call = ChatCallState() { didSet { touched() } }
     /// Bumped on every change, so renderers that copy data can cheaply detect updates.
     @Published var revision = 0
-    /// Lobby replies you talked over: their later updates are ignored, like a real barge-in.
+    /// Pixie replies you talked over: their later updates are ignored, like a real barge-in.
     var interrupted: Set<String> = []
     /// When set, rows appended now get this time instead of the clock's (a saved call).
     private var stepTime: Date?
@@ -108,7 +108,7 @@ struct ChatScript {
     }
 
     /// Streams a message word by word. `wordsPerSecond` ~2.5 for your speech, faster for
-    /// Lobby's transcript, which runs ahead of its audio.
+    /// Pixie's transcript, which runs ahead of its audio.
     @discardableResult
     mutating func stream(_ speaker: ChatItem.Speaker, _ text: String, wordsPerSecond: Double = 6,
                          timing: String? = nil, insertBefore: String? = nil, cutAfterWords: Int? = nil,

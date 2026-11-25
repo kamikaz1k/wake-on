@@ -1,6 +1,6 @@
 import Foundation
 
-/// Lobby's "pause / resume / skip what's playing" tool. Sends the same play/pause commands as
+/// Pixie's "pause / resume / skip what's playing" tool. Sends the same play/pause commands as
 /// Control Center and AirPods, to whichever app is playing (Spotify, Podcasts, YouTube…),
 /// through Apple's private MediaRemote framework. Works with the phone locked and Wake On in
 /// the background (verified on iOS 26). Private API: fine for this sideloaded app, not for the

@@ -15,7 +15,7 @@ struct LiveVoiceConfig {
         return voices.contains(saved) ? saved : "marin"
     }
     var instructions = """
-    You are Lobby, a voice assistant the user starts from their iPhone. Answer in one or two short \
+    You are \(Agent.name), a voice assistant the user starts from their iPhone. Answer in one or two short \
     spoken sentences unless they ask for more. Start speaking right away. Always reply when the user \
     stops talking, even if they only counted, tested the microphone or made a statement: acknowledge \
     it briefly. When a question needs \
@@ -63,11 +63,11 @@ struct LiveVoiceConfig {
     var maps = true
     /// The show_visual tool: an HTML page shown in the chat (see ShowVisual).
     var visuals = true
-    /// The browser tool: an in-app browser Lobby can drive (see BrowserTool).
+    /// The browser tool: an in-app browser Pixie can drive (see BrowserTool).
     var browser = true
     /// The remember and recall tools (see Memory).
     var memoryTools = true
-    /// What Lobby remembers, for both models' instructions (`Memory.callText`).
+    /// What Pixie remembers, for both models' instructions (`Memory.callText`).
     var memory: String?
     /// Host candidates are enough: OpenAI's media servers are publicly reachable.
     var iceGatheringTimeout: Duration = .seconds(3)
@@ -226,7 +226,7 @@ final class OpenAILiveVoiceProvider: NSObject {
     }
 
     /// Opens a TLS connection ahead of time to where the next call is set up (OpenAI, or the
-    /// Lobby server with an invite code). Costs nothing.
+    /// Pixie server with an invite code). Costs nothing.
     static func prewarm() {
         _ = factory
         let openAI = URL(string: "https://api.openai.com/v1/live/sessions")!

@@ -14,9 +14,9 @@ enum ChatTokens {
     /// About 4 characters per token for English; there is no tokenizer on the phone.
     static func estimate(_ text: String) -> Int { (text.count + 3) / 4 }
 
-    /// One transcript line as a resumed call sees it ("User: …" or "Lobby: …").
+    /// One transcript line as a resumed call sees it ("User: …" or "Pixie: …").
     static func line(_ line: ChatLog.Line) -> String {
-        "\(line.speaker == "You" ? "User" : "Lobby"): \(line.text)"
+        "\(line.speaker == "You" ? "User" : Agent.name): \(line.text)"
     }
 
     static func estimate(_ lines: [ChatLog.Line]) -> Int {

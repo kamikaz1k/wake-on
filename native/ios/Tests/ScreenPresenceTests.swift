@@ -1,7 +1,7 @@
 import XCTest
 @testable import WakeOn
 
-/// Lobby is told whether the user can see the screen: the backend's instructions get a
+/// Pixie is told whether the user can see the screen: the backend's instructions get a
 /// "Screen:" line mid-call, and the chat log shows when it went out of view.
 @MainActor
 final class ScreenPresenceTests: XCTestCase {
@@ -42,7 +42,7 @@ final class ScreenPresenceTests: XCTestCase {
         // The usual start, in view, gets no line; going away and coming back do.
         XCTAssertEqual(markers(["in_view"]), [])
         XCTAssertEqual(markers(["in_view", "away", "in_view"]),
-                       ["Screen not in view · Lobby answers in speech", "Screen in view · Lobby can show things"])
-        XCTAssertEqual(markers(["away"]), ["Screen not in view · Lobby answers in speech"])
+                       ["Screen not in view · \(Agent.name) answers in speech", "Screen in view · \(Agent.name) can show things"])
+        XCTAssertEqual(markers(["away"]), ["Screen not in view · \(Agent.name) answers in speech"])
     }
 }

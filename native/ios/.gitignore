@@ -1,7 +1,7 @@
 Vendor/
 Resources/*.onnx
 Resources/tokens.txt
-Resources/hey-lobby.txt
+Resources/lexicon.txt
 Resources/wake-fixture.wav
 build/
 build-device/

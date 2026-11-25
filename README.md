@@ -1,6 +1,6 @@
-# Lobby Wake
+# Pixie Wake
 
-An experimental macOS-first wake-word listener for **“Hey Lobby”**. It keeps
+An experimental macOS-first wake-word listener for **“Hey Pixie”**. It keeps
 wake detection local with sherpa-onnx, preserves audio spoken immediately after
 the wake phrase, and hands the same microphone stream to a conversation-agent
 adapter.
@@ -9,10 +9,10 @@ The first working vertical slice uses OpenAI Realtime over WebSocket for the
 conversation. A deterministic mock remains available for local wake-word
 testing without network usage.
 
-## iPhone app: Wake On
+## iPhone app: Pixie
 
 The main client is now a native iPhone app (`native/ios`). Press the Action Button or say
-**"Hey Lobby"** and you're talking to `gpt-live-1.1` over WebRTC. A second model
+**"Hey Pixie"** and you're talking to `gpt-live-1.1` over WebRTC. A second model
 (`gpt-5.6-terra`) does web search and the app's tools: Spotify, YouTube, media controls,
 volume, Google Maps, an in-app browser, visuals and Obsidian notes.
 
@@ -35,7 +35,7 @@ Measured on an iPhone 17 Pro over Wi-Fi (round trip ≈ 54 ms):
 | Audio reaching OpenAI | 690–1,380 ms | 630–950 ms |
 | Same, normal App Intent (before fast-start) | 1,559–1,953 ms | 1,542–1,672 ms |
 
-| "Hey Lobby" (phone locked, app in background) | |
+| "Hey Pixie" (phone locked, app in background) | |
 |---|---:|
 | Wake word detected after the phrase ends | 250–360 ms |
 | Wake → call microphone live | 347–419 ms |
@@ -62,7 +62,7 @@ The same scenario (web search with sources) in each library: swipe sideways or u
 arrows at the bottom to switch.
 
 <p>
-  <img src="docs/images/chatlab-ours.png" width="190" alt="Our SwiftUI view: user bubble, 'Searched the web' row, Lobby's reply, copy buttons, Live and Turns header">
+  <img src="docs/images/chatlab-ours.png" width="190" alt="Our SwiftUI view: user bubble, 'Searched the web' row, Pixie's reply, copy buttons, Live and Turns header">
   <img src="docs/images/chatlab-exyte.png" width="190" alt="exyte/Chat: bubbles with timestamps and read ticks">
   <img src="docs/images/chatlab-conversationkit.png" width="190" alt="ConversationKit: assistant replies with a sparkle icon and an always-on message box">
   <img src="docs/images/chatlab-lmchatui.png" width="190" alt="LanguageModelChatUI: a green 'Tool call for web_search completed' banner">
@@ -155,7 +155,7 @@ Live microphone:
 uv run lobby-wake
 ```
 
-Say **“Hey Lobby”**, then continue with your request. The wake detector remains
+Say **“Hey Pixie”**, then continue with your request. The wake detector remains
 local. While it listens, the app keeps a configured Realtime session warm. Once
 triggered, the one-second preroll and subsequent microphone audio are sent
 immediately, and response audio is played through the default macOS output
@@ -543,7 +543,7 @@ Run a bounded guided A/B session when changing the native microphone path:
 uv run lobby-compare-wake-capture --attempts 10
 ```
 
-The tool runs a microphone test, collects ten approved “Hey Lobby” attempts
+The tool runs a microphone test, collects ten approved “Hey Pixie” attempts
 through raw `sounddevice` capture, then ten through the native Apple
 voice-processed path. Each attempt is evaluated locally with the same Sherpa
 configuration and must be kept or redone, so misses remain in the denominator.

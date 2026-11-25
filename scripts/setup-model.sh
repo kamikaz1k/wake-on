@@ -20,7 +20,7 @@ uv run sherpa-onnx-cli text2token \
   --tokens-type phone+ppinyin \
   --lexicon "${model_dir}/en.phone" \
   "${models_dir}/keywords.raw.txt" \
-  "${models_dir}/hey-lobby.txt"
+  "${models_dir}/hey-pixie.txt"
 
 echo "Model ready: ${model_dir}"
-echo "Keyword tokens: ${models_dir}/hey-lobby.txt"
+echo "Keyword tokens: ${models_dir}/hey-pixie.txt"

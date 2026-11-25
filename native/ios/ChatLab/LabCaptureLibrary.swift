@@ -12,7 +12,7 @@ extension CapturedCall {
         let lines = lines
         return [
             LabScenario(id: "R\(number)", title: title,
-                        lookFor: base + " Check the tool rows (web search, play_spotify, opening Spotify), the status line while Lobby looks things up, and how filler like \"One moment\" sits next to the answer.",
+                        lookFor: base + " Check the tool rows (web search, play_spotify, opening Spotify), the status line while \(Agent.name) looks things up, and how filler like \"One moment\" sits next to the answer.",
                         script: { CaptureReplay(lines: lines, rawEvents: false).steps }),
             LabScenario(id: "R\(number)e", title: "\(title) · events",
                         lookFor: base + " Every event sent and received appears inline between the messages; tap one to see its JSON.",

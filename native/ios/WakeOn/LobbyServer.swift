@@ -31,10 +31,10 @@ enum LobbyServer {
         case "daily_limit":
             return ("You've used today's calls. More at \(resetTime(now: now, calendar: calendar)).", false)
         case "global_limit":
-            return ("Lobby is out of calls for today. More at \(resetTime(now: now, calendar: calendar)).", false)
+            return ("\(Agent.name) is out of calls for today. More at \(resetTime(now: now, calendar: calendar)).", false)
         default:
             // A 401 that isn't about the code means the server's own OpenAI key was refused.
-            return status == 401 ? ("Lobby's server can't reach OpenAI right now. Try again later.", false) : nil
+            return status == 401 ? ("\(Agent.name)'s server can't reach OpenAI right now. Try again later.", false) : nil
         }
     }
 
@@ -51,7 +51,7 @@ enum LobbyServer {
     /// Where to set up a call with this credential: OpenAI for a key, the server for a code.
     static func endpoint(for credential: String, openAI: URL, server: URL? = url) throws -> URL {
         guard isInviteCode(credential) else { return openAI }
-        guard let server else { throw VoiceError.message("This build has no Lobby server for invite codes. Use an OpenAI key.") }
+        guard let server else { throw VoiceError.message("This build has no \(Agent.name) server for invite codes. Use an OpenAI key.") }
         return server.appendingPathComponent("v1/live/sessions")
     }
 }

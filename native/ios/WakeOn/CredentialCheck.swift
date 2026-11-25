@@ -1,7 +1,7 @@
 import Foundation
 
 /// Checks an invite code or OpenAI key before it's saved ("Verify and Save"). Neither check
-/// starts a call or costs anything: codes go to the Lobby server's /v1/check, keys ask OpenAI
+/// starts a call or costs anything: codes go to the Pixie server's /v1/check, keys ask OpenAI
 /// for its model list.
 enum CredentialCheck {
     enum Outcome: Equatable {
@@ -76,7 +76,7 @@ enum CredentialCheck {
         case (401, _):
             return .rejected("That invite code isn't right. Check for typos, or ask for it again.")
         default:
-            return .savedWithWarning("Saved, but the Lobby server couldn't check it right now. "
+            return .savedWithWarning("Saved, but the \(Agent.name) server couldn't check it right now. "
                                      + "It's checked again when you start a chat.")
         }
     }

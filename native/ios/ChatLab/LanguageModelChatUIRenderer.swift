@@ -10,8 +10,8 @@ import UIKit
 // its message list itself while running inference. So this page uses the two public paths
 // it has, each where it fits:
 //
-// 1. Lobby replies and tool calls go through the library's own pipeline. A fake
-//    `ChatClient` (`BaseChatClient.provideStreamingChat`) yields the Lobby text deltas as the
+// 1. Pixie replies and tool calls go through the library's own pipeline. A fake
+//    `ChatClient` (`BaseChatClient.provideStreamingChat`) yields the Pixie text deltas as the
 //    replay produces them, and `.tool(ToolRequest)` chunks for tool rows; a `ToolProvider`
 //    waits until the replay finishes the tool, then returns its result or an error. A turn
 //    starts with `session.runInference(model:messageListView:input:)` and an empty user
@@ -185,7 +185,7 @@ final class LMChatDriver: ObservableObject {
         controller = container
     }
 
-    /// Between inferences: write everything up to the next Lobby reply or tool into storage
+    /// Between inferences: write everything up to the next Pixie reply or tool into storage
     /// and reload, then start an inference for that reply or tool.
     private func syncStorage() {
         guard let session else { return }
@@ -297,7 +297,7 @@ final class LMChatDriver: ObservableObject {
 
     // MARK: Fake model and tools
 
-    /// One inference step: streams the next Lobby reply, then ends with a tool call if a tool
+    /// One inference step: streams the next Pixie reply, then ends with a tool call if a tool
     /// follows. Ends without one when anything else comes next, which ends the inference.
     func runStep(generation: Int, into continuation: AsyncThrowingStream<ChatResponseChunk, Swift.Error>.Continuation) async {
         defer { continuation.finish() }

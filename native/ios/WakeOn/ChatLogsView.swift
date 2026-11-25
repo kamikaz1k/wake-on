@@ -22,7 +22,7 @@ struct ChatLogsView: View {
         List(selection: $selection) {
             if store.logs.isEmpty {
                 ContentUnavailableView("No chat logs yet", systemImage: "text.bubble",
-                                       description: Text("Each conversation with Lobby is saved here, on this iPhone."))
+                                       description: Text("Each conversation with \(Agent.name) is saved here, on this iPhone."))
             }
             ForEach(store.logs) { log in
                 NavigationLink { ChatLogDetailView(log: log) } label: {
@@ -211,7 +211,7 @@ struct ChatLogDetailView: View {
     }
 }
 
-/// A saved call in Lobby's chat view (ChatUI). With a capture it shows everything that
+/// A saved call in Pixie's chat view (ChatUI). With a capture it shows everything that
 /// happened: tool rows for web searches and Spotify, check-ins, how the call ended. Calls from
 /// before captures show just what was said.
 @available(iOS 18.0, *)
@@ -241,11 +241,11 @@ struct ChatLogTranscript: View {
     }
 }
 
-/// The delete confirmations' words when a chat has notes in Lobby's memory.
+/// The delete confirmations' words when a chat has notes in Pixie's memory.
 enum MemoryDeleteWords {
     static func message(_ memories: Int) -> String {
         guard memories > 0 else { return "This can't be undone." }
         let things = memories == 1 ? "1 thing" : "\(memories) things"
-        return "This also removes \(things) Lobby remembered from it. This can't be undone."
+        return "This also removes \(things) \(Agent.name) remembered from it. This can't be undone."
     }
 }

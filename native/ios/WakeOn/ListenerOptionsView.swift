@@ -20,7 +20,7 @@ struct ListenerOptionsView: View {
                 .accessibilityIdentifier("listener-auto-resume")
             Toggle("Use iPhone microphone with headphones", isOn: $builtInMicrophone)
                 .accessibilityIdentifier("listener-built-in-mic")
-            Toggle("Start a conversation on “Hey Lobby”", isOn: $talkOnWake)
+            Toggle("Start a conversation on “\(Agent.wakePhrase)”", isOn: $talkOnWake)
                 .accessibilityIdentifier("listener-talk-on-wake")
         } header: { Text("Listening options") } footer: {
             Text("Sharing lets videos and music play without stopping the listener; it also hears them. Full sound keeps iOS's normal audio processing for them (the listener otherwise uses raw measurement mode). The iPhone microphone keeps Bluetooth headphones in high-quality playback. Voice calls always use their own audio and pause other sound.")

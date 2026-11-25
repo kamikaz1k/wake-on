@@ -44,7 +44,7 @@ final class ShowVisualTests: XCTestCase {
         // Mid-stream, the row already had part of the page.
         let mid = try XCTUnwrap(partial)
         XCTAssertTrue(visual.html.hasPrefix(mid.html))
-        // The call goes on: Lobby speaks after the visual, and the saved replay matches.
+        // The call goes on: \(Agent.name) speaks after the visual, and the saved replay matches.
         let saved = ChatTranscript(steps: CaptureReplay(lines: call.lines, rawEvents: false).steps, startedAt: Date()).items
         XCTAssertEqual(live.transcript.items.map(\.kind), saved.map(\.kind))
         XCTAssertTrue(saved.contains { $0.kind == .message(.lobby, text: "It's on your screen: highs from 9 to 14 degrees.", state: .done) })

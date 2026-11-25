@@ -17,7 +17,7 @@ final class ChatToolChainTests: XCTestCase {
         XCTAssertEqual(segments.map(\.id), ["u", "chain-t1", "l"])
         guard case let .tools(tools, finished) = segments[1].content else { return XCTFail() }
         XCTAssertEqual(tools.map(\.name), ["web_search", "play_spotify"])
-        XCTAssertTrue(finished, "Lobby replied after it, so it collapses")
+        XCTAssertTrue(finished, "\(Agent.name) replied after it, so it collapses")
     }
 
     func testRunningOrTrailingChainStaysOpenWhileLive() {

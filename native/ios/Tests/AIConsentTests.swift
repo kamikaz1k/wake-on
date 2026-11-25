@@ -1,7 +1,7 @@
 import XCTest
 @testable import WakeOn
 
-/// App Review: nothing goes to OpenAI before the user agrees (5.1.2(i)), and Lobby's replies
+/// App Review: nothing goes to OpenAI before the user agrees (5.1.2(i)), and Pixie's replies
 /// can be reported (1.2, 4.7.1) without the reply leaving the phone in a link.
 @MainActor
 final class AIConsentTests: XCTestCase {
@@ -51,6 +51,6 @@ final class AIConsentTests: XCTestCase {
         let url = MessageReport.url.absoluteString
         XCTAssertTrue(url.hasPrefix("https://github.com/kamikaz1k/wake-on/issues/new?"))
         XCTAssertTrue(url.contains("title=Report"))
-        XCTAssertFalse(url.contains("Lobby%20said"), "Only the template goes in the link")
+        XCTAssertFalse(url.contains("\(Agent.name)%20said"), "Only the template goes in the link")
     }
 }

@@ -1,7 +1,7 @@
 import AVFoundation
 import Foundation
 
-/// How the background "Hey Lobby" listener uses audio. Voice calls ignore these: a call
+/// How the background "Hey Pixie" listener uses audio. Voice calls ignore these: a call
 /// always takes a dedicated, non-shared voice-chat session.
 struct ListenerSettings: Equatable {
     /// Mix with other apps' audio, so a video or music does not interrupt listening.
@@ -15,7 +15,7 @@ struct ListenerSettings: Equatable {
     /// mode switches off system audio processing for the whole route, so other apps' playback
     /// loses its EQ, loudness and spatial effects while the listener runs.
     var fullSoundForOthers = true
-    /// Experiment: start a voice conversation when "Hey Lobby" is heard, even in the background.
+    /// Experiment: start a voice conversation when "Hey Pixie" is heard, even in the background.
     var talkOnWake = false
 
     enum Key {

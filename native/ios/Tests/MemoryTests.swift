@@ -1,7 +1,7 @@
 import XCTest
 @testable import WakeOn
 
-/// Lobby's memory (after OptMem): notes, the summary tree, what a call starts with, deleting.
+/// Pixie's memory (after OptMem): notes, the summary tree, what a call starts with, deleting.
 final class MemoryTests: XCTestCase {
     private let callA = UUID()
     private let callB = UUID()
@@ -203,7 +203,7 @@ final class MemoryTests: XCTestCase {
 
     func testDeleteWordsMentionMemories() {
         XCTAssertEqual(MemoryDeleteWords.message(0), "This can't be undone.")
-        XCTAssertTrue(MemoryDeleteWords.message(1).contains("1 thing Lobby remembered"))
+        XCTAssertTrue(MemoryDeleteWords.message(1).contains("1 thing \(Agent.name) remembered"))
         XCTAssertTrue(MemoryDeleteWords.message(3).contains("3 things"))
     }
 

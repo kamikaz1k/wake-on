@@ -6,7 +6,7 @@ import SwiftUI
 /// view, so differences between pages come from the libraries, not from our styling.
 
 /// One tool call on its own (Chat Lab's library pages place rows one by one): a chain of one
-/// step, collapsed once it's done. Lobby's own view groups a turn's calls (`ChatToolChain`).
+/// step, collapsed once it's done. Pixie's own view groups a turn's calls (`ChatToolChain`).
 struct ChatToolRow: View {
     let tool: ChatItem.Tool
 
@@ -96,7 +96,7 @@ struct ChatCardView: View {
     }
 }
 
-/// Small grey footer under a Lobby reply, for turn timing (E2) and the cut-off state (B3).
+/// Small grey footer under a Pixie reply, for turn timing (E2) and the cut-off state (B3).
 struct ChatMessageFooter: View {
     let item: ChatItem
     var body: some View {

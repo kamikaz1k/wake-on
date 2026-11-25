@@ -147,7 +147,7 @@ enum LabScenarios {
                         s.wait(0.8); s.stream(.lobby, LabText.long, wordsPerSecond: 5)
                     }),
         LabScenario(id: "A5", title: "Reply grows into the screen",
-                    lookFor: "Lobby's answer should fill the space below your message, without the whole thread jumping up at once.",
+                    lookFor: "\(Agent.name)'s answer should fill the space below your message, without the whole thread jumping up at once.",
                     script: script { s in
                         s.history(6); s.wait(2)
                         s.stream(.user, "Plan my Saturday in Lisbon.", wordsPerSecond: 2.5)
@@ -170,7 +170,7 @@ enum LabScenarios {
                         }
                     }),
         LabScenario(id: "A8", title: "Show what's out of view",
-                    lookFor: "Scroll up while it streams. Is there a sign that Lobby is still talking or that new messages arrived below?",
+                    lookFor: "Scroll up while it streams. Is there a sign that \(Agent.name) is still talking or that new messages arrived below?",
                     script: script { s in
                         s.history(8); s.wait(2)
                         s.stream(.user, "Plan my Saturday in Lisbon.", wordsPerSecond: 2.5)
@@ -185,7 +185,7 @@ enum LabScenarios {
                     }),
         LabScenario(id: "A10", title: "Jump anywhere",
                     lookFor: "A 40-turn call. Is there a way to search, see an outline, or jump to a specific turn?",
-                    script: script { s in s.marker("Call started · Hey Lobby"); s.history(40) }),
+                    script: script { s in s.marker("Call started · \(Agent.wakePhrase)"); s.history(40) }),
         LabScenario(id: "A11", title: "Reopen at the last meaningful turn",
                     lookFor: "A saved call opens. It should land on your last message with the reply below, not the very bottom, and without a visible jump.",
                     script: script { s in
@@ -247,15 +247,15 @@ enum LabScenarios {
                         s.wait(0.6); s.revise(id, .user, to: "Play Come Sail Away by Styx.")
                         s.wait(0.8); s.stream(.lobby, "Playing Come Sail Away by Styx on Spotify.", wordsPerSecond: 4)
                     }),
-        LabScenario(id: "B2", title: "Lobby's words stream in",
-                    lookFor: "Lobby's text arrives in bursts, ahead of where its voice would be. Does it stream smoothly?",
+        LabScenario(id: "B2", title: "\(Agent.name)'s words stream in",
+                    lookFor: "\(Agent.name)'s text arrives in bursts, ahead of where its voice would be. Does it stream smoothly?",
                     script: script { s in
                         s.history(2)
                         s.stream(.user, "How long to drive to Montreal?", wordsPerSecond: 2.5)
                         s.wait(0.9); s.stream(.lobby, LabText.answers[3] + " " + LabText.answers[5], wordsPerSecond: 9)
                     }),
         LabScenario(id: "B3", title: "Barge-in",
-                    lookFor: "You interrupt Lobby mid-sentence. The cut-off reply should look cut off, not complete.",
+                    lookFor: "You interrupt \(Agent.name) mid-sentence. The cut-off reply should look cut off, not complete.",
                     script: script { s in
                         s.history(2)
                         s.stream(.user, "Plan my Saturday in Lisbon.", wordsPerSecond: 2.5)
@@ -264,7 +264,7 @@ enum LabScenarios {
                         s.wait(0.6); s.stream(.lobby, "Dinner in Bairro Alto, then a fado show.", wordsPerSecond: 4)
                     }),
         LabScenario(id: "B4", title: "Out-of-order turns",
-                    lookFor: "Lobby starts replying before your transcript is finished. Your message should slot in above the reply.",
+                    lookFor: "\(Agent.name) starts replying before your transcript is finished. Your message should slot in above the reply.",
                     script: script { s in
                         s.history(3)
                         let reply = s.stream(.lobby, "Sure, here's how long it takes. ", wordsPerSecond: 5)
@@ -272,15 +272,15 @@ enum LabScenarios {
                         s.run { $0.update(reply) { $0.kind = .message(.lobby, text: "Sure, here's how long it takes. " + LabText.answers[3], state: .done) } }
                     }),
         LabScenario(id: "B5", title: "Wake-word burst",
-                    lookFor: "After \"Hey Lobby\", your whole request appears at once from the kept audio.",
+                    lookFor: "After \"\(Agent.wakePhrase)\", your whole request appears at once from the kept audio.",
                     script: script { s in
                         s.history(2); s.wait(1)
-                        s.marker("Hey Lobby")
+                        s.marker("\(Agent.wakePhrase)")
                         s.wait(1.2); s.said(.user, "What's the weather like in Paris, France right now?")
                         s.wait(0.9); s.stream(.lobby, LabText.answers[0], wordsPerSecond: 4)
                     }),
         LabScenario(id: "B6", title: "Live status",
-                    lookFor: "An animated status line (Listening, Thinking, Searching the web) that disappears when Lobby speaks.",
+                    lookFor: "An animated status line (Listening, Thinking, Searching the web) that disappears when \(Agent.name) speaks.",
                     script: script { s in
                         s.history(2)
                         s.status("Listening…")
@@ -315,7 +315,7 @@ enum LabScenarios {
                         s.stream(.lobby, LabText.answers[0], wordsPerSecond: 4)
                     }),
         LabScenario(id: "C3", title: "Tools before text",
-                    lookFor: "The turn starts with tools and no words, and runs two tools before Lobby speaks.",
+                    lookFor: "The turn starts with tools and no words, and runs two tools before \(Agent.name) speaks.",
                     script: script { s in
                         s.history(1)
                         s.stream(.user, "Pause the music and tell me the score.", wordsPerSecond: 2.5)
@@ -341,7 +341,7 @@ enum LabScenarios {
 
     static let blocks: [LabScenario] = [
         LabScenario(id: "D1", title: "Message rows",
-                    lookFor: "Speakers line up on opposite sides, with a name or time header, and consecutive Lobby messages group together.",
+                    lookFor: "Speakers line up on opposite sides, with a name or time header, and consecutive \(Agent.name) messages group together.",
                     script: script { s in
                         s.said(.user, "Pause the music.")
                         s.said(.lobby, "Paused.")
@@ -352,7 +352,7 @@ enum LabScenarios {
                         s.said(.lobby, "Resumed.")
                     }),
         LabScenario(id: "D2", title: "Bubble variants",
-                    lookFor: "Distinct styles for you and Lobby, a link and buttons inside a message, and a long message that can collapse.",
+                    lookFor: "Distinct styles for you and \(Agent.name), a link and buttons inside a message, and a long message that can collapse.",
                     script: script { s in
                         s.said(.user, "Find me a fado show.")
                         s.said(.lobby, "Clube de Fado has a show at 9:30. Details at [clube-de-fado.com](https://clube-de-fado.com).")
@@ -367,7 +367,7 @@ enum LabScenarios {
                         s.history(2)
                         s.marker("Call ended · you said bye")
                         s.marker("Today", .separator)
-                        s.marker("Call started · Hey Lobby")
+                        s.marker("Call started · \(Agent.wakePhrase)")
                         s.history(1, startingAt: 2)
                         s.marker("Call ended · 10 s of silence")
                     }),
@@ -421,9 +421,9 @@ enum LabScenarios {
                         s.event(.received, "response.done", #"{"usage":{"input_tokens":812,"output_tokens":41}}"#)
                     }),
         LabScenario(id: "E2", title: "Turn timing",
-                    lookFor: "Under each Lobby reply, how long it took to answer (and connect time on the first turn).",
+                    lookFor: "Under each \(Agent.name) reply, how long it took to answer (and connect time on the first turn).",
                     script: script { s in
-                        s.marker("Connected in 0.88 s · Hey Lobby")
+                        s.marker("Connected in 0.88 s · \(Agent.wakePhrase)")
                         s.stream(.user, "What's the weather in Paris?", wordsPerSecond: 2.5)
                         s.wait(1.3); s.stream(.lobby, LabText.answers[0], wordsPerSecond: 4, timing: "Reply in 1.3 s")
                         s.stream(.user, "Play Come Sail Away.", wordsPerSecond: 2.5)
@@ -452,7 +452,7 @@ enum LabScenarios {
         LabScenario(id: "F3", title: "Same view for saved logs",
                     lookFor: "A finished call shown all at once, as it would be from the chat log list.",
                     script: script { s in
-                        s.marker("Nov 7 · Hey Lobby")
+                        s.marker("Nov 7 · \(Agent.wakePhrase)")
                         s.history(5)
                         s.marker("Call ended · bye")
                     }),

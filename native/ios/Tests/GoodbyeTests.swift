@@ -1,12 +1,12 @@
 import XCTest
 @testable import WakeOn
 
-/// After Lobby says bye, room noise must not hold the call open (it once took 18 s).
+/// After Pixie says bye, room noise must not hold the call open (it once took 18 s).
 final class GoodbyeTests: XCTestCase {
     private let wait = VoiceSessionController.endSilenceSeconds
 
     func testHangsUpTwoSecondsAfterLobbyStopsWhateverTheMicHears() {
-        // Mic level isn't an input at all: only Lobby's audio and the user's words count.
+        // Mic level isn't an input at all: only Pixie's audio and the user's words count.
         XCTAssertFalse(VoiceSessionController.goodbyeHangsUp(now: 10 + wait - 0.1, lobbyLastActive: 10, userLastWords: nil, lookingUp: false))
         XCTAssertTrue(VoiceSessionController.goodbyeHangsUp(now: 10 + wait, lobbyLastActive: 10, userLastWords: nil, lookingUp: false))
     }
@@ -28,7 +28,7 @@ final class GoodbyeTests: XCTestCase {
         XCTAssertFalse(VoiceSessionController.endsWithBye("Bye now, but first: anything else?"))
     }
 
-    /// Lobby's check-in after an answer counts as the idle check-in; other questions don't.
+    /// Pixie's check-in after an answer counts as the idle check-in; other questions don't.
     func testCheckInQuestionIsRecognised() {
         XCTAssertTrue(VoiceSessionController.endsWithCheckIn("It's 3 pm in Lagos. Anything else?"))
         XCTAssertTrue(VoiceSessionController.endsWithCheckIn("Is there anything else I can help with?"))
@@ -39,7 +39,7 @@ final class GoodbyeTests: XCTestCase {
     }
 
     func testIdleCountsWordsNotMicSound() {
-        // Lobby last talked at 10 s; mic sound alone never moves the clock.
+        // Pixie last talked at 10 s; mic sound alone never moves the clock.
         XCTAssertEqual(VoiceSessionController.quietSeconds(now: 25, lobbyOrLookup: 10, userWords: nil), 15)
         // The user's transcribed words at 20 s do.
         XCTAssertEqual(VoiceSessionController.quietSeconds(now: 25, lobbyOrLookup: 10, userWords: 20), 5)

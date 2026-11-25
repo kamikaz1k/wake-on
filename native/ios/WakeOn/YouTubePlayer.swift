@@ -1,7 +1,7 @@
 import UIKit
 import UserNotifications
 
-/// Lobby's "play something on YouTube" tool, the same way as `SpotifyPlayer`: the backend
+/// Pixie's "play something on YouTube" tool, the same way as `SpotifyPlayer`: the backend
 /// model finds the youtube.com link with web search and calls `play_youtube`; the app ends the
 /// call and opens it in the YouTube app (or Safari if the app isn't installed).
 enum YouTubePlayer {

@@ -2,7 +2,7 @@ import SwiftUI
 import UIKit
 import WebKit
 
-/// Lobby's show_visual tool: the backend model writes one self-contained HTML page (a chart, a
+/// Pixie's show_visual tool: the backend model writes one self-contained HTML page (a chart, a
 /// table, a diagram, a small app) and the chat shows it in a web view while the call goes on.
 ///
 /// The page runs in WebKit's own sandboxed process with a throwaway data store and no bridge

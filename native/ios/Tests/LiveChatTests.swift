@@ -35,7 +35,7 @@ final class LiveChatTests: XCTestCase {
         let saved = ChatTranscript(steps: CaptureReplay(lines: lines(), rawEvents: false).steps, startedAt: Date()).items
         XCTAssertEqual(live.transcript.items.map(\.kind), saved.map(\.kind))
         XCTAssertEqual(live.transcript.items.map(\.timing), saved.map(\.timing))
-        // While it happens, Lobby's filler is still streaming and the search is under way.
+        // While it happens, Pixie's filler is still streaming and the search is under way.
         XCTAssertTrue(midCall.contains { $0.kind == .message(.lobby, text: "One moment.", state: .streaming) })
         XCTAssertTrue(midCall.contains { if case let .tool(tool) = $0.kind { tool.state == .requested } else { false } })
         let messages = saved.compactMap { item -> String? in if case let .message(_, text, _) = item.kind { text } else { nil } }

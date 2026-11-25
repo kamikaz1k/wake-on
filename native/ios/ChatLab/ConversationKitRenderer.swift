@@ -39,7 +39,7 @@ struct ConversationKitRenderer: View {
                     }
                 }
             }
-            // Library hook for the row under an AI message: Lobby's timing or "Interrupted".
+            // Library hook for the row under an AI message: Pixie's timing or "Interrupted".
             .messageActions { message in
                 if let message = message as? LabConvMessage, let item = message.item, item.speaker == .lobby {
                     ChatMessageFooter(item: item).padding(.leading, 34)

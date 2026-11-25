@@ -117,7 +117,7 @@ export async function handle(request, env, upstream, ctx = { waitUntil: () => {}
     counts,
   ]);
   if (codeCount >= perCode) return error(429, "daily_limit", "You've used today's calls.");
-  if (allCount >= overall) return error(429, "global_limit", "Lobby is out of calls for today.");
+  if (allCount >= overall) return error(429, "global_limit", "Out of calls for today.");
   // The writes run after the reply is sent (they took 195-345 ms, all of it on the call's
   // set-up). Two calls at the same moment can then both pass the limit; that's acceptable.
   if (response.ok) {
@@ -139,7 +139,7 @@ export async function handle(request, env, upstream, ctx = { waitUntil: () => {}
   return new Response(response.body, { status: response.status, headers });
 }
 
-/** One line of Lobby's memory from up to 16 lines (see the app's MemoryJob). Only the lines
+/** One line of the assistant's memory from up to 16 lines (see the app's MemoryJob). Only the lines
  * come from the app; the prompt and model are fixed here. Nothing is stored or logged. */
 async function summarize(request, env, upstream, ctx) {
   const code = (request.headers.get("Authorization") || "").replace(/^Bearer\s+/i, "").trim();

@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// The main screen: Lobby's chat. The latest chat (or the live call) fills the screen, with a
+/// The main screen: Pixie's chat. The latest chat (or the live call) fills the screen, with a
 /// talk button at the bottom; history and settings sit in the toolbar.
 struct HomeView: View {
     @ObservedObject var wake: WakeController
@@ -77,7 +77,7 @@ struct HomeView: View {
     private var suggestions: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 12) {
-                Text(voice.keySource == "missing" ? "Set up to talk to Lobby" : "Ask Lobby anything")
+                Text(voice.keySource == "missing" ? "Set up to talk to \(Agent.name)" : "Ask \(Agent.name) anything")
                     .font(.title2.bold())
                 Text(voice.keySource == "missing"
                      ? "Enter an invite code from a friend, or your own OpenAI API key."
@@ -182,10 +182,10 @@ struct SettingsView: View {
                         LabeledContent("Memory", value: "\(memory.memory.notes.count)")
                     }
                     .accessibilityIdentifier("settings-memory")
-                } header: { Text("Lobby") }
+                } header: { Text(Agent.name) }
 
                 Section {
-                    // One switch: background listening that starts a conversation on "Hey Lobby".
+                    // One switch: background listening that starts a conversation on "Hey Pixie".
                     // (Developer keeps the listener's separate options, including notify-only.)
                     Toggle(isOn: Binding(get: { (wake.enabled || wake.busy) && talkOnWake },
                                          set: { on in
@@ -200,23 +200,23 @@ struct SettingsView: View {
                                                  wake.stop()
                                              }
                                          })) {
-                        Text(wake.busy ? "Starting…" : "Listen for “Hey Lobby”")
+                        Text(wake.busy ? "Starting…" : "Listen for “\(Agent.wakePhrase)”")
                     }
                     .disabled(wake.busy)
                     .accessibilityIdentifier("simple-hands-free")
                     Toggle("Keep screen on while charging", isOn: $awakeWhileCharging)
                         .accessibilityIdentifier("simple-awake-charging")
                 } header: { Text("Listening") } footer: {
-                    Text("Listening hears “Hey Lobby”, even with the phone locked: say it and your request in one go. While charging, the screen stays on as long as Pixie is open.")
+                    Text("Listening hears “\(Agent.wakePhrase)”, even with the phone locked: say it and your request in one go. While charging, the screen stays on as long as Pixie is open.")
                 }
 
                 Section {
-                    Toggle("Lobby can use the browser", isOn: $browserEnabled)
+                    Toggle("\(Agent.name) can use the browser", isOn: $browserEnabled)
                         .accessibilityIdentifier("simple-browser-enabled")
                     BrowserSignInsLink()
                     ObsidianVaultRow()
                 } header: { Text("Browser and notes") } footer: {
-                    Text("With the browser on, Lobby can open, search and read websites; it keeps you signed in only to the sites you choose.")
+                    Text("With the browser on, \(Agent.name) can open, search and read websites; it keeps you signed in only to the sites you choose.")
                 }
 
                 Section {
@@ -225,7 +225,7 @@ struct SettingsView: View {
                     Link("Privacy Policy", destination: AIConsent.privacyPolicy)
                         .accessibilityIdentifier("simple-privacy-policy")
                 } header: { Text("Privacy") } footer: {
-                    Text("Calls with Lobby send your voice to OpenAI. Turn this off to stop that: no call starts until you agree again.")
+                    Text("Calls with \(Agent.name) send your voice to OpenAI. Turn this off to stop that: no call starts until you agree again.")
                 }
 
                 Section {
@@ -251,7 +251,7 @@ struct SettingsView: View {
     }
 }
 
-/// During a call: the orb, the conversation in Lobby's chat view as it happens (the same view
+/// During a call: the orb, the conversation in Pixie's chat view as it happens (the same view
 /// and rows as the chat log afterwards), and the call controls.
 @available(iOS 18.0, *)
 struct LiveCallScreen: View {

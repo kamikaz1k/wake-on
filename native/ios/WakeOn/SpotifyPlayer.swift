@@ -1,7 +1,7 @@
 import UIKit
 import UserNotifications
 
-/// Lobby's "play something on Spotify" tool. The backend model finds the item's
+/// Pixie's "play something on Spotify" tool. The backend model finds the item's
 /// open.spotify.com link with web search and calls `play_spotify`; the app ends the call and
 /// opens the item in the Spotify app. No Spotify account or API key is involved.
 enum SpotifyPlayer {

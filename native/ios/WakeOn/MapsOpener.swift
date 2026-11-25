@@ -1,7 +1,7 @@
 import UIKit
 import UserNotifications
 
-/// Lobby's Google Maps tool. The backend model finds the place's address (web search if
+/// Pixie's Google Maps tool. The backend model finds the place's address (web search if
 /// needed) and calls `open_map`. Mode show puts an embedded Google Map in the chat with a link
 /// out, and the call goes on. Directions and search work like play_spotify: the app ends the
 /// call and opens Google Maps. No Google account or API key is involved.

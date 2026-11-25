@@ -1,7 +1,7 @@
 import SwiftUI
 import UniformTypeIdentifiers
 
-/// Lobby's "note that down" tool: writes Markdown straight into the user's Obsidian vault.
+/// Pixie's "note that down" tool: writes Markdown straight into the user's Obsidian vault.
 /// The vault lives in Obsidian's iCloud folder, which other apps can't open by themselves, so
 /// the user picks the vault folder once in Settings (the system folder picker) and the app
 /// keeps a bookmark to it. Writing needs no Obsidian and no hang-up, so the call goes on, and
@@ -198,7 +198,7 @@ enum ObsidianVault {
     }
 }
 
-/// Settings row: which vault Lobby writes to; tap to pick it (iCloud Drive › Obsidian › vault).
+/// Settings row: which vault Pixie writes to; tap to pick it (iCloud Drive › Obsidian › vault).
 struct ObsidianVaultRow: View {
     @State private var name = ObsidianVault.name
     @State private var picking = false

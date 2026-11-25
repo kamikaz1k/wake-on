@@ -1,7 +1,7 @@
 import XCTest
 @testable import WakeOn
 
-/// The chat log page builds Lobby's chat view from a call's capture, or from its lines for
+/// The chat log page builds Pixie's chat view from a call's capture, or from its lines for
 /// calls saved before captures.
 @MainActor
 final class ChatLogTranscriptTests: XCTestCase {

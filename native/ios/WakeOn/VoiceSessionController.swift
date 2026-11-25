@@ -35,7 +35,7 @@ final class VoiceSessionController: ObservableObject {
     /// The largest lookup request this call, measured by OpenAI (instructions, tools and
     /// transcript). The voice model itself only reports seconds.
     private var lookupInputTokens = 0
-    /// Everything the backend used this call, summed over its answers (sent to the Lobby
+    /// Everything the backend used this call, summed over its answers (sent to the Pixie
     /// server at hang-up for calls with an invite code, see `UsageReport`).
     private var lookupUsage = UsageReport.Tokens()
     /// The call's invite code or key, for the usage report.
@@ -68,7 +68,7 @@ final class VoiceSessionController: ObservableObject {
     /// The permission sheet (AIConsentView) is up, asking before the first call.
     @Published var consentNeeded = false
     /// How the latest call started ("in_app", "app_intent", "wake_word"…). Onboarding watches it
-    /// to confirm the Action Button and "Hey Lobby" work.
+    /// to confirm the Action Button and "Hey Pixie" work.
     @Published private(set) var lastTrigger: String?
     /// The words a `.prompt` probe sends (a suggested first question).
     private var promptText: String?
@@ -109,9 +109,9 @@ final class VoiceSessionController: ObservableObject {
     private var lastStatsPublish: Double = 0
     private var lastLevelLog: Double = 0
     private var serverEventCounts: [String: Int] = [:]
-    /// Silence before hanging up after Lobby says "Bye".
+    /// Silence before hanging up after Pixie says "Bye".
     static let endSilenceSeconds = 2.0
-    /// Silence before hanging up after Lobby asks "Anything else?": a moment to think of more.
+    /// Silence before hanging up after Pixie asks "Anything else?": a moment to think of more.
     static let checkInSilenceSeconds = 4.0
     private var goodbyeHeard = false
     /// Quiet time (no speech, no lookup) before checking in, and again before ending the call.
@@ -120,16 +120,16 @@ final class VoiceSessionController: ObservableObject {
         let value = UserDefaults.standard.object(forKey: idleSecondsKey) as? Double ?? 10
         return max(0, value)
     }
-    /// Lobby talking or a lookup running (the user's words are `lastUserWordsAt`).
+    /// Pixie talking or a lookup running (the user's words are `lastUserWordsAt`).
     private var lastActivity: Double?
-    /// The longest a call runs, a fail-safe in case the hang-ups above never fire; Lobby is told
+    /// The longest a call runs, a fail-safe in case the hang-ups above never fire; Pixie is told
     /// `maxCallWarningSeconds` before so it can say so.
     nonisolated static let maxCallSeconds = 30.0 * 60
     nonisolated static let maxCallWarningSeconds = 60.0
     private var liveSince: Double?
     private var maxCallWarned = false
     private var nudgedAt: Double?
-    /// Lobby has started speaking its check-in since the nudge.
+    /// Pixie has started speaking its check-in since the nudge.
     private var checkInSpoken = false
     private var lookingUpSince: Double?
     /// Browser steps waiting on a page; the lookup isn't over while one runs.
@@ -239,7 +239,7 @@ final class VoiceSessionController: ObservableObject {
         }
         var credentials = OpenAIKeyStore.load()
         #if DEBUG
-        // "--invite CODE": this call uses an invite code (through the Lobby server) without
+        // "--invite CODE": this call uses an invite code (through the Pixie server) without
         // replacing the key saved in the Keychain (testing the server on the phone).
         let args = ProcessInfo.processInfo.arguments
         if let index = args.firstIndex(of: "--invite"), index + 1 < args.count {
@@ -442,17 +442,17 @@ final class VoiceSessionController: ObservableObject {
     }
 
     /// Whether a call starts its audio inside the wake listener's running session instead of
-    /// switching to voice-chat mode. Every "Hey Lobby" call must: switching takes ~1 s and the
+    /// switching to voice-chat mode. Every "Hey Pixie" call must: switching takes ~1 s and the
     /// listener records silence meanwhile, losing what was said after the wake phrase
-    /// ("Hey Lobby, come sail away with me" arrived as "away with me"). From the background iOS
+    /// ("Hey Pixie, come sail away with me" arrived as "away with me"). From the background iOS
     /// refuses the switch anyway. Cost: echo cancellation is weaker outside voice-chat mode.
-    /// Guarded by WakeHandoverTests; don't change without re-testing "Hey Lobby, <request>"
+    /// Guarded by WakeHandoverTests; don't change without re-testing "Hey Pixie, <request>"
     /// with the app on screen and in the background.
     nonisolated static func keepsListenerSession(trigger: String) -> Bool { trigger == "wake_word" }
 
     /// Whether a call starts its audio engine only at the user's first pause. Starting it mutes
     /// the iPhone's microphone for ~0.5 s (both the listener's and the call's audio went to
-    /// digital zeros), which ate "come" from "Hey Lobby, can you play come sail away with me".
+    /// digital zeros), which ate "come" from "Hey Pixie, can you play come sail away with me".
     /// The listener keeps recording for the call meanwhile. Cost: OpenAI hears the request
     /// only once the user pauses. Guarded by WakeHandoverTests and check-wake-handover.py.
     nonisolated static func startsAudioAtPause(trigger: String) -> Bool { trigger == "wake_word" }
@@ -468,10 +468,10 @@ final class VoiceSessionController: ObservableObject {
         armAudio()
     }
 
-    /// Whether echo cancellation waits for Lobby's first reply instead of switching on at
-    /// `session.started`. Switching it on silences the mic for ~0.3 s; ~0.7 s after "Hey Lobby"
+    /// Whether echo cancellation waits for Pixie's first reply instead of switching on at
+    /// `session.started`. Switching it on silences the mic for ~0.3 s; ~0.7 s after "Hey Pixie"
     /// the user is usually mid-sentence ("can you [play come sail] away with me" lost the
-    /// middle). It's only needed once Lobby speaks, and by then the user has stopped.
+    /// middle). It's only needed once Pixie speaks, and by then the user has stopped.
     /// Action Button calls keep the early switch: the user waits for the chime there.
     /// Guarded by WakeHandoverTests and check-wake-handover.py.
     nonisolated static func defersVoiceProcessing(trigger: String) -> Bool { trigger == "wake_word" }
@@ -564,7 +564,7 @@ final class VoiceSessionController: ObservableObject {
     private func takePrepared() -> OpenAILiveVoiceProvider? {
         defer { prepared = nil }
         // A setting that changes the tools (vault picked, browser switched) makes it stale too,
-        // and so does a change to what Lobby remembers.
+        // and so does a change to what Pixie remembers.
         guard let prepared, DispatchTime.now().uptimeNanoseconds - preparedSince < Self.preparedMaxAge,
               prepared.config.notes == ObsidianVault.isSet, prepared.config.browser == BrowserTool.enabled,
               prepared.config.memory == MemoryStore.shared.callText else {
@@ -693,7 +693,7 @@ final class VoiceSessionController: ObservableObject {
         case "session.output_transcript.delta":
             enableDeferredVoiceProcessing(reason: "reply")
             let seconds = uptimeSeconds(time)
-            if lastSpeaker != "Lobby" {
+            if lastSpeaker != Agent.speakerID {
                 // First reply fragment of this turn: compare the server's own timeline too.
                 var fields: [String: Any] = [:]
                 if let start = json["start_ms"] as? Int, let inputEnd = lastInputEndMs {
@@ -704,27 +704,27 @@ final class VoiceSessionController: ObservableObject {
                 exchanges.forEach { $0.outputTranscript(at: time, fields: [:]) }
             }
             tracker.noteAssistantTranscript(at: seconds)
-            appendTranscript("Lobby", json["delta"] as? String ?? "")
+            appendTranscript(Agent.speakerID, json["delta"] as? String ?? "")
             if nudgedAt != nil { checkInSpoken = true }
-            // Lobby ends a finished answer with "Anything else?": the same as the idle check-in,
+            // Pixie ends a finished answer with "Anything else?": the same as the idle check-in,
             // so silence after it ends the call and an answer keeps it going.
-            if nudgedAt == nil, let line = transcript.last, line.speaker == "Lobby",
+            if nudgedAt == nil, let line = transcript.last, line.speaker == Agent.speakerID,
                Self.endsWithCheckIn(line.text) {
                 nudgedAt = seconds
                 checkInSpoken = true
                 record("check_in_heard", at: time)
                 log("check-in heard: hanging up after \(Int(Self.checkInSilenceSeconds)) s of silence")
             }
-            // Follows Lobby's latest line: a reply that goes on after "bye", or a new reply to
+            // Follows Pixie's latest line: a reply that goes on after "bye", or a new reply to
             // something the user said after the goodbye, cancels the hang-up.
-            let bye = transcript.last.map { $0.speaker == "Lobby" && Self.endsWithBye($0.text) } ?? false
+            let bye = transcript.last.map { $0.speaker == Agent.speakerID && Self.endsWithBye($0.text) } ?? false
             if bye != goodbyeHeard {
                 goodbyeHeard = bye
                 if bye {
                     record("goodbye_heard", at: time)
                     log("goodbye heard: hanging up after \(Int(Self.endSilenceSeconds)) s of silence")
                 } else {
-                    log("goodbye cancelled: Lobby kept talking")
+                    log("goodbye cancelled: \(Agent.name) kept talking")
                 }
             }
         case "session.delegation.created":
@@ -1003,12 +1003,12 @@ final class VoiceSessionController: ObservableObject {
     private var fullTranscript: [ChatLog.Line] = []
     private var callTrigger = ""
     private var callStartedAt = Date()
-    /// Notes Lobby remembered this call: any, and the summary job may run (MemoryJob).
+    /// Notes Pixie remembered this call: any, and the summary job may run (MemoryJob).
     private var notesAdded = 0
     /// Every event of the call, saved with its chat log (see `CallCapture`).
     private var capture: CallCapture?
 
-    /// The current call as Lobby's chat view shows it, built from the same events as the capture.
+    /// The current call as Pixie's chat view shows it, built from the same events as the capture.
     /// Kept after the call ends until the next one starts.
     @Published private(set) var liveChat: LiveChat?
 
@@ -1200,8 +1200,8 @@ final class VoiceSessionController: ObservableObject {
         let lookingUp = lookingUpSince.map { time - $0 < 30 } ?? false
         if tracker.assistant.active || lastLobbyActive == nil { lastLobbyActive = time }
         if goodbyeHeard {
-            // After Lobby's goodbye, room noise must not hold the call open (it took 18 s once):
-            // only Lobby still talking or the user's transcribed words delay the hang-up.
+            // After Pixie's goodbye, room noise must not hold the call open (it took 18 s once):
+            // only Pixie still talking or the user's transcribed words delay the hang-up.
             if Self.goodbyeHangsUp(now: time, lobbyLastActive: lastLobbyActive ?? time,
                                    userLastWords: lastUserWordsAt, lookingUp: lookingUp) {
                 log(String(format: "ending after goodbye lobbyQuietMs=%.0f", (time - (lastLobbyActive ?? time)) * 1000))
@@ -1210,7 +1210,7 @@ final class VoiceSessionController: ObservableObject {
             return
         }
         // Mic sound doesn't count: it can be noise, echo or a side conversation, which GPT-Live
-        // doesn't transcribe. Only the user's transcribed words, Lobby talking, or a lookup do.
+        // doesn't transcribe. Only the user's transcribed words, Pixie talking, or a lookup do.
         if tracker.assistant.active || lookingUp || lastActivity == nil {
             lastActivity = time
             return
@@ -1221,7 +1221,7 @@ final class VoiceSessionController: ObservableObject {
         guard idle > 0, !goodbyeHeard else { return }
         if let nudged = nudgedAt {
             // Checked in and still no answer: end shortly after the question, or after the
-            // full silence time if Lobby never asked it.
+            // full silence time if Pixie never asked it.
             let answered = checkInSpoken ? quiet >= Self.checkInSilenceSeconds : time - nudged >= idle && quiet >= idle
             guard answered else { return }
             log(String(format: "ending after no answer to check-in quietMs=%.0f", quiet * 1000))
@@ -1265,7 +1265,7 @@ final class VoiceSessionController: ObservableObject {
         browserOpen && (reason == "paused" || reason == "idle")
     }
 
-    /// After Lobby's goodbye: hang up once Lobby has been quiet and the user has said no words
+    /// After Pixie's goodbye: hang up once Pixie has been quiet and the user has said no words
     /// for `endSilenceSeconds`. Mic level is ignored; noise and echo held a call open for 18 s.
     nonisolated static func goodbyeHangsUp(now: Double, lobbyLastActive: Double, userLastWords: Double?,
                                            lookingUp: Bool) -> Bool {
@@ -1276,7 +1276,7 @@ final class VoiceSessionController: ObservableObject {
     private var lastLobbyActive: Double?
     private var lastUserWordsAt: Double?
 
-    /// How long the call has been idle: since Lobby last talked or looked something up, or the
+    /// How long the call has been idle: since Pixie last talked or looked something up, or the
     /// user last said words, whichever was later. Mic sound alone is not activity.
     nonisolated static func quietSeconds(now: Double, lobbyOrLookup: Double, userWords: Double?) -> Double {
         now - max(lobbyOrLookup, userWords ?? -.infinity)
@@ -1284,7 +1284,7 @@ final class VoiceSessionController: ObservableObject {
 
     enum MaxLengthStep: Equatable { case none, warn, end }
 
-    /// The fail-safe call limit: warn Lobby a minute before `maxCallSeconds`, then hang up.
+    /// The fail-safe call limit: warn Pixie a minute before `maxCallSeconds`, then hang up.
     nonisolated static func maxLengthStep(elapsed: Double, warned: Bool) -> MaxLengthStep {
         if elapsed >= maxCallSeconds { return .end }
         if !warned, elapsed >= maxCallSeconds - maxCallWarningSeconds { return .warn }

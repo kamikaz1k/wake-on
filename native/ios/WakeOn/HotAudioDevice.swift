@@ -96,7 +96,7 @@ final class HotAudioDevice: NSObject, @unchecked Sendable {
     // MARK: Wake-word handover
     //
     // The call's echo-cancelling microphone takes ~330 ms to start. So that nothing said
-    // right after "Hey Lobby" is lost, the listener keeps recording until then and its audio
+    // right after "Hey Pixie" is lost, the listener keeps recording until then and its audio
     // is staged here, cut at the host time of the call microphone's first frame, then placed in
     // front of the call's backlog before anything is sent. Staging is shared with the listener's
     // worker thread under a lock; the real-time thread only ever tries the lock.
@@ -397,7 +397,7 @@ final class HotAudioDevice: NSObject, @unchecked Sendable {
             // iOS refuses voice-chat (exclusive) configuration from the background ('!int').
             // The listener's shared session is still active: start the engine inside it.
             // Switching just the mode to voice chat is refused too ('!int'), and the failed attempt
-            // still moved the output to the earpiece, so Lobby was too quiet to hear.
+            // still moved the output to the earpiece, so Pixie was too quiet to hear.
             let outputs = session.currentRoute.outputs.map(\.portType.rawValue).joined(separator: ",")
             trace("session_kept category=\(session.category.rawValue) mode=\(session.mode.rawValue) options=\(session.categoryOptions.rawValue) outputs=\(outputs)")
             sessionReady = true

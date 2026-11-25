@@ -31,7 +31,7 @@ final class ResumeChatTests: XCTestCase {
         XCTAssertNil(LiveVoiceConfig.historyNote([]))
         let short = try XCTUnwrap(LiveVoiceConfig.historyNote([.init(speaker: "You", text: "code word pineapple"),
                                                                .init(speaker: "Lobby", text: "Okay.")]))
-        XCTAssertTrue(short.contains("User: code word pineapple\nLobby: Okay."))
+        XCTAssertTrue(short.contains("User: code word pineapple\n\(Agent.name): Okay."))
         XCTAssertFalse(short.contains("left out"))
         let long = (0..<400).map { ChatLog.Line(speaker: "You", text: "line \($0) " + String(repeating: "x", count: 40)) }
         let note = try XCTUnwrap(LiveVoiceConfig.historyNote(long))
@@ -84,7 +84,7 @@ final class ResumeChatTests: XCTestCase {
         XCTAssertNil(VoiceSessionController.userFacingError("Anything", hangingUp: true))
         // If the server closes it by itself: a plain explanation instead of the raw message.
         XCTAssertEqual(VoiceSessionController.userFacingError(early, hangingUp: false),
-                       "Lobby was still getting ready when the call ended. Try again.")
+                       "\(Agent.name) was still getting ready when the call ended. Try again.")
         XCTAssertEqual(VoiceSessionController.userFacingError("Invalid API key", hangingUp: false), "Invalid API key")
     }
 
@@ -105,7 +105,7 @@ final class ResumeChatTests: XCTestCase {
         let afterClose = try replay(start + [close, error]).map(\.text)
         XCTAssertFalse(afterClose.contains { $0.contains("context injection") || $0.contains("getting ready") })
         let serverClosed = try replay(start + [error]).map(\.text)
-        XCTAssertTrue(serverClosed.contains("Lobby was still getting ready when the call ended. Try again."))
+        XCTAssertTrue(serverClosed.contains("\(Agent.name) was still getting ready when the call ended. Try again."))
     }
 
     func testOnlyPauseAndIdleInTheBrowserKeepTheChat() {

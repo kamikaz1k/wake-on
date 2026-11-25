@@ -3,7 +3,7 @@ import MarkdownView
 import SwiftUI
 
 /// exyte/Chat 3.3.7 + MarkdownView 3.9.1. Each ChatItem becomes an exyte `Message`:
-/// you are the current user, Lobby is another user, and non-message rows come from a
+/// you are the current user, Pixie is another user, and non-message rows come from a
 /// system user and are drawn by `messageBuilder` with our shared rows. Scrolling, grouping,
 /// date headers and the scroll-to-bottom button are exyte's own; no extra scroll logic.
 struct ExyteRenderer: View {
@@ -13,7 +13,7 @@ struct ExyteRenderer: View {
     @State private var scrollTo: ScrollToParams?
 
     private static let you = User(id: "you", name: "You", avatarURL: nil, isCurrentUser: true)
-    private static let lobby = User(id: "lobby", name: "Lobby", avatarURL: nil, isCurrentUser: false)
+    private static let lobby = User(id: "lobby", name: Agent.name, avatarURL: nil, isCurrentUser: false)
     private static let system = User(id: "system", name: "Call", avatarURL: nil, type: .system)
     static let itemKey = "labItem"
     static let chainKey = "labChain"
@@ -146,7 +146,7 @@ struct ExyteRenderer: View {
     }
 }
 
-/// Lobby's message: MarkdownView inside a bubble styled with exyte's theme colours. exyte's
+/// Pixie's message: MarkdownView inside a bubble styled with exyte's theme colours. exyte's
 /// `messageBuilder` replaces the whole row, so the avatar, name and time view are ours to
 /// redo; only the name (from the group position exyte passes) is shown here.
 private struct LobbyBubble: View {

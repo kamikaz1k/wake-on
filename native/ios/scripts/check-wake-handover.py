@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
-"""Check every "Hey Lobby" call in a phone voice log for a broken handover.
+"""Check every wake-word ("Hey Pixie") call in a phone voice log for a broken handover.
 
-Words said straight after "Hey Lobby" must reach the call. This broke several times, and
+Words said straight after the wake phrase must reach the call. This broke several times, and
 the unit tests (Tests/WakeHandoverTests.swift) can't see device-only causes, so run this on
-the phone's log after testing "Hey Lobby, <request>" with the app on screen and in the background:
+the phone's log after testing "Hey Pixie, <request>" with the app on screen and in the background:
 
   xcrun devicectl device copy from ... --source Documents/voice-console.log --destination log.txt
   python3 scripts/check-wake-handover.py log.txt
@@ -12,7 +12,7 @@ Exit status 1 if any wake call FAILs. Per call:
   FAIL  the call switched the audio session (`session_configure`) instead of keeping the
         listener's: the switch took ~1 s and the listener recorded silence meanwhile
   FAIL  no `wake bridge merged`: the listener's audio never reached the call
-  FAIL  echo cancellation switched on at session start instead of waiting for Lobby's reply
+  FAIL  echo cancellation switched on at session start instead of waiting for Pixie's reply
         (no `voice_processing_deferred`): switching silences the mic ~0.3 s, mid-sentence
   FAIL  the call's audio engine started before the user paused (no `audio_start_after_pause`):
         starting it mutes the iPhone's microphone ~0.5 s, mid-sentence
@@ -54,7 +54,7 @@ def check(body):
         if int(bridge[2]) <= -100:
             warnings.append(f"staged audio ended in near silence (tailDb={bridge[2]})")
     if "voice_processing_on" in joined and "voice_processing_deferred" not in joined:
-        failures.append("echo cancellation switched on at session start, not after Lobby's reply "
+        failures.append("echo cancellation switched on at session start, not after Pixie's reply "
                         "(silences the mic ~0.3 s mid-sentence)")
     if "mic_live" in joined and "audio_start_after_pause" not in joined:
         failures.append("call audio engine started before the user paused (mutes the mic ~0.5 s)")
@@ -97,7 +97,7 @@ def main(paths):
             for reason in warnings:
                 print(f"    WARN {reason}")
     if total == 0:
-        print("No Hey Lobby calls in the log.")
+        print("No wake-word calls in the log.")
     return 1 if failed else 0
 
 

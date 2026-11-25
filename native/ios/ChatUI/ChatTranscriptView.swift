@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// Lobby's chat view (Wake On's chat logs, and Chat Lab's "Ours" page), implementing shadcn's "What Makes a Great Streaming Chat
+/// Pixie's chat view (Wake On's chat logs, and Chat Lab's "Ours" page), implementing shadcn's "What Makes a Great Streaming Chat
 /// Experience" rules (MessageScroller docs). The library pages show their libraries out of the
 /// box; this view is the reference they are compared against.
 ///
@@ -17,9 +17,9 @@ import SwiftUI
 ///   hidden until positioned so there's no visible jump.
 /// - A12/B4: `scrollPosition` with `scrollTargetLayout` keeps the turn you're reading in place
 ///   when rows are inserted or resized above it.
-/// - A15: VoiceOver announces each finished Lobby reply once, not token by token.
-/// - D1: a "Lobby" label starts each run of Lobby messages. D7: edge fades when scrollable.
-/// Lobby's text uses MarkdownView (via `SizedMarkdown`) for lists, tables and code.
+/// - A15: VoiceOver announces each finished Pixie reply once, not token by token.
+/// - D1: a "Pixie" label starts each run of Pixie messages. D7: edge fades when scrollable.
+/// Pixie's text uses MarkdownView (via `SizedMarkdown`) for lists, tables and code.
 struct ChatTurn: Identifiable {
     let id: String
     var items: [ChatItem]
@@ -186,7 +186,7 @@ struct ChatTranscriptView: View {
         for item in items where !announced.contains(item.id) {
             if case let .message(.lobby, text, state) = item.kind, state != .streaming {
                 announced.insert(item.id)
-                AccessibilityNotification.Announcement("Lobby: \(text)").post()
+                AccessibilityNotification.Announcement("\(Agent.name): \(text)").post()
             }
         }
     }
@@ -200,7 +200,7 @@ struct ChatTranscriptView: View {
                 unseen = 0
                 withAnimation(.smooth) { position.scrollTo(edge: .bottom) }
             } label: {
-                Label(lobbyTalking ? "Lobby is talking" : unseen > 0 ? "\(unseen) new" : "Jump to latest",
+                Label(lobbyTalking ? "\(Agent.name) is talking" : unseen > 0 ? "\(unseen) new" : "Jump to latest",
                       systemImage: "arrow.down")
                     .font(.footnote.weight(.semibold))
                     .padding(.horizontal, 14).padding(.vertical, 8)
@@ -266,7 +266,7 @@ private struct TurnView: View {
                     ChatToolChain(tools: tools, finished: finished).padding(.horizontal, 4)
                 }
             }
-            // A running chain already shows what Lobby is doing; the status line would repeat it.
+            // A running chain already shows what Pixie is doing; the status line would repeat it.
             if let status, !ChatToolGrouping.endsWithRunningChain(segments) {
                 ChatStatusLine(text: status).padding(.leading, 4)
             }
@@ -393,7 +393,7 @@ private struct PlainRow: View {
         if case let .message(speaker, text, state) = item.kind {
             VStack(alignment: speaker == .user ? .trailing : .leading, spacing: 3) {
                 if showName {
-                    Text("Lobby").font(.caption.weight(.semibold)).foregroundStyle(.secondary)
+                    Text(Agent.name).font(.caption.weight(.semibold)).foregroundStyle(.secondary)
                         .padding(.horizontal, 12) // line up with the text inside the bubble
                 }
                 Group {
@@ -428,7 +428,7 @@ private struct PlainRow: View {
     }
 }
 
-/// Actions under a finished message: Copy, Expand for wide tables, and Report on Lobby's
+/// Actions under a finished message: Copy, Expand for wide tables, and Report on Pixie's
 /// replies (App Review Guidelines 1.2 and 4.7.1: a way to report objectionable AI output).
 private struct MessageActions: View {
     let text: String
@@ -488,7 +488,7 @@ private struct MessageActions: View {
     }
 }
 
-/// Where a reported Lobby reply goes: a GitHub issue form. The reply itself stays out of the
+/// Where a reported Pixie reply goes: a GitHub issue form. The reply itself stays out of the
 /// link (issues are public); it's copied so the reporter can choose to paste it.
 enum MessageReport {
     static let explanation = "This opens a report form on GitHub, where reports are public. "
@@ -496,7 +496,7 @@ enum MessageReport {
     static var url: URL {
         var parts = URLComponents(string: "https://github.com/kamikaz1k/wake-on/issues/new")!
         parts.queryItems = [
-            URLQueryItem(name: "title", value: "Report: a Lobby response"),
+            URLQueryItem(name: "title", value: "Report: a \(Agent.name) response"),
             URLQueryItem(name: "labels", value: "report"),
             URLQueryItem(name: "body", value: "What was wrong with the response?\n\n"
                          + "(Optional) Paste the response here. It was copied when you tapped Report.\n"),

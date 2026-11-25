@@ -1,8 +1,8 @@
 import Foundation
 import UIKit
 
-/// Lobby's long-term memory, after OptMem (github.com/VictorTaelin/OptMem): an append-only log
-/// of one-line notes Lobby writes during calls (`remember`), and a tree of one-line summaries
+/// Pixie's long-term memory, after OptMem (github.com/VictorTaelin/OptMem): an append-only log
+/// of one-line notes Pixie writes during calls (`remember`), and a tree of one-line summaries
 /// over them, so a call can start with the whole history in a few dozen lines: recent notes
 /// word for word, older ones folded into summaries. `recall` still searches every note.
 ///

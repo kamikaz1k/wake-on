@@ -1,8 +1,8 @@
 import UIKit
 
 /// Whether the user can see Pixie during a call. In view, visuals and maps are worth showing
-/// unasked; away (phone locked, or Pixie in the background, as with most Hey Lobby calls),
-/// they wait unseen in the chat, so Lobby answers in speech instead.
+/// unasked; away (phone locked, or Pixie in the background, as with most Hey Pixie calls),
+/// they wait unseen in the chat, so Pixie answers in speech instead.
 ///
 /// The app tells both models once the call starts and whenever it changes: the backend gets
 /// its instructions updated (`session.update`), the voice model gets quiet context

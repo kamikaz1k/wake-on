@@ -1,19 +1,19 @@
 import SwiftUI
 import WebKit
 
-/// Lobby's browser tool: an in-app browser that opens as a sheet during the call, and a few
-/// fixed actions Lobby can take on it (open, search the site, find text and scroll it into
+/// Pixie's browser tool: an in-app browser that opens as a sheet during the call, and a few
+/// fixed actions Pixie can take on it (open, search the site, find text and scroll it into
 /// view, click a link, scroll, read). You can also open it yourself from the Simple page.
 ///
 /// What keeps it contained: only sites you allow keep sign-ins (`BrowserSignIns`; every other
-/// site's cookies are wiped at launch and when the browser closes), Lobby only runs the app's own scripts below (never script of its
+/// site's cookies are wiped at launch and when the browser closes), Pixie only runs the app's own scripts below (never script of its
 /// own), those run in a separate JavaScript world the page can't see or tamper with, it never
 /// types anything but a search query, and other apps' links (tel:, mailto:, App Store) and
-/// downloads are refused. The remaining risk is a page's text trying to steer Lobby, so page
+/// downloads are refused. The remaining risk is a page's text trying to steer Pixie, so page
 /// text goes back marked as information, never instructions.
 enum BrowserTool {
     static let toolName = "browser"
-    /// Simple page setting: whether Lobby is offered the tool.
+    /// Simple page setting: whether Pixie is offered the tool.
     static let enabledKey = "browser.enabled"
     static var enabled: Bool { UserDefaults.standard.object(forKey: enabledKey) as? Bool ?? true }
 
@@ -203,7 +203,7 @@ enum BrowserTool {
     """#
 }
 
-/// The one in-app browser. The tool and the sheet share its web view, so what Lobby does is
+/// The one in-app browser. The tool and the sheet share its web view, so what Pixie does is
 /// what you see.
 @MainActor
 final class BrowserSession: NSObject, ObservableObject, WKNavigationDelegate, WKUIDelegate {
@@ -231,7 +231,7 @@ final class BrowserSession: NSObject, ObservableObject, WKNavigationDelegate, WK
     /// The page's colour for the top bar, as Safari and Chrome do: the site's theme colour
     /// (`<meta name="theme-color">`), else the colour behind the page.
     @Published private(set) var pageColor: UIColor?
-    /// What Lobby is doing on the page right now, shown over it ("Searching for …").
+    /// What Pixie is doing on the page right now, shown over it ("Searching for …").
     @Published private(set) var activity: String?
     let webView: WKWebView
     private var observations: [NSKeyValueObservation] = []
@@ -241,7 +241,7 @@ final class BrowserSession: NSObject, ObservableObject, WKNavigationDelegate, WK
         // Persistent so allowed sites keep you signed in; the rest is pruned (`BrowserSignIns`).
         config.websiteDataStore = .default()
         config.allowsInlineMediaPlayback = true
-        // Phone-sized from the start: Lobby may use it before the sheet lays it out (or with
+        // Phone-sized from the start: Pixie may use it before the sheet lays it out (or with
         // the phone locked), and a zero-size page has nothing "visible" to find.
         webView = WKWebView(frame: CGRect(x: 0, y: 0, width: 390, height: 844), configuration: config)
         webView.allowsBackForwardNavigationGestures = true
@@ -280,7 +280,7 @@ final class BrowserSession: NSObject, ObservableObject, WKNavigationDelegate, WK
         return "Browser: open on the user's screen at \"\(title)\" (\(url.absoluteString))."
     }
 
-    // MARK: - Lobby's actions
+    // MARK: - Pixie's actions
 
     /// Runs one of the tool's actions and says what happened, with the page's state.
     func perform(action: String, text: String) async -> String {
@@ -359,7 +359,7 @@ final class BrowserSession: NSObject, ObservableObject, WKNavigationDelegate, WK
         }
     }
 
-    /// Title, address and the start of the page's text, for Lobby.
+    /// Title, address and the start of the page's text, for Pixie.
     private func summary(_ lead: String, textLimit: Int = 900, linkLimit: Int = 15) async -> String {
         guard let page = await run("read(\(textLimit), \(linkLimit))") else {
             return [lead, "Page: \(title)", "Address: \(url?.absoluteString ?? "")"].filter { !$0.isEmpty }.joined(separator: "\n")
@@ -436,13 +436,13 @@ final class BrowserSession: NSObject, ObservableObject, WKNavigationDelegate, WK
 }
 
 /// The browser sheet: the page, an address field, Done, back and forward, Open in Safari, and
-/// a Lobby button to start a call about the page (pause, resume or end it). While Lobby acts on the page, a
+/// a Pixie button to start a call about the page (pause, resume or end it). While Pixie acts on the page, a
 /// label over it says what it's doing.
 struct BrowserSheet: View {
     @ObservedObject var browser: BrowserSession
     @ObservedObject var voice: VoiceSessionController = .shared
     @State private var address = ""
-    /// DEBUG `-lobby-demo`: cycles the Lobby control through its states without a call, for
+    /// DEBUG `-lobby-demo`: cycles the Pixie control through its states without a call, for
     /// recording the transitions (idle → live → working → paused → live → idle, 1.5 s apart).
     @State private var demoMode: LobbyMode?
     @State private var demoWorking = false
@@ -592,7 +592,7 @@ struct BrowserSheet: View {
         return 0.299 * r + 0.587 * g + 0.114 * b < 0.55 ? .dark : .light
     }
 
-    /// Lobby in the browser, one state for the whole control (see `LobbyControl`).
+    /// Pixie in the browser, one state for the whole control (see `LobbyControl`).
     private var lobbyMode: LobbyMode {
         if let demoMode { return demoMode }
         return switch voice.phase {
@@ -601,10 +601,10 @@ struct BrowserSheet: View {
         }
     }
 
-    /// Lobby in the browser: the orb alone, which starts a call that knows this page is open;
+    /// Pixie in the browser: the orb alone, which starts a call that knows this page is open;
     /// during a call it shrinks to the left of a capsule that grows out of it with Pause and
-    /// Stop; paused, Pause flips over to Resume. No labels: the orb moves with Lobby's voice,
-    /// and a spinner on it means Lobby is connecting or working on the page.
+    /// Stop; paused, Pause flips over to Resume. No labels: the orb moves with Pixie's voice,
+    /// and a spinner on it means Pixie is connecting or working on the page.
     private var lobbyBar: some View {
         let mode = lobbyMode
         let working = demoWorking || voice.phase == .connecting || voice.phase == .ending
@@ -642,10 +642,10 @@ struct BrowserSheet: View {
     /// For VoiceOver only; the control itself has no text.
     private var lobbyStatus: String {
         switch voice.phase {
-        case .connecting: "Connecting to Lobby"
+        case .connecting: "Connecting to \(Agent.name)"
         case .ending: "Ending"
-        case .live: browser.activity ?? "Lobby is listening"
-        case .idle: voice.pausedThread == nil ? "" : "Lobby paused"
+        case .live: browser.activity ?? "\(Agent.name) is listening"
+        case .idle: voice.pausedThread == nil ? "" : "\(Agent.name) paused"
         }
     }
 }
@@ -656,14 +656,14 @@ private struct BrowserWebView: UIViewRepresentable {
     func updateUIView(_ view: WKWebView, context: Context) {}
 }
 
-/// The floating Lobby control in the browser. One value (`mode`) drives one spring:
+/// The floating Pixie control in the browser. One value (`mode`) drives one spring:
 /// - idle: the orb alone, large;
 /// - live: the orb shrinks to the left and the capsule grows out of it, uncovering Pause and
 ///   Stop (they're clipped by the capsule, never faded);
 /// - paused: Pause flips over (a card turn) to Resume.
 enum LobbyMode { case idle, live, paused }
 
-/// Sizes of the floating Lobby control, in points.
+/// Sizes of the floating Pixie control, in points.
 private enum LobbyMetrics {
     static let idleSize: CGFloat = 64
     static let orbSize: CGFloat = 40
@@ -679,7 +679,7 @@ private enum LobbyMetrics {
 
 struct LobbyControl<Orb: View>: View {
     let mode: LobbyMode
-    /// Lobby is connecting, ending or acting on the page: a spinner on the orb.
+    /// Pixie is connecting, ending or acting on the page: a spinner on the orb.
     let working: Bool
     @ViewBuilder let orb: (CGFloat) -> Orb
     let tapOrb: () -> Void
@@ -709,7 +709,7 @@ struct LobbyControl<Orb: View>: View {
             }
             .buttonStyle(.plain)
             .disabled(mode == .live)
-            .accessibilityLabel(mode == .paused ? "Resume Lobby" : "Ask Lobby")
+            .accessibilityLabel(mode == .paused ? "Resume \(Agent.name)" : "Ask \(Agent.name)")
             .accessibilityIdentifier("browser-ask-lobby")
             // Always laid out; the pill's width uncovers them while they grow out of it with a
             // little blur, as Dynamic Island content does (never an opacity fade).
@@ -731,7 +731,7 @@ struct LobbyControl<Orb: View>: View {
         }
         .accessibilityElement(children: open ? .contain : .ignore)
         .accessibilityAddTraits(open ? [] : .isButton)
-        .accessibilityLabel(open ? "" : "Ask Lobby")
+        .accessibilityLabel(open ? "" : "Ask \(Agent.name)")
         .padding(open ? LobbyMetrics.inset : 0)
         // Both sides concrete, in width and height: the pill stretches both ways like the island.
         .frame(width: open ? LobbyMetrics.openWidth : LobbyMetrics.idleSize,

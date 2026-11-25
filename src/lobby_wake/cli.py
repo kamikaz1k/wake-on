@@ -25,9 +25,9 @@ from .realtime import DEFAULT_INSTRUCTIONS, OpenAIRealtimeAgent
 from .wake import SherpaWakeWordEngine
 
 DEFAULT_MODEL_DIR = Path("models/sherpa-onnx-kws-zipformer-zh-en-3M-2025-12-20")
-DEFAULT_KEYWORDS_FILE = Path("models/hey-lobby.txt")
+DEFAULT_KEYWORDS_FILE = Path("models/hey-pixie.txt")
 DEFAULT_ROUTE_ID = "lobby"
-DEFAULT_TRIGGER_ID = "hey_lobby"
+DEFAULT_TRIGGER_ID = "hey_pixie"
 
 
 def build_parser() -> argparse.ArgumentParser:

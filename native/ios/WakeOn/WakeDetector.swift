@@ -6,11 +6,13 @@ enum WakeError: LocalizedError {
 }
 
 /// Confined to the audio worker queue. Uses the same model and decoder settings as Python.
+/// Listens for `phrase` (by default "Hey <assistant's name>"), built at start from the lexicon.
 final class WakeDetector {
     private let spotter: OpaquePointer
     private let stream: OpaquePointer
 
-    init(bundle: Bundle = .main) throws {
+    init(phrase: String = Agent.wakePhrase, bundle: Bundle = .main) throws {
+        let keywords = try WakePhrase.keywordLine(for: phrase, bundle: bundle)
         var strings: [UnsafeMutablePointer<CChar>] = []
         defer { strings.forEach { free($0) } }
         func string(_ value: String) -> UnsafePointer<CChar> {
@@ -33,7 +35,8 @@ final class WakeDetector {
         config.model_config.tokens = try path("tokens", "txt")
         config.model_config.num_threads = 1
         config.model_config.provider = string("cpu")
-        config.keywords_file = try path("hey-lobby", "txt")
+        config.keywords_buf = string(keywords)
+        config.keywords_buf_size = Int32(keywords.utf8.count)
         config.max_active_paths = 16
         config.num_trailing_blanks = 0
         config.keywords_score = 2

@@ -18,18 +18,18 @@ Input = Callable[[str], str]
 Output = Callable[[str], None]
 
 POSITIVE_PROMPTS = (
-    'Say “Hey Lobby”, then stop.',
-    'Say “Hey Lobby” followed by a natural request.',
-    'Say “Hey Lobby” a little faster than usual.',
-    'Say “Hey Lobby” a little more quietly than usual.',
-    'Say “Hey Lobby” naturally from a different angle or distance.',
+    'Say “Hey Pixie”, then stop.',
+    'Say “Hey Pixie” followed by a natural request.',
+    'Say “Hey Pixie” a little faster than usual.',
+    'Say “Hey Pixie” a little more quietly than usual.',
+    'Say “Hey Pixie” naturally from a different angle or distance.',
 )
 
 NEGATIVE_PROMPTS = (
-    'Say “Hey” without saying “Lobby”.',
-    'Say “Lobby” without saying “Hey”.',
-    'Say a normal sentence containing the word “lobby”.',
-    'Say a phrase that sounds somewhat similar to “Hey Lobby”.',
+    'Say “Hey” without saying “Pixie”.',
+    'Say “Pixie” without saying “Hey”.',
+    'Say a normal sentence containing the word “pixie”.',
+    'Say a phrase that sounds somewhat similar to “Hey Pixie”.',
     'Speak naturally without saying the wake phrase.',
 )
 
@@ -100,7 +100,7 @@ class SamplingSession:
         self._output = output_fn
 
     def run(self, positive_count: int, negative_count: int) -> None:
-        self._output("Lobby Wake sample recorder")
+        self._output("Pixie wake sample recorder")
         self._output("Audio is saved only after you approve each take.")
         self._run_microphone_test()
         self._collect("positive", positive_count, POSITIVE_PROMPTS)

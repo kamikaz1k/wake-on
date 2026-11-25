@@ -97,7 +97,7 @@ struct WakeOnApp: App {
                     guard !didLaunchTest else { return }
                     didLaunchTest = true
                     let args = ProcessInfo.processInfo.arguments
-                    // --voice <name>: choose Lobby's voice (as the Voice setting does).
+                    // --voice <name>: choose Pixie's voice (as the Voice setting does).
                     if let index = args.firstIndex(of: "--voice"), index + 1 < args.count {
                         UserDefaults.standard.set(args[index + 1], forKey: LiveVoiceConfig.voiceKey)
                     }
@@ -154,7 +154,7 @@ struct WakeOnApp: App {
                                 if args.contains("--reuse-mic") {
                                     controller.start()
                                     for _ in 0..<250 {
-                                        if controller.status == "Listening for Hey Lobby" { break }
+                                        if controller.status == "Listening for \(Agent.wakePhrase)" { break }
                                         try await Task.sleep(nanoseconds: 20_000_000)
                                     }
                                     guard controller.enabled else { throw WakeError.message("Wake microphone did not initialize.") }

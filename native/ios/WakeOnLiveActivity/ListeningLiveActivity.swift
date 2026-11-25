@@ -8,7 +8,7 @@ struct WakeOnLiveActivityBundle: WidgetBundle {
 }
 
 /// The listener's Live Activity: the sky orb, calm while listening and bright once it hears
-/// "Hey Lobby" or a conversation is on.
+/// "Hey Pixie" or a conversation is on.
 struct ListeningLiveActivity: Widget {
     var body: some WidgetConfiguration {
         ActivityConfiguration(for: ListeningActivityAttributes.self) { context in
@@ -63,9 +63,9 @@ struct Look {
     var title: String {
         if stale { return "Not listening" }
         switch mode {
-        case .listening: return "Listening for Hey Lobby"
+        case .listening: return "Listening for \(Agent.wakePhrase)"
         case .heard: return "Heard you"
-        case .talking: return "Talking with Lobby"
+        case .talking: return "Talking with \(Agent.name)"
         case .paused: return "Listening paused"
         }
     }
@@ -73,7 +73,7 @@ struct Look {
     var detail: String {
         if stale { return "Open Pixie to listen again" }
         switch mode {
-        case .listening: return "Say “Hey Lobby” to talk"
+        case .listening: return "Say “\(Agent.wakePhrase)” to talk"
         case .heard: return "Connecting…"
         case .talking: return ""
         case .paused: return "Another app has the microphone"
@@ -89,7 +89,7 @@ struct OrbView: View {
             .resizable()
             .scaledToFit()
             .frame(width: size, height: size)
-            // Calm is a little smaller, so the orb grows when it hears "Hey Lobby".
+            // Calm is a little smaller, so the orb grows when it hears "Hey Pixie".
             .scaleEffect(look.bright ? 1 : 0.84)
             .saturation(look.dimmed ? 0 : 1)
             .opacity(look.dimmed ? 0.6 : 1)

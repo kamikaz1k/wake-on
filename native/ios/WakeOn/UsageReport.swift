@@ -1,6 +1,6 @@
 import Foundation
 
-/// What a call with an invite code used, sent to the Lobby server at hang-up so it can add it
+/// What a call with an invite code used, sent to the Pixie server at hang-up so it can add it
 /// up per person per day (`server/scripts/usage.mjs` prints it). The voice model is billed by
 /// the second and only reports seconds; the backend reports tokens. Calls with an OpenAI key
 /// send nothing. Best effort: a report that fails is dropped.

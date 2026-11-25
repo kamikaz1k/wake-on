@@ -1,4 +1,4 @@
-// Simulates Lobby's memory filling up over months of calls, with the app's own `Memory` code
+// Simulates Pixie's memory filling up over months of calls, with the app's own `Memory` code
 // (copied out of WakeOn/Memory.swift by run.sh) and real summaries from OpenAI. See README.md.
 //
 //   run.sh <out-dir> [lobby|eager|never]
@@ -148,7 +148,7 @@ func items(_ reply: String) -> [String] {
 func askFromMemory(_ questions: [Question], memory text: String) async throws -> [String] {
     let reply = replyText(try await respond([
         "model": quizModel, "store": false, "reasoning": ["effort": "low"],
-        "instructions": "You are Lobby, a voice assistant. Answer each question about the user from the memory below only, in a few words. If the memory doesn't say, answer \"don't know\".\n\n" + text,
+        "instructions": "You are \(Agent.name), a voice assistant. Answer each question about the user from the memory below only, in a few words. If the memory doesn't say, answer \"don't know\".\n\n" + text,
         "input": questions.enumerated().map { "\($0.offset + 1). \($0.element.q)" }.joined(separator: "\n"),
         "text": schema("answers", ["type": "string"]),
     ], kind: "quiz"))
@@ -163,7 +163,7 @@ func askWithRecall(_ question: String, memory text: String) async throws -> Stri
     var input: [[String: Any]] = [["role": "user", "content": question]]
     let body: [String: Any] = [
         "model": quizModel, "store": false, "reasoning": ["effort": "low"], "tools": Memory.tools.filter { toolNames.contains($0["name"] as? String ?? "") },
-        "instructions": "You are Lobby, a voice assistant. Answer the user's question about themselves in a few words. " + Memory.delegationInstructions + " If you still can't find it, say you don't know.\n\n" + text,
+        "instructions": "You are \(Agent.name), a voice assistant. Answer the user's question about themselves in a few words. " + Memory.delegationInstructions + " If you still can't find it, say you don't know.\n\n" + text,
     ]
     for _ in 0..<6 {
         var request = body

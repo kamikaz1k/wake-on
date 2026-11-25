@@ -78,14 +78,14 @@ enum MemoryJob {
 }
 
 /// One summary line: with an OpenAI key straight from OpenAI, with an invite code from the
-/// Lobby server (which holds the prompt, so it can't be used for anything else, and asks again
+/// Pixie server (which holds the prompt, so it can't be used for anything else, and asks again
 /// itself when a line is too long).
 enum MemorySummarizer {
     static let openAI = URL(string: "https://api.openai.com/v1/responses")!
 
     static func summarize(_ lines: [String], credential: String) async throws -> String {
         if LobbyServer.isInviteCode(credential) {
-            guard let server = LobbyServer.url else { throw VoiceError.message("No Lobby server in this build.") }
+            guard let server = LobbyServer.url else { throw VoiceError.message("No \(Agent.name) server in this build.") }
             return try await post(server.appendingPathComponent("v1/memory/summarize"), ["lines": lines], credential)
         }
         // Too long: say so and ask again, as OptMem does, instead of cutting the line.

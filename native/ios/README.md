@@ -3,7 +3,7 @@
 Native SwiftUI + AVAudioEngine + Sherpa ONNX prototype. No OpenAI connection,
 API key, Python runtime, or network service is used by the app.
 
-Enable listening, say **Hey Lobby**, and keep speaking. The actual Sherpa model
+Enable listening, say **Hey Pixie**, and keep speaking. The actual Sherpa model
 emits a wake event. The app immediately hands a snapshot to its UI, retains
 **up to two seconds before detection plus three seconds after detection**, and
 lets you replay the result. Detection pauses after a wake until explicitly
@@ -93,7 +93,7 @@ settings, so set your development team in Xcode **after** setup.
 3. Enable Developer Mode on the phone if Xcode requests it, then Run.
 4. Tap **Enable listening** and permit microphone access. Allow notifications if
    you want the tap-to-open route.
-5. Leave the app or lock the screen, then say “Hey Lobby” followed immediately by
+5. Leave the app or lock the screen, then say “Hey Pixie” followed immediately by
    a short sentence. Wait three seconds after detection.
 6. Tap the notification or reopen Wake On. Look for **Detected in background**
    and replay the clip. It should include the wake phrase and following speech.
@@ -270,12 +270,22 @@ See `validation/` for fixture reports and the validation notes. A simulator
 background pass is separate from real-device microphone, battery, suspension,
 notification-tap, and locked-screen validation.
 
-## Realtime voice: Talk to Lobby
+## Renaming the assistant
+
+The name lives in one place, `Agent` ([Shared/Agent.swift](Shared/Agent.swift)): the app's text,
+the voice instructions and the wake phrase ("Hey <name>") all read it. The wake phrase is turned
+into the model's sounds at start from the bundled pronouncing dictionary (`Resources/lexicon.txt`,
+see `WakeOn/WakePhrase.swift`), so any name in it works with no new keyword file. There's no
+setting for it yet; to try another name, launch with `-agentName Nova`. Info.plist, the App
+Shortcut titles and the server's copy say "Pixie" on their own. The wake threshold was tuned on
+"Hey Lobby" recordings, so a new name may need its own.
+
+## Realtime voice: Talk to Pixie
 
 Architecture, latency design and every experiment: [docs/ios-voice-latency.md](../../docs/ios-voice-latency.md).
 Raw measurements: [docs/measurements/2026-10-25-ios-voice](../../docs/measurements/2026-10-25-ios-voice/README.md).
 
-**Talk to Lobby** starts a two-way voice conversation with OpenAI's `gpt-live-1`
+**Talk to Pixie** starts a two-way voice conversation with OpenAI's `gpt-live-1`
 over WebRTC, straight from the phone. There is no relay server. Questions that
 need current information are delegated to `gpt-5.6-terra` with hosted web
 search. This uses an **OpenAI API key** and is billed per use to that API
@@ -291,10 +301,10 @@ Setup:
    Product › Scheme › Edit Scheme › Run › Environment Variables). The app moves it
    into the Keychain on first use, so later launches by iOS still have it. The
    key is never written into the app bundle. Do not give this build to anyone else.
-3. Settings › Action Button › Shortcut › Wake On › **Talk to Lobby (fast start)**.
+3. Settings › Action Button › Shortcut › Pixie › **Talk to Pixie (fast start)**.
    It starts connecting before iOS brings the app forward, about 600 ms sooner
-   than plain **Talk to Lobby**, which iOS runs only ~700 ms after the app is on
-   screen. **End Lobby call** is also available. The wake listener pauses during
+   than plain **Talk to Pixie**, which iOS runs only ~700 ms after the app is on
+   screen. **End Pixie call** is also available. The wake listener pauses during
    a call and resumes afterwards.
 
 Audio comes from `HotAudioDevice`, the app's own voice-processing `AVAudioEngine`

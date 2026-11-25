@@ -70,7 +70,7 @@ final class MapsOpenerTests: XCTestCase {
         XCTAssertEqual(request.embedURL.absoluteString,
                        "https://maps.google.com/maps?q=Demetres%2C%209174%20Yonge%20St%2C%20Richmond%20Hill%2C%20ON&z=15&output=embed")
         XCTAssertTrue(request.webURL.absoluteString.hasPrefix("https://www.google.com/maps/search/?api=1&query=Demetres"))
-        // The made-up sample: the tool row becomes a map with a link out, and Lobby keeps talking.
+        // The made-up sample: the tool row becomes a map with a link out, and Pixie keeps talking.
         let url = URL(fileURLWithPath: #filePath).deletingLastPathComponent()
             .appendingPathComponent("../ChatLab/Captures/sample-place.jsonl")
         let call = try XCTUnwrap(CapturedCall.load(url))

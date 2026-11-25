@@ -7,6 +7,10 @@ import XCTest
 /// cancellation switching on mid-sentence, the call engine's start muting the mic ~0.5 s);
 /// each test pins one cause. Also check a device log with scripts/check-wake-handover.py.
 final class WakeHandoverTests: XCTestCase {
+    /// wake-fixture.wav is a "Hey Lobby" recording (recordings/positive), made before the
+    /// assistant became Pixie, so these tests listen for that phrase.
+    static let fixturePhrase = "Hey Lobby"
+
     /// A wake-word call reuses the listener's session in the foreground too. Switching to
     /// voice-chat mode took ~1 s on an iPhone 17 Pro, and the listener recorded silence meanwhile.
     func testEveryWakeWordCallKeepsTheListenerSession() {
@@ -38,7 +42,7 @@ final class WakeHandoverTests: XCTestCase {
         let lead = 16_000
         let source = [Float](repeating: 0, count: lead) + speech + [Float](repeating: 0, count: 16_000)
 
-        let detector = try WakeDetector()
+        let detector = try WakeDetector(phrase: Self.fixturePhrase)
         var detectedAt: Int?
         for offset in stride(from: 0, to: source.count, by: 320) where detectedAt == nil {
             let block = Array(source[offset..<min(offset + 320, source.count)])
@@ -119,7 +123,7 @@ final class WakeHandoverTests: XCTestCase {
         let pcm = try XCTUnwrap(AVAudioPCMBuffer(pcmFormat: file.processingFormat, frameCapacity: AVAudioFrameCount(file.length)))
         try file.read(into: pcm)
         let source = try MonoConverter(input: pcm.format).convert(pcm) + [Float](repeating: 0, count: 32_000)
-        let detector = try WakeDetector()
+        let detector = try WakeDetector(phrase: Self.fixturePhrase)
         var detectedAt: Int?
         for offset in stride(from: 0, to: source.count, by: 320) where detectedAt == nil {
             let block = Array(source[offset..<min(offset + 320, source.count)])

@@ -31,7 +31,7 @@ struct VoiceSectionView: View {
                 .accessibilityIdentifier("voice-status")
             switch voice.phase {
             case .idle:
-                Button("Talk to Lobby", systemImage: "waveform") {
+                Button("Talk to \(Agent.name)", systemImage: "waveform") {
                     voice.start(trigger: "in_app")
                 }
                 .disabled(voice.keySource == "missing")
@@ -68,9 +68,9 @@ struct VoiceSectionView: View {
             }
             .accessibilityIdentifier("voice-idle-seconds")
         } header: { Text("Voice assistant") } footer: {
-            Text("Assign Talk to Lobby to the Action Button: Settings › Action Button › Shortcut › Pixie. "
-                 + "Press it again to hang up. Lobby asks if there is anything else after an answer, or after "
-                 + "the silence time; the call ends 4 s after that question with no answer, or 2 s after Lobby says bye.")
+            Text("Assign Talk to \(Agent.name) to the Action Button: Settings › Action Button › Shortcut › Pixie. "
+                 + "Press it again to hang up. \(Agent.name) asks if there is anything else after an answer, or after "
+                 + "the silence time; the call ends 4 s after that question with no answer, or 2 s after \(Agent.name) says bye.")
         }
 
         Section { APIKeyLink(voice: voice) }
@@ -147,7 +147,7 @@ struct APIKeyLink: View {
     }
 }
 
-/// An invite code (calls go through the Lobby server) or an OpenAI API key (calls go straight
+/// An invite code (calls go through the Pixie server) or an OpenAI API key (calls go straight
 /// to OpenAI): enter or replace it (saved to the Keychain), or remove it.
 struct APIKeyView: View {
     @ObservedObject var voice: VoiceSessionController
@@ -264,9 +264,9 @@ struct APIKeyView: View {
         switch voice.keySource {
         case "keychain" where needsNewCode:
             "The saved invite code doesn't work anymore. Ask for a new one and enter it above."
-        case "keychain": "Saved in this iPhone's Keychain. Lobby needs it to talk."
+        case "keychain": "Saved in this iPhone's Keychain. \(Agent.name) needs it to talk."
         case "environment": "Using the key from the launch environment (debug builds)."
-        default: "Lobby needs an invite code, or your own OpenAI API key, to talk. It's kept in this iPhone's Keychain."
+        default: "\(Agent.name) needs an invite code, or your own OpenAI API key, to talk. It's kept in this iPhone's Keychain."
         }
     }
 }

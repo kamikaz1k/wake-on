@@ -2,7 +2,7 @@ import SwiftUI
 
 /// A turn's tool calls as one quiet chain, like Claude's: while the turn runs, each step is a
 /// line of small grey text on a thin connecting line, the current step shimmering. Once the
-/// turn is done (Lobby replied, or the call is saved) it collapses into one summary line
+/// turn is done (Pixie replied, or the call is saved) it collapses into one summary line
 /// ("Searched the web, opened Spotify ›") that opens the chain again on tap.
 struct ChatToolChain: View {
     let tools: [ChatItem.Tool]

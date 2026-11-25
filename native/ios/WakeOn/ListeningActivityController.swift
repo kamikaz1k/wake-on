@@ -14,7 +14,7 @@ final class ListeningActivityController {
     /// restarts, it then shows "Not listening" instead of claiming to listen.
     static let staleAfter: TimeInterval = 20 * 60
     static let refreshEvery: TimeInterval = 10 * 60
-    /// How long "Heard you" shows after "Hey Lobby" when no conversation follows.
+    /// How long "Heard you" shows after "Hey Pixie" when no conversation follows.
     static let heardSeconds: TimeInterval = 4
 
     private var activity: Activity<ListeningActivityAttributes>?
@@ -52,7 +52,7 @@ final class ListeningActivityController {
         sync()
     }
 
-    /// "Hey Lobby" was just heard.
+    /// "Hey Pixie" was just heard.
     func noteWake() {
         heardUntil = Date().addingTimeInterval(Self.heardSeconds)
         sync()
@@ -65,7 +65,7 @@ final class ListeningActivityController {
     private func desiredMode() -> Mode? {
         let wake = WakeController.shared, voice = VoiceSessionController.shared
         let heard = (heardUntil ?? .distantPast) > Date()
-        // Only calls the listener is part of: it was on before, or "Hey Lobby" started this one.
+        // Only calls the listener is part of: it was on before, or "Hey Pixie" started this one.
         if voice.phase != .idle, voice.resumeWakeListener || wake.handingOver {
             return voice.phase == .connecting && heard ? .heard : .talking
         }

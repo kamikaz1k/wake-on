@@ -52,7 +52,7 @@ function call(body, code) {
 const goodBody = () => ({
   session: {
     model: "gpt-live-1.1",
-    instructions: "You are Lobby.",
+    instructions: "You are Pixie.",
     audio: { output: { voice: "marin" } },
     delegation: { type: "responses", responses: { model: "gpt-5.6-terra", tools: [{ type: "web_search" }] } },
   },

@@ -3,6 +3,10 @@ import AVFoundation
 @testable import WakeOn
 
 final class HandoffBufferTests: XCTestCase {
+    /// wake-fixture.wav is a "Hey Lobby" recording (recordings/positive), made before the
+    /// assistant became Pixie, so these tests listen for that phrase.
+    static let fixturePhrase = "Hey Lobby"
+
     func testDirectCapturePreservesFirstSampleAndStopsExactlyAtFiveSeconds() {
         var buffer = HandoffBuffer(tailFrames: 80_000)
         let initial = buffer.trigger("DIRECT_RECORDING")
@@ -65,7 +69,7 @@ final class HandoffBufferTests: XCTestCase {
     }
 
     func testRealModelDetectsFixtureAndPreservesExactHandoff() throws {
-        let detector = try WakeDetector()
+        let detector = try WakeDetector(phrase: Self.fixturePhrase)
         let url = try XCTUnwrap(Bundle.main.url(forResource: "wake-fixture", withExtension: "wav"))
         let file = try AVAudioFile(forReading: url)
         let pcm = try XCTUnwrap(AVAudioPCMBuffer(pcmFormat: file.processingFormat,
@@ -92,7 +96,7 @@ final class HandoffBufferTests: XCTestCase {
     }
 
     func testRealModelDoesNotWakeOnSilence() throws {
-        let detector = try WakeDetector()
+        let detector = try WakeDetector(phrase: Self.fixturePhrase)
         for _ in 0..<500 {
             XCTAssertNil(detector.accept([Float](repeating: 0, count: 320)))
         }
@@ -111,7 +115,7 @@ final class HandoffBufferTests: XCTestCase {
         let format = try XCTUnwrap(AVAudioFormat(commonFormat: .pcmFormatFloat32, sampleRate: 48_000,
                                                 channels: 1, interleaved: false))
         let converter = try MonoConverter(input: format)
-        let detector = try WakeDetector()
+        let detector = try WakeDetector(phrase: Self.fixturePhrase)
         var phrases: [String] = []
         for offset in stride(from: 0, to: source.count, by: 960) {
             let chunk = Array(source[offset..<min(offset + 960, source.count)])

@@ -187,7 +187,7 @@ class WakeCaptureComparison:
             while kept < self._attempts:
                 self._output("")
                 self._output(f"{mode.upper()} attempt {kept + 1}/{self._attempts}")
-                self._output('Say “Hey Lobby” once, naturally, then remain silent.')
+                self._output('Say “Hey Pixie” once, naturally, then remain silent.')
                 ready = self._input("Press Enter to record, or q to stop: ").strip().lower()
                 if ready == "q":
                     raise KeyboardInterrupt

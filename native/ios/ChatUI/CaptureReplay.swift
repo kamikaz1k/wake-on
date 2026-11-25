@@ -30,12 +30,12 @@ struct CapturedCall: Identifiable {
         let said = lines.filter { $0.type == "session.input_transcript.delta" }
             .compactMap { $0.event["delta"] as? String }.joined()
         let words = said.split(separator: " ").prefix(8).joined(separator: " ")
-        return words.isEmpty ? "Lobby only" : words + (said.split(separator: " ").count > 8 ? "…" : "")
+        return words.isEmpty ? "\(Agent.name) only" : words + (said.split(separator: " ").count > 8 ? "…" : "")
     }
 
     var source: String {
         switch trigger {
-        case "wake_word": "Hey Lobby"
+        case "wake_word": Agent.wakePhrase
         case "app_intent_fast", "app_intent": "Action Button"
         case "in_app": "In app"
         default: trigger
@@ -57,7 +57,7 @@ struct CapturedCall: Identifiable {
 /// Turns a capture's events into timed transcript changes.
 ///
 /// - Transcript deltas stream into messages. A new message starts when the speaker changes,
-///   when a tool row or marker was added below the current one, or (for Lobby) when a looked-up
+///   when a tool row or marker was added below the current one, or (for Pixie) when a looked-up
 ///   answer arrived since its last words, so the "One moment" filler and the answer are apart.
 /// - Backend items become tool rows: web searches (with their query and the answer they led
 ///   to), function calls such as play_spotify (arguments as they stream, then our result), and
@@ -136,7 +136,7 @@ struct CaptureReplay {
         case "response.event":
             backend(e["event"] as? [String: Any] ?? [:], delegation: e["delegation_id"] as? String ?? "")
         case "session.commentary.append" where line.source == "client":
-            marker("You went quiet · Lobby checks in")
+            marker("You went quiet · \(Agent.name) checks in")
         case "session.close" where line.source == "client":
             closeSent = true
         case "error":
@@ -214,12 +214,12 @@ struct CaptureReplay {
             }
             updateTool("map-open") { $0.result = result; $0.state = outcome == "failed" ? .failed : .done }
         case "app.screen":
-            // What Lobby was told about the screen; the usual start (in view) isn't worth a line.
+            // What Pixie was told about the screen; the usual start (in view) isn't worth a line.
             // Only changes of the screen state; the same update also carries the browser's page.
             let state = e["state"] as? String
             let away = state == "away"
             if state != lastScreen, away || lastScreen != nil {
-                marker(away ? "Screen not in view · Lobby answers in speech" : "Screen in view · Lobby can show things")
+                marker(away ? "Screen not in view · \(Agent.name) answers in speech" : "Screen in view · \(Agent.name) can show things")
             }
             lastScreen = state
         case "app.media_command":
@@ -287,7 +287,7 @@ struct CaptureReplay {
                     }
                 for search in searches[delegation] ?? [] {
                     updateTool(search) {
-                        if !text.isEmpty { $0.result = "Lobby was told: \(text)" }
+                        if !text.isEmpty { $0.result = "\(Agent.name) was told: \(text)" }
                         $0.sources = sources
                     }
                 }
@@ -444,7 +444,7 @@ enum CallErrors {
     static func userFacing(_ message: String, hangingUp: Bool) -> String? {
         guard !hangingUp else { return nil }
         if message.localizedCaseInsensitiveContains("context injection") {
-            return "Lobby was still getting ready when the call ended. Try again."
+            return "\(Agent.name) was still getting ready when the call ended. Try again."
         }
         return message
     }

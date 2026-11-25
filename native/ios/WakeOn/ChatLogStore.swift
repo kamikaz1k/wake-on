@@ -22,7 +22,7 @@ struct ChatLog: Codable, Identifiable, Equatable {
     /// The first thing the user said, for the list.
     var title: String {
         let first = lines.first { $0.speaker == "You" }?.text.trimmingCharacters(in: .whitespacesAndNewlines)
-        return first.flatMap { $0.isEmpty ? nil : $0 } ?? "Lobby only"
+        return first.flatMap { $0.isEmpty ? nil : $0 } ?? "\(Agent.name) only"
     }
 
     /// "1:12"
@@ -33,7 +33,7 @@ struct ChatLog: Codable, Identifiable, Equatable {
 
     var source: String {
         switch trigger {
-        case "wake_word": "Hey Lobby"
+        case "wake_word": Agent.wakePhrase
         case "app_intent_fast", "app_intent": "Action Button"
         case "in_app": "In app"
         case "resume": "Resumed"
@@ -123,7 +123,7 @@ final class ChatLogStore: ObservableObject {
         return true
     }
 
-    /// Deletes logs and, unless `keepMemories`, what Lobby remembered from them (see Memory).
+    /// Deletes logs and, unless `keepMemories`, what Pixie remembered from them (see Memory).
     func delete(ids: Set<UUID>, keepMemories: Bool = false) {
         if !keepMemories { MemoryStore.shared.delete(calls: ids) }
         logs.removeAll { ids.contains($0.id) }
@@ -175,7 +175,7 @@ final class ChatLogStore: ObservableObject {
         }
         guard let data = try? JSONEncoder().encode(logs) else { return }
         // Readable after the first unlock, so calls from the lock screen (Action Button,
-        // Hey Lobby) can read and add to it.
+        // Hey Pixie) can read and add to it.
         try? data.write(to: url, options: [.atomic, .completeFileProtectionUntilFirstUserAuthentication])
     }
 }

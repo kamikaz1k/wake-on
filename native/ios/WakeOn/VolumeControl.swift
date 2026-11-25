@@ -2,7 +2,7 @@ import AVFoundation
 import MediaPlayer
 import UIKit
 
-/// Lobby's "turn it up / down / set the volume to 30%" tool. iOS has no public API to set the
+/// Pixie's "turn it up / down / set the volume to 30%" tool. iOS has no public API to set the
 /// system volume; the standard workaround is the slider inside a hidden `MPVolumeView`, which
 /// moves the same volume as the side buttons (and shows the volume HUD). During a call the
 /// buttons control the call's volume, so the app hangs up first and then sets it (like

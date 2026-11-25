@@ -13,7 +13,7 @@ final class LobbyServerTests: XCTestCase {
 
     func testCodeWithoutAServerSaysSo() {
         XCTAssertThrowsError(try LobbyServer.endpoint(for: "ab12-cd34-ef56", openAI: openAI, server: nil)) {
-            XCTAssertTrue($0.localizedDescription.contains("no Lobby server"))
+            XCTAssertTrue($0.localizedDescription.contains("no \(Agent.name) server"))
         }
         XCTAssertNoThrow(try LobbyServer.endpoint(for: "sk-abc", openAI: openAI, server: nil))
     }

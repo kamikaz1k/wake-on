@@ -2,12 +2,12 @@ import AVFoundation
 import SwiftUI
 
 /// First-run setup: access (invite code or key), permission, a first call, the Action Button,
-/// "Hey Lobby" listening and a demo of recorded calls. Every step after Welcome can be skipped;
+/// "Hey Pixie" listening and a demo of recorded calls. Every step after Welcome can be skipped;
 /// steps that can't work yet (no code, no permission, no Action Button) are passed over.
 enum Onboarding {
     static let doneKey = "onboarding.done"
 
-    /// Suggested first questions, each showing something Lobby can do.
+    /// Suggested first questions, each showing something Pixie can do.
     static let prompts: [(label: String, icon: String, text: String)] = [
         ("Chart this week's weather", "chart.xyaxis.line", "Show me a chart of this week's weather where I am."),
         ("Where's the Eiffel Tower?", "map", "Where's the Eiffel Tower?"),
@@ -75,7 +75,7 @@ struct OnboardingView: View {
     let finish: () -> Void
 
     @State private var step: Step = OnboardingView.launchStep
-    /// The current step's call happened (first call, Action Button press, "Hey Lobby").
+    /// The current step's call happened (first call, Action Button press, "Hey Pixie").
     @State private var stepCallDone = false
     /// The first call just ended: the next page opens with a "That's a call" line.
     @State private var firstCallDone = false
@@ -83,7 +83,7 @@ struct OnboardingView: View {
     @State private var practiceStarted = false
     /// Steps already passed (done or skipped), for Back.
     @State private var history: [Step] = []
-    /// Hey Lobby sub-step: 0 say it, 1 dot and chime, 2 turn on, 3 try it, 4 done.
+    /// Hey Pixie sub-step: 0 say it, 1 dot and chime, 2 turn on, 3 try it, 4 done.
     @State private var heySub = 0
     @State private var chimePlayed = false
     @State private var listeningEnabled = false
@@ -95,7 +95,7 @@ struct OnboardingView: View {
     var body: some View {
         NavigationStack {
             Group {
-                // The Hey Lobby step shows its call inside the card instead.
+                // The Hey Pixie step shows its call inside the card instead.
                 if #available(iOS 18.0, *), voice.phase != .idle, step != .heyLobby, let chat = voice.liveChat {
                     LiveCallScreen(voice: voice, transcript: chat.transcript,
                                    visualizer: VoiceVisualizer(style: visualizerStyle, palette: .named(visualizerPalette)))
@@ -153,8 +153,8 @@ struct OnboardingView: View {
     @ViewBuilder private var page: some View {
         switch step {
         case .welcome:
-            OnboardingPage(icon: "sparkles", title: "Meet Lobby",
-                           text: "Lobby is a voice assistant you talk to like a person. Ask questions, find places, play music and look things up, hands-free.") {
+            OnboardingPage(icon: "sparkles", title: "Meet \(Agent.name)",
+                           text: "\(Agent.name) is a voice assistant you talk to like a person. Ask questions, find places, play music and look things up, hands-free.") {
                 EmptyView()
             } actions: {
                 primary("Get Started", id: "onboarding-start") { advance() }
@@ -175,7 +175,7 @@ struct OnboardingView: View {
                            title: stepCallDone ? "That's a call" : "Your first call",
                            text: stepCallDone
                                ? "Next, set it up so a single press starts one."
-                               : "Tap a question to start. Lobby answers out loud. Say “bye” or tap End to hang up.") {
+                               : "Tap a question to start. \(Agent.name) answers out loud. Say “bye” or tap End to hang up.") {
                 if !stepCallDone {
                     VStack(spacing: 10) {
                         ForEach(Onboarding.prompts, id: \.label) { prompt in
@@ -207,7 +207,7 @@ struct OnboardingView: View {
                     VStack(alignment: .leading, spacing: 10) {
                         OnboardingRow(icon: "1.circle", tint: .primary, textStyle: .primary, text: "Open Settings, then tap Action Button")
                         OnboardingRow(icon: "2.circle", tint: .primary, textStyle: .primary, text: "Swipe to Shortcut, then tap Choose a Shortcut")
-                        OnboardingRow(icon: "3.circle", tint: .primary, textStyle: .primary, text: "Pick Pixie › Talk to Lobby")
+                        OnboardingRow(icon: "3.circle", tint: .primary, textStyle: .primary, text: "Pick Pixie › Talk to \(Agent.name)")
                         OnboardingRow(icon: "4.circle", tint: .primary, textStyle: .primary, text: "Come back here and press the Action Button")
                     }
                     HStack(spacing: 12) {
@@ -234,14 +234,14 @@ struct OnboardingView: View {
             // phrase alone (practice, no call), what listening looks and sounds like, turning
             // listening on, then the whole thing end to end.
             OnboardingPage(note: firstCallDone ? callDoneNote : nil,
-                           icon: "waveform", title: "Just say “Hey Lobby”",
+                           icon: "waveform", title: "Just say “\(Agent.wakePhrase)”",
                            text: "Listening runs on your iPhone, and nothing is sent until you say it.") {
                 VStack(alignment: .leading, spacing: 20) {
-                    OnboardingSubstep(number: 1, title: "Say “Hey Lobby”",
-                                      result: "Heard you. That phrase wakes Lobby.", state: subState(0)) {
+                    OnboardingSubstep(number: 1, title: "Say “\(Agent.wakePhrase)”",
+                                      result: "Heard you. That phrase wakes \(Agent.name).", state: subState(0)) {
                         HStack(spacing: 8) {
                             ProgressView().controlSize(.small)
-                            Text("Listening for “Hey Lobby”… Nothing starts a call yet.").foregroundStyle(.secondary)
+                            Text("Listening for “\(Agent.wakePhrase)”… Nothing starts a call yet.").foregroundStyle(.secondary)
                         }
                     }
                     OnboardingSubstep(number: 2, title: "What listening looks and sounds like",
@@ -250,7 +250,7 @@ struct OnboardingView: View {
                             OnboardingRow(icon: "arrow.up",
                                           text: "Look at the top of the screen: the orange dot shows while the microphone is on, like now.")
                             OnboardingRow(icon: "bell.fill",
-                                          text: "After “Hey Lobby”, this chime means Lobby is ready for your question. Words said during it are missed.")
+                                          text: "After “\(Agent.wakePhrase)”, this chime means \(Agent.name) is ready for your question. Words said during it are missed.")
                             HStack {
                                 Button("Play the Chime", systemImage: "speaker.wave.2") { playChime(); chimePlayed = true }
                                     .buttonStyle(.bordered)
@@ -265,7 +265,7 @@ struct OnboardingView: View {
                     OnboardingSubstep(number: 3, title: "Turn on background listening",
                                       result: "Listening is on.", state: subState(2)) {
                         VStack(alignment: .leading, spacing: 12) {
-                            Text("Then “Hey Lobby” works any time, even with the phone locked. It uses under 1% of battery an hour; turn it off in Settings.")
+                            Text("Then “\(Agent.wakePhrase)” works any time, even with the phone locked. It uses under 1% of battery an hour; turn it off in Settings.")
                                 .foregroundStyle(.secondary)
                             Button("Turn On Background Listening") { turnOnListening() }
                                 .buttonStyle(.borderedProminent)
@@ -279,7 +279,7 @@ struct OnboardingView: View {
                         } else {
                             HStack(spacing: 8) {
                                 ProgressView().controlSize(.small)
-                                Text("Say “Hey Lobby”, wait for the chime, then ask “what time is it?”")
+                                Text("Say “\(Agent.wakePhrase)”, wait for the chime, then ask “what time is it?”")
                                     .foregroundStyle(.secondary)
                             }
                         }
@@ -297,7 +297,7 @@ struct OnboardingView: View {
                 if step == .heyLobby, heySub == 3, old != .idle, new == .idle, voice.lastTrigger == "wake_word" { heySub = 4 }
             }
         case .demo:
-            OnboardingPage(icon: "play.rectangle.on.rectangle.fill", title: "See what Lobby can do",
+            OnboardingPage(icon: "play.rectangle.on.rectangle.fill", title: "See what \(Agent.name) can do",
                            text: "Recorded calls, played back as they happened.") {
                 DemoList()
             } actions: {
@@ -305,7 +305,7 @@ struct OnboardingView: View {
             }
         case .done:
             OnboardingPage(icon: "checkmark.seal.fill", title: "You're all set",
-                           text: "Start a chat from the main screen, press the Action Button, or say “Hey Lobby”.") {
+                           text: "Start a chat from the main screen, press the Action Button, or say “\(Agent.wakePhrase)”.") {
                 EmptyView()
             } actions: {
                 primary("Start Using Pixie", id: "onboarding-finish") { finish() }
@@ -319,7 +319,7 @@ struct OnboardingView: View {
         heySub > index ? .done : heySub == index ? .current : .upcoming
     }
 
-    /// Listening on without starting calls, so "Hey Lobby" can be practised. If listening was
+    /// Listening on without starting calls, so "Hey Pixie" can be practised. If listening was
     /// already on (and starting calls), it's restarted without calls: a detection never jumps
     /// to a call here.
     private func startPractice() {
@@ -531,7 +531,7 @@ struct DemoList: View {
     }
 }
 
-/// A recorded call played back at its own timing in Lobby's chat view.
+/// A recorded call played back at its own timing in Pixie's chat view.
 @available(iOS 18.0, *)
 struct DemoReplayView: View {
     let call: CapturedCall

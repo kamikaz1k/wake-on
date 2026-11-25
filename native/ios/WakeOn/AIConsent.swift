@@ -11,7 +11,7 @@ enum AIConsent {
     static func set(_ value: Bool) { UserDefaults.standard.set(value, forKey: key) }
 
     /// Shown when a call can't start for lack of permission and the sheet can't be shown
-    /// (the Action Button or "Hey Lobby" with the app in the background).
+    /// (the Action Button or "Hey Pixie" with the app in the background).
     static let backgroundMessage = "Open Pixie and agree to sending your voice to OpenAI before your first call."
 }
 
@@ -37,10 +37,10 @@ struct AIConsentPage: View {
                         .font(.system(size: 56))
                         .foregroundStyle(.tint)
                         .accessibilityHidden(true)
-                    Text("Talking to Lobby uses OpenAI")
+                    Text("Talking to \(Agent.name) uses OpenAI")
                         .font(.title2.bold())
-                    Text("During a call, Pixie sends your voice to OpenAI so Lobby can understand and answer you, along with anything you ask Lobby to look at, like a web page in Pixie’s browser.")
-                    Text("This happens only while a call is on. “Hey Lobby” listening runs on your iPhone and sends nothing until a call starts. Your chat history stays on your iPhone.")
+                    Text("During a call, Pixie sends your voice to OpenAI so \(Agent.name) can understand and answer you, along with anything you ask \(Agent.name) to look at, like a web page in Pixie’s browser.")
+                    Text("This happens only while a call is on. “\(Agent.wakePhrase)” listening runs on your iPhone and sends nothing until a call starts. Your chat history stays on your iPhone.")
                     Text("OpenAI handles this data under its API policies. You can turn this off any time in Settings › Privacy.")
                         .foregroundStyle(.secondary)
                     Link("Privacy Policy", destination: AIConsent.privacyPolicy)

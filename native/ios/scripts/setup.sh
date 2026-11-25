@@ -16,13 +16,15 @@ if [ ! -d Vendor/WebRTC.xcframework ]; then
   unzip -q -o "$webrtc" -d Vendor
 fi
 model=../../models/sherpa-onnx-kws-zipformer-zh-en-3M-2025-12-20
-if [ ! -d "$model" ] || [ ! -f ../../models/hey-lobby.txt ]; then
+if [ ! -d "$model" ]; then
   sh ../../scripts/setup-model.sh
 fi
 cp "$model/encoder-epoch-13-avg-2-chunk-8-left-64.int8.onnx" Resources/encoder.onnx
 cp "$model/decoder-epoch-13-avg-2-chunk-8-left-64.onnx" Resources/decoder.onnx
 cp "$model/joiner-epoch-13-avg-2-chunk-8-left-64.int8.onnx" Resources/joiner.onnx
-cp "$model/tokens.txt" ../../models/hey-lobby.txt Resources/
+cp "$model/tokens.txt" Resources/
+# Pronouncing dictionary: the app builds its wake phrase ("Hey <name>") from it (WakePhrase.swift).
+cp "$model/en.phone" Resources/lexicon.txt
 fixture=${WAKE_FIXTURE:-../../recordings/positive/positive-001-quiet.wav}
 if [ -f "$fixture" ]; then
   cp "$fixture" Resources/wake-fixture.wav

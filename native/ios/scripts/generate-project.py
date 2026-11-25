@@ -36,7 +36,7 @@ shared=[file(str(p.relative_to(root)), 'sourcecode.swift') for p in sorted((root
 activity_sources=[file(str(p.relative_to(root)), 'sourcecode.swift') for p in sorted((root/'WakeOnLiveActivity').glob('*.swift'))]
 activity_assets=file('WakeOnLiveActivity/Assets.xcassets', 'folder.assetcatalog')
 tests=[file(str(p.relative_to(root)), 'sourcecode.swift') for p in sorted((root/'Tests').glob('*.swift'))]
-resources=[file('Resources/'+n, 'file') for n in ['encoder.onnx','decoder.onnx','joiner.onnx','tokens.txt','hey-lobby.txt','wake-fixture.wav']]
+resources=[file('Resources/'+n, 'file') for n in ['encoder.onnx','decoder.onnx','joiner.onnx','tokens.txt','lexicon.txt','wake-fixture.wav']]
 # Recorded two-voice conversation for the visualizer gallery.
 resources+=[file('WakeOn/Assets.xcassets', 'folder.assetcatalog')]
 resources+=[file('WakeOn/PrivacyInfo.xcprivacy', 'text.xml')]
@@ -56,7 +56,7 @@ test_product=add('testproduct','PBXFileReference',explicitFileType='wrapper.cfbu
 # Chat Lab: a separate app for comparing chat UI libraries (docs/research/chat-ui-scenarios.md).
 # Kept out of Wake On so its packages never touch the voice app or its launch time.
 lab_sources=[file(str(p.relative_to(root)), 'sourcecode.swift') for p in sorted((root/'ChatLab').glob('*.swift'))]
-# Lobby's chat view, compiled into both Wake On (chat logs) and Chat Lab.
+# The assistant's chat view, compiled into both Wake On (chat logs) and Chat Lab.
 chat_ui=[file(str(p.relative_to(root)), 'sourcecode.swift') for p in sorted((root/'ChatUI').glob('*.swift'))]
 # A made-up sample call in Wake On's capture format; real captures stay off git (captures/).
 # Made-up sample calls: Chat Lab's replays and Pixie's onboarding demo.
@@ -79,7 +79,7 @@ for url, requirement, names in lab_packages:
     for name in names:
         lab_product_deps.append(add('pkgproduct'+name,'XCSwiftPackageProductDependency',package=ref_id,productName=name))
 lab_framework_files=[add('labbuild'+d,'PBXBuildFile',productRef=d) for d in lab_product_deps]
-# Wake On uses only MarkdownView, for the chat view's Lobby text.
+# Wake On uses only MarkdownView, for the chat view's Pixie text.
 app_product_deps=[k for k in lab_product_deps if objects[k]['productName'] in ('MarkdownView','MarkdownParser')]
 app_framework_files=[add('appbuild'+d,'PBXBuildFile',productRef=d) for d in app_product_deps]
 products=add('products','PBXGroup',children=[app,test_product,appex,lab_app,lab_ui_product],name='Products',sourceTree='<group>')
@@ -102,7 +102,7 @@ lab_frameworks=add('labFrameworks','PBXFrameworksBuildPhase',buildActionMask=214
 # Without this the simulator finds it in the build folder and the phone crashes at launch.
 lab_embed_files=[add('labembed'+d,'PBXBuildFile',productRef=d,settings={'ATTRIBUTES':['CodeSignOnCopy','RemoveHeadersOnCopy']}) for d in lab_product_deps if objects[d]['productName']=='LanguageModelChatUI']
 lab_embed=add('labEmbedFrameworks','PBXCopyFilesBuildPhase',buildActionMask=2147483647,dstPath='',dstSubfolderSpec=10,files=lab_embed_files,name='Embed Frameworks',runOnlyForDeploymentPostprocessing=0)
-lab_target=add('labapp','PBXNativeTarget',name='ChatLab',productName='ChatLab',productReference=lab_app,productType='com.apple.product-type.application',buildConfigurationList=configs('lab',lab_settings),buildPhases=[phase('labSources','PBXSourcesBuildPhase',lab_sources+chat_ui,prefix='labbuild'),lab_frameworks,phase('labResources','PBXResourcesBuildPhase',lab_resources,prefix='labbuild'),lab_embed],buildRules=[],dependencies=[],packageProductDependencies=lab_product_deps)
+lab_target=add('labapp','PBXNativeTarget',name='ChatLab',productName='ChatLab',productReference=lab_app,productType='com.apple.product-type.application',buildConfigurationList=configs('lab',lab_settings),buildPhases=[phase('labSources','PBXSourcesBuildPhase',lab_sources+chat_ui+[f for f in shared if 'Agent.swift' in str(objects[f].get('path',''))],prefix='labbuild'),lab_frameworks,phase('labResources','PBXResourcesBuildPhase',lab_resources,prefix='labbuild'),lab_embed],buildRules=[],dependencies=[],packageProductDependencies=lab_product_deps)
 # Chat Lab UI tests: real swipes in the simulator (e.g. overscrolling a library's list).
 lab_proxy=add('labProxy','PBXContainerItemProxy',containerPortal=project_id,proxyType=1,remoteGlobalIDString=lab_target,remoteInfo='ChatLab')
 lab_dep=add('labDependency','PBXTargetDependency',target=lab_target,targetProxy=lab_proxy)
@@ -124,7 +124,7 @@ def ref(id,name):
 <ProfileAction buildConfiguration="Release"><BuildableProductRunnable runnableDebuggingMode="0">{ref(app_target,'WakeOn.app')}</BuildableProductRunnable></ProfileAction>
 <AnalyzeAction buildConfiguration="Debug"/><ArchiveAction buildConfiguration="Release" revealArchiveInOrganizer="YES"/>
 </Scheme>''')
-info=dict(CFBundleDevelopmentRegion='en',CFBundleExecutable='$(EXECUTABLE_NAME)',CFBundleIdentifier='$(PRODUCT_BUNDLE_IDENTIFIER)',CFBundleInfoDictionaryVersion='6.0',CFBundleName='Pixie',CFBundleDisplayName='Pixie',CFBundlePackageType='APPL',CFBundleShortVersionString='0.1.0',CFBundleVersion='$(CURRENT_PROJECT_VERSION)',LSRequiresIPhoneOS=True,NSMicrophoneUsageDescription='Listen locally for Hey Lobby, keep a short audio buffer for the wake handoff, and talk with the voice assistant.',NSCameraUsageDescription='Pixie doesn’t use your camera: calls with Lobby are voice only. A website you open in Pixie’s browser could ask for it, and iOS asks you first.',UIBackgroundModes=['audio','processing'],BGTaskSchedulerPermittedIdentifiers=['com.kamikaz1k.wakeon.memory'],NSSupportsLiveActivities=True,UILaunchScreen={},UISupportedInterfaceOrientations=['UIInterfaceOrientationPortrait','UIInterfaceOrientationLandscapeLeft','UIInterfaceOrientationLandscapeRight'],UIApplicationSceneManifest={'UIApplicationSupportsMultipleScenes':False},ITSAppUsesNonExemptEncryption=False,CFBundleURLTypes=[{'CFBundleURLName':'com.kamikaz1k.wakeon','CFBundleURLSchemes':['wakeon']}])
+info=dict(CFBundleDevelopmentRegion='en',CFBundleExecutable='$(EXECUTABLE_NAME)',CFBundleIdentifier='$(PRODUCT_BUNDLE_IDENTIFIER)',CFBundleInfoDictionaryVersion='6.0',CFBundleName='Pixie',CFBundleDisplayName='Pixie',CFBundlePackageType='APPL',CFBundleShortVersionString='0.1.0',CFBundleVersion='$(CURRENT_PROJECT_VERSION)',LSRequiresIPhoneOS=True,NSMicrophoneUsageDescription='Listen locally for Hey Pixie, keep a short audio buffer for the wake handoff, and talk with the voice assistant.',NSCameraUsageDescription='Pixie doesn’t use your camera: calls with Pixie are voice only. A website you open in Pixie’s browser could ask for it, and iOS asks you first.',UIBackgroundModes=['audio','processing'],BGTaskSchedulerPermittedIdentifiers=['com.kamikaz1k.wakeon.memory'],NSSupportsLiveActivities=True,UILaunchScreen={},UISupportedInterfaceOrientations=['UIInterfaceOrientationPortrait','UIInterfaceOrientationLandscapeLeft','UIInterfaceOrientationLandscapeRight'],UIApplicationSceneManifest={'UIApplicationSupportsMultipleScenes':False},ITSAppUsesNonExemptEncryption=False,CFBundleURLTypes=[{'CFBundleURLName':'com.kamikaz1k.wakeon','CFBundleURLSchemes':['wakeon']}])
 info['UISupportedInterfaceOrientations~ipad'] = info['UISupportedInterfaceOrientations'] + ['UIInterfaceOrientationPortraitUpsideDown']
 (root/'WakeOn/Info.plist').write_bytes(plistlib.dumps(info))
 

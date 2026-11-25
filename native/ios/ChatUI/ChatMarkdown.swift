@@ -5,7 +5,7 @@ import UIKit
 
 /// MarkdownView's own SwiftUI wrapper measures its height after layout (async) and starts each
 /// new view at 0. In exyte's recycled table cells that made the list's height change by a row
-/// every time a Lobby bubble was reused near the top, so the scroll position kept re-clamping:
+/// every time a Pixie bubble was reused near the top, so the scroll position kept re-clamping:
 /// the bounce loop at the top. This wrapper reports its height during layout instead.
 ///
 /// Tables: MarkdownView puts each table in a sideways scroll view but turns its clipping off,
@@ -89,7 +89,7 @@ struct ExpandedMessage: View {
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .padding()
             }
-            .navigationTitle("Lobby")
+            .navigationTitle(Agent.name)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) { Button("Done") { dismiss() } }

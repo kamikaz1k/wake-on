@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// Settings › Memory: what Lobby has remembered, newest first. Each note opens the chat it
+/// Settings › Memory: what Pixie has remembered, newest first. Each note opens the chat it
 /// came from; swipe to delete one, or delete them all. Standard components only.
 struct MemoryView: View {
     @ObservedObject var store: MemoryStore = .shared
@@ -13,7 +13,7 @@ struct MemoryView: View {
         List {
             if notes.isEmpty {
                 ContentUnavailableView("Nothing remembered yet", systemImage: "brain",
-                                       description: Text("What Lobby learns in your calls will show up here."))
+                                       description: Text("What \(Agent.name) learns in your calls will show up here."))
             } else {
                 Section {
                     ForEach(notes) { note in
@@ -25,7 +25,7 @@ struct MemoryView: View {
                     }
                     .onDelete { offsets in store.delete(noteIDs: Set(offsets.map { notes[$0].id })) }
                 } footer: {
-                    Text("Lobby sees these at the start of every call, with older ones summarized. They stay on this iPhone and go to OpenAI only during calls and when summarized.")
+                    Text("\(Agent.name) sees these at the start of every call, with older ones summarized. They stay on this iPhone and go to OpenAI only during calls and when summarized.")
                 }
             }
             #if DEBUG
@@ -42,7 +42,7 @@ struct MemoryView: View {
                 }
             }
         }
-        .confirmationDialog("Delete everything Lobby remembers?", isPresented: $confirmDeleteAll,
+        .confirmationDialog("Delete everything \(Agent.name) remembers?", isPresented: $confirmDeleteAll,
                             titleVisibility: .visible) {
             Button("Delete \(notes.count) \(notes.count == 1 ? "Memory" : "Memories")", role: .destructive) {
                 store.deleteAll()
