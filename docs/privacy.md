@@ -1,6 +1,6 @@
 # Pixie privacy policy
 
-Last updated: November 22, 2026
+Last updated: November 25, 2026
 
 Pixie is a voice assistant for iPhone. This page explains what
 the app does with your information. In short: your voice goes to OpenAI only while you're
@@ -19,6 +19,15 @@ To answer questions, Pixie may search the web. That search runs at OpenAI.
 
 The app asks your permission before the first call. You can withdraw it any time in
 Settings › Privacy ("Send voice to OpenAI in calls"); no call starts until you agree again.
+
+## Your location
+
+When you ask about something that depends on where you are (the weather, places near you,
+directions from here) and don't name a place, Pixie may look up your iPhone's location once.
+iOS asks your permission the first time, and only while you use the app. The area's name and
+coordinates rounded to about 100 m go to OpenAI in that call so Pixie can answer. Pixie
+doesn't track your location or keep it anywhere. You can turn it off in the iPhone's
+Settings › Pixie › Location.
 
 ## "Hey Pixie" listening
 
@@ -83,7 +92,7 @@ web.
 ## What the app doesn't do
 
 - No ads, analytics or tracking, and no data sold or shared for advertising.
-- No location access.
+- No location tracking: your location is only looked up when a question needs it.
 - No account with the developer.
 
 ## Children

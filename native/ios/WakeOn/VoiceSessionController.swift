@@ -782,7 +782,7 @@ final class VoiceSessionController: ObservableObject {
         }
     }
 
-    /// The backend model called one of the app's tools (play_spotify, play_youtube, control_media, open_map, show_visual).
+    /// The backend model called one of the app's tools (play_spotify, play_youtube, control_media, open_map, get_location, show_visual).
     private func handleFunctionCall(_ item: [String: Any]) {
         let name = item["name"] as? String ?? ""
         let callID = item["call_id"] as? String ?? ""
@@ -802,6 +802,17 @@ final class VoiceSessionController: ObservableObject {
                 self.completeFunctionCall(name: name, callID: callID, arguments: arguments, result: result,
                                           action: ["kind": "browser", "step": step,
                                                    "url": browser.url?.absoluteString ?? NSNull()])
+            }
+            return
+        }
+        if name == CurrentLocation.toolName {
+            // A fix (and maybe the permission prompt) takes a moment: the output follows.
+            lookingUpSince = uptimeSeconds()
+            Task { @MainActor in
+                let result = await CurrentLocation.locate()
+                self.log("location \(result.hasPrefix("The user is in") ? "found" : "unavailable")")
+                self.completeFunctionCall(name: name, callID: callID, arguments: arguments, result: result,
+                                          action: ["kind": "location"])
             }
             return
         }

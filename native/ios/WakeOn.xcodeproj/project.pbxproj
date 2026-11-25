@@ -68,6 +68,13 @@
 			<key>sourceTree</key>
 			<string>&lt;group&gt;</string>
 		</dict>
+		<key>0406B817A61A374E7DCCF7AD</key>
+		<dict>
+			<key>fileRef</key>
+			<string>4B3D8A9C7EB1EF5788401C2E</string>
+			<key>isa</key>
+			<string>PBXBuildFile</string>
+		</dict>
 		<key>04D13FD0AA6F0197CF2C9990</key>
 		<dict>
 			<key>buildConfigurationList</key>
@@ -417,6 +424,17 @@
 			<string>sourcecode.swift</string>
 			<key>path</key>
 			<string>WakeOn/ContentView.swift</string>
+			<key>sourceTree</key>
+			<string>&lt;group&gt;</string>
+		</dict>
+		<key>1E48ED7EB3CFBCF86BD70F04</key>
+		<dict>
+			<key>isa</key>
+			<string>PBXFileReference</string>
+			<key>lastKnownFileType</key>
+			<string>sourcecode.swift</string>
+			<key>path</key>
+			<string>WakeOn/CurrentLocation.swift</string>
 			<key>sourceTree</key>
 			<string>&lt;group&gt;</string>
 		</dict>
@@ -1040,6 +1058,17 @@
 				<key>minimumVersion</key>
 				<string>0.2.0</string>
 			</dict>
+		</dict>
+		<key>4B3D8A9C7EB1EF5788401C2E</key>
+		<dict>
+			<key>isa</key>
+			<string>PBXFileReference</string>
+			<key>lastKnownFileType</key>
+			<string>sourcecode.swift</string>
+			<key>path</key>
+			<string>Tests/CurrentLocationTests.swift</string>
+			<key>sourceTree</key>
+			<string>&lt;group&gt;</string>
 		</dict>
 		<key>4D21998E0F87301D09500B4B</key>
 		<dict>
@@ -1682,6 +1711,7 @@
 				<string>2E25DF7EB50C6B90D3C76346</string>
 				<string>364477DAA4A0A3FDA02EC409</string>
 				<string>9974356E209FF4C15ABE4053</string>
+				<string>0406B817A61A374E7DCCF7AD</string>
 				<string>FD0F0DB50B6695E5A313F02A</string>
 				<string>604415CC5C8C5E7AD42D4232</string>
 				<string>F5A8AD6DD1708ECCF94AA2E2</string>
@@ -2827,6 +2857,7 @@
 				<string>B54125122EED1782DCF9B206</string>
 				<string>141FC4B68CEA3CBAC086E734</string>
 				<string>96BED2CC5F692481EDA9CC0A</string>
+				<string>FA772B0CCD9F955FCDF840AA</string>
 				<string>71A29599834994135DF78497</string>
 				<string>568BF71766AD031C662F40F2</string>
 				<string>190FC281175A458411477DAD</string>
@@ -3360,6 +3391,7 @@
 				<string>C81A61E9307DAAB1D29A09A0</string>
 				<string>1DC5C0769628AED0F89639D8</string>
 				<string>0B2B63CD30D0D4CC192066A5</string>
+				<string>1E48ED7EB3CFBCF86BD70F04</string>
 				<string>E823720E1997284D87C9BE0D</string>
 				<string>E76A9CF85B5C75CD8CF3551D</string>
 				<string>D51D6D61BE2D40D10969555F</string>
@@ -3410,6 +3442,7 @@
 				<string>BEE981B64F5E0E5875912826</string>
 				<string>182587B069862EA9650992A3</string>
 				<string>7EB96735C070336980330FA2</string>
+				<string>4B3D8A9C7EB1EF5788401C2E</string>
 				<string>9F2F0D7B8211BA8CBE1CF982</string>
 				<string>F92C1B086F4CDFB01AAC82C5</string>
 				<string>A52E1E1026008ABCCF27FFB3</string>
@@ -4021,6 +4054,13 @@
 			<string>Tests/LobbyServerTests.swift</string>
 			<key>sourceTree</key>
 			<string>&lt;group&gt;</string>
+		</dict>
+		<key>FA772B0CCD9F955FCDF840AA</key>
+		<dict>
+			<key>fileRef</key>
+			<string>1E48ED7EB3CFBCF86BD70F04</string>
+			<key>isa</key>
+			<string>PBXBuildFile</string>
 		</dict>
 		<key>FACE6F9FACAF97921DE31675</key>
 		<dict>

@@ -140,6 +140,7 @@ enum ChatToolSteps {
         case "save_note": "note.text"
         case "remember", "recall": "brain"
         case "set_volume": "speaker.wave.2"
+        case "get_location": "location"
         default: "wrench.and.screwdriver"
         }
     }
@@ -174,6 +175,7 @@ enum ChatToolSteps {
             quoted("note").map { done ? "Remembered \($0)" : "Remembering \($0)" } ?? (done ? "Remembered" : "Remembering")
         case "recall":
             quoted("query").map { done ? "Recalled \($0)" : "Recalling \($0)" } ?? (done ? "Searched memory" : "Searching memory")
+        case "get_location": done ? "Checked your location" : "Checking your location"
         default:
             done ? readable(tool.name).capitalizedFirst : "Running \(readable(tool.name))"
         }
@@ -194,6 +196,7 @@ enum ChatToolSteps {
             case "save_note": "saved a note"
             case "remember": "remembered"
             case "recall": "searched memory"
+            case "get_location": "checked your location"
             default: readable(tool.name)
             }
             if !parts.contains(part) { parts.append(part) }

@@ -41,6 +41,8 @@
 	<true/>
 	<key>NSCameraUsageDescription</key>
 	<string>Pixie doesn’t use your camera: calls with Pixie are voice only. A website you open in Pixie’s browser could ask for it, and iOS asks you first.</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>When you ask about something near you, like the weather or places nearby, Pixie looks up your location once and uses it to answer.</string>
 	<key>NSMicrophoneUsageDescription</key>
 	<string>Listen locally for Hey Pixie, keep a short audio buffer for the wake handoff, and talk with the voice assistant.</string>
 	<key>NSSupportsLiveActivities</key>

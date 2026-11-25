@@ -61,6 +61,8 @@ struct LiveVoiceConfig {
     var notes = false
     /// The open_map tool: directions or a place in Google Maps (see MapsOpener).
     var maps = true
+    /// The get_location tool: where the user is, after iOS's permission (see CurrentLocation).
+    var location = true
     /// The show_visual tool: an HTML page shown in the chat (see ShowVisual).
     var visuals = true
     /// The browser tool: an in-app browser Pixie can drive (see BrowserTool).
@@ -83,6 +85,7 @@ struct LiveVoiceConfig {
         if mediaControl { text += " " + MediaControl.delegationInstructions }
         if volume { text += " " + VolumeControl.delegationInstructions }
         if notes { text += " " + ObsidianNotes.delegationInstructions }
+        if location { text += " " + CurrentLocation.delegationInstructions }
         if maps { text += " " + MapsOpener.delegationInstructions }
         if visuals { text += " " + ShowVisual.delegationInstructions }
         if browser { text += " " + BrowserTool.delegationInstructions }
@@ -135,6 +138,7 @@ struct LiveVoiceConfig {
         if mediaControl { tools.append(MediaControl.tool) }
         if volume { tools.append(VolumeControl.tool) }
         if notes { tools.append(ObsidianNotes.tool) }
+        if location { tools.append(CurrentLocation.tool) }
         if maps { tools.append(MapsOpener.tool) }
         if visuals { tools.append(ShowVisual.tool) }
         if browser { tools.append(BrowserTool.tool) }
