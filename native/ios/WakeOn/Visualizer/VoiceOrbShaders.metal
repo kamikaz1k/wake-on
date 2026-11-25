@@ -109,8 +109,8 @@ float3 waveLines(float3 n, device const float *h, int count, float t, float3 use
 using namespace voiceorb;
 
 /// Sky orb: warped noise clouds on a lit sphere. It scales with the voice, and its sky takes
-/// `sky`, the palette's color for the moment (the speaker's while someone talks, Pixie's,
-/// softened, at rest; see `VoicePalette.sky`).
+/// `sky`, the palette's color for the moment (the speaker's while someone talks, the
+/// palette's own color, softened, at rest; see `VoicePalette.sky`).
 /// The Daylight palette's blue (0.24, 0.57, 0.98) gives the original look.
 [[ stitchable ]] half4 voiceSkyOrb(float2 position, half4 color, float2 size, float t, float flow,
                                    float level, float spring, float think, float3 sky) {

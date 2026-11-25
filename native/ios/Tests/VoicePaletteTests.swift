@@ -17,6 +17,14 @@ final class VoicePaletteTests: XCTestCase {
         }
     }
 
+    /// "Mint and lavender" rested lavender; a palette should rest at the color it's named for.
+    func testGreenPalettesRestGreen() {
+        for palette in [VoicePalette.mintLavender, .meadow] {
+            let c = palette.sky(VoiceFrame())
+            XCTAssertGreaterThan(c.y, max(c.x, c.z), palette.name)
+        }
+    }
+
     func testEachPaletteGivesADifferentRestingSky() {
         let colors = VoicePalette.presets.map { $0.sky(VoiceFrame()) }
         for i in colors.indices {
