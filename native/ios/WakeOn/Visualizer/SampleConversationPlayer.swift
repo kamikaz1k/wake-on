@@ -1,7 +1,8 @@
 import AVFoundation
 import Foundation
 
-/// Plays a short recorded two-voice conversation (bundled `viz-*.wav`) and serves
+/// Plays a short two-voice conversation (bundled `viz-*.wav`: OpenAI gpt-4o-mini-tts, Pixie in its
+/// default call voice Marin, the user in Cedar, made with a casual-speech prompt) and serves
 /// its audio to a `VoiceSignal`, so the visualizers can be judged on real speech
 /// without starting a call. Includes one interruption.
 @MainActor
@@ -64,16 +65,22 @@ final class SampleConversationPlayer: ObservableObject, VoiceAudioSource {
         await sleep(0.5); guard live() else { return }
         await say("u2", .user); guard live() else { return }
         await think(1.0); guard live() else { return }
+        // The user cuts in about 2.3 s before "it can get—" ends, and Pixie fades out under them.
         Task { await say("a2", .assistant) }
-        await sleep(7.6); guard live() else { return }
+        await sleep(max(0, seconds("a2") - 2.3)); guard live() else { return }
         Task { await say("u3", .user) }
         await sleep(0.45); guard live() else { return }
         await fadeOut(assistantNode, seconds: 0.26); guard live() else { return }
-        await sleep(2.0); guard live() else { return }
+        await sleep(max(0, seconds("u3") - 0.71)); guard live() else { return }
         await think(0.7); guard live() else { return }
         await say("a3", .assistant); guard live() else { return }
         caption = "End of sample."
         isPlaying = false
+    }
+
+    private func seconds(_ name: String) -> Double {
+        guard let clip = clips[name] else { return 0 }
+        return Double(clip.frameLength) / clip.format.sampleRate
     }
 
     private func say(_ name: String, _ speaker: VoiceSpeaker) async {

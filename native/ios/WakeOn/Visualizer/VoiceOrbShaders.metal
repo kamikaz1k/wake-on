@@ -108,16 +108,18 @@ float3 waveLines(float3 n, device const float *h, int count, float t, float3 use
 
 using namespace voiceorb;
 
-/// ChatGPT-style sky orb: warped noise clouds on a lit sphere. It only scales with the voice.
+/// Sky orb: warped noise clouds on a lit sphere. It scales with the voice, and its sky takes
+/// `sky`, the palette's color for the moment (the speaker's while someone talks, idle at rest).
+/// The Daylight palette's blue (0.24, 0.57, 0.98) gives the original look.
 [[ stitchable ]] half4 voiceSkyOrb(float2 position, half4 color, float2 size, float t, float flow,
-                                   float level, float spring, float think, float speakerMix) {
+                                   float level, float spring, float think, float3 sky) {
     float2 p = centered(position, size);
     float rr = length(p);
     float R = 0.6 * (1.0 + spring * 0.17 + sin(t * 1.1) * 0.008 + think * sin(t * 3.2) * 0.025);
     float aa = 2.0 / min(size.x, size.y);
     float mask = smoothstep(R + aa, R - aa, rr);
     float halo = exp(-max(rr - R, 0.0) * 11.0) * (0.10 + level * 0.28) * (1.0 - mask);
-    float3 haloColor = mix(float3(0.30, 0.62, 1.0), float3(0.45, 0.55, 1.0), speakerMix);
+    float3 haloColor = mix(sky, float3(1.0), 0.06);
     if (rr > R + aa) { return half4(half3(haloColor * halo), half(halo)); }
 
     float2 q = p / R;
@@ -132,7 +134,9 @@ using namespace voiceorb;
     float cl = smoothstep(-0.25, 0.75, d);
     cl = cl * cl * (3.0 - 2.0 * cl);
 
-    float3 deep = float3(0.05, 0.27, 0.80), mid = float3(0.24, 0.57, 0.98), top = float3(0.68, 0.86, 1.0);
+    // The ramp is built from one color so any palette works: darker and more saturated below,
+    // paler above.
+    float3 mid = sky, deep = pow(max(sky, 0.0), 1.8) * 0.85, top = mix(sky, float3(1.0), 0.58);
     float3 col = mix(deep, mid, smoothstep(-1.0, 0.55, q.y + w.y * 0.25));
     col = mix(col, top, smoothstep(0.15, 1.0, q.y) * 0.55);
     col = mix(col, deep * 0.85, smoothstep(0.25, 0.75, w.x) * 0.28);
@@ -141,9 +145,8 @@ using namespace voiceorb;
     col *= 0.70 + 0.30 * max(dot(n, L), 0.0);
     col += pow(max(dot(reflect(-L, n), float3(0.0, 0.0, 1.0)), 0.0), 28.0) * 0.28;
     float fresnel = pow(1.0 - z, 2.6);
-    col = mix(col, float3(0.78, 0.92, 1.0), fresnel * 0.55);
+    col = mix(col, mix(sky, float3(1.0), 0.72), fresnel * 0.55);
     col += cl * level * 0.10;
-    col += mix(float3(-0.02, 0.05, 0.0), float3(0.05, -0.02, 0.07), speakerMix) * min(1.0, level * 2.0);
     return half4(half3(col * mask + haloColor * halo), half(mask + halo));
 }
 

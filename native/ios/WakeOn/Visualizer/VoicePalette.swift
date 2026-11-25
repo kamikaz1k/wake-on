@@ -1,7 +1,7 @@
 import SwiftUI
 
 /// Colors for the particle and wave visualizers: one per speaker, plus a resting color.
-/// (The sky orb keeps its own blue look whatever the palette.)
+/// (The bloom orb keeps its own crimson whatever the palette.)
 struct VoicePalette: Hashable, Identifiable, Sendable {
     var name: String
     var user: SIMD3<Float>
@@ -16,14 +16,16 @@ struct VoicePalette: Hashable, Identifiable, Sendable {
         self.idle = Self.rgb(idle)
     }
 
+    /// The sky orb's original blue, at rest and for both speakers (Pixie a touch more violet).
+    static let daylight = VoicePalette(name: "Daylight", user: 0x3D91FA, assistant: 0x5C86FF, idle: 0x3D91FA)
     static let mintLavender = VoicePalette(name: "Mint and lavender", user: 0x2FC79A, assistant: 0x9A90F0, idle: 0x6E7280)
     static let ocean = VoicePalette(name: "Ocean", user: 0x38D6F5, assistant: 0x4F7BFF, idle: 0x5F6F86)
     static let sunset = VoicePalette(name: "Sunset", user: 0xFFB547, assistant: 0xFF5C8A, idle: 0x7D6A70)
     static let aurora = VoicePalette(name: "Aurora", user: 0x7CF5A8, assistant: 0xD17CFF, idle: 0x5E7470)
     static let mono = VoicePalette(name: "Mono", user: 0xF2F2F2, assistant: 0xC9C9D1, idle: 0x6A6A70)
 
-    static let presets: [VoicePalette] = [.mintLavender, .ocean, .sunset, .aurora, .mono]
-    static let `default` = VoicePalette.mintLavender
+    static let presets: [VoicePalette] = [.daylight, .mintLavender, .ocean, .sunset, .aurora, .mono]
+    static let `default` = VoicePalette.daylight
 
     static func named(_ name: String) -> VoicePalette { presets.first { $0.name == name } ?? .default }
 

@@ -39,7 +39,7 @@ enum VoiceVisualizerStyle: String, CaseIterable, Identifiable, Sendable {
 /// An animated voice visualizer for a two-way conversation.
 ///
 /// `VoiceVisualizer()` is the sky orb driven by the live call audio. Pick another
-/// `style`, `palette` (not used by the sky or bloom orbs), or `signal` (for example
+/// `style`, `palette` (not used by the bloom orb), or `signal` (for example
 /// `VoiceSignal.simulated()` in previews).
 struct VoiceVisualizer: View {
     var style: VoiceVisualizerStyle = .skyOrb
@@ -53,7 +53,7 @@ struct VoiceVisualizer: View {
             let frame = signal.frame(at: timeline.date)
             Group {
                 switch style {
-                case .skyOrb: SkyOrbView(frame: frame)
+                case .skyOrb: SkyOrbView(frame: frame, palette: palette)
                 case .waveOrb: WaveOrbView(frame: frame, palette: palette)
                 case .bloomOrb: BloomOrbView(frame: frame)
                 default:
@@ -82,14 +82,15 @@ struct VoiceVisualizer: View {
 
 private struct SkyOrbView: View {
     let frame: VoiceFrame
+    let palette: VoicePalette
     var body: some View {
-        let f = frame
+        let f = frame, sky = palette.current(frame)
         Rectangle()
             .fill(.black)
             .visualEffect { content, proxy in
                 content.colorEffect(ShaderLibrary.voiceSkyOrb(
                     .float2(proxy.size), .float(f.time.truncatingRemainder(dividingBy: 3600)), .float(f.skyFlow),
-                    .float(f.level), .float(f.spring), .float(f.thinking), .float(f.mix)))
+                    .float(f.level), .float(f.spring), .float(f.thinking), .float3(sky.x, sky.y, sky.z)))
             }
     }
 }

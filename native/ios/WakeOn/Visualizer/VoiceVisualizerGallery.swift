@@ -51,7 +51,7 @@ struct VoiceVisualizerGallery: View {
                     ForEach(VoicePalette.presets) { preset in Text(preset.name).tag(preset.name) }
                 }
                 .pickerStyle(.menu)
-                Text("Colors apply to every style except the sky orb.")
+                Text("Colors apply to every style except the bloom orb.")
                     .font(.footnote).foregroundStyle(.secondary)
 
                 LazyVGrid(columns: [GridItem(.adaptive(minimum: 150), spacing: 12)], spacing: 12) {
