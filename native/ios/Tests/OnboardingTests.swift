@@ -1,3 +1,4 @@
+import CoreLocation
 import XCTest
 @testable import WakeOn
 
@@ -26,5 +27,14 @@ final class OnboardingTests: XCTestCase {
         XCTAssertEqual(Step.location.rawValue, Step.permission.rawValue + 1)
         XCTAssertEqual(Step.firstCall.rawValue, Step.location.rawValue + 1)
         XCTAssertTrue(Onboarding.prompts.first?.text.contains("where I am") ?? false)
+    }
+
+    /// The location page always shows; it asks, says it's on, or points to Settings.
+    func testLocationPageState() {
+        XCTAssertEqual(CurrentLocation.access(.notDetermined), .ask)
+        XCTAssertEqual(CurrentLocation.access(.authorizedWhenInUse), .on)
+        XCTAssertEqual(CurrentLocation.access(.authorizedAlways), .on)
+        XCTAssertEqual(CurrentLocation.access(.denied), .off)
+        XCTAssertEqual(CurrentLocation.access(.restricted), .off)
     }
 }

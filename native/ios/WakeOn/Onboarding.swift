@@ -69,6 +69,7 @@ struct OnboardingView: View {
     @ObservedObject var wake: WakeController
     @ObservedObject var voice: VoiceSessionController = .shared
     @ObservedObject private var invite = InviteLink.shared
+    @ObservedObject private var locator = Locator.shared
     @AppStorage(VoiceVisualizerSettings.styleKey) private var visualizerStyle: VoiceVisualizerStyle = .skyOrb
     @AppStorage(VoiceVisualizerSettings.paletteKey) private var visualizerPalette = VoicePalette.default.name
     @AppStorage(ListenerSettings.Key.talkOnWake) private var talkOnWake = false
@@ -171,19 +172,36 @@ struct OnboardingView: View {
                 }
             }, decline: { AIConsent.set(false); advance() })
         case .location:
-            OnboardingPage(icon: "location.circle.fill", title: "Answers for where you are",
-                           text: "Allow location so \(Agent.name) can answer questions like “what's the weather?” or “coffee near me” without asking where you are.") {
+            let access = CurrentLocation.access(locator.status)
+            OnboardingPage(icon: access == .on ? "checkmark.circle.fill" : "location.circle.fill",
+                           title: access == .on ? "Location is on" : "Answers for where you are",
+                           text: access == .on
+                               ? "\(Agent.name) can answer questions like “what's the weather?” or “coffee near me” for where you are."
+                               : "Allow location so \(Agent.name) can answer questions like “what's the weather?” or “coffee near me” without asking where you are.") {
                 VStack(alignment: .leading, spacing: 12) {
                     OnboardingRow(icon: "magnifyingglass", text: "Looked up only when a question needs it. Pixie never tracks you.")
                     OnboardingRow(icon: "map", text: "Your area and rough position go to OpenAI with that question.")
-                    OnboardingRow(icon: "gearshape", text: "Optional. Change it any time in Settings › Pixie › Location.")
+                    OnboardingRow(icon: "gearshape", text: access == .off
+                                  ? "Location is off for Pixie. Turn it on in Settings › Pixie › Location."
+                                  : "Optional. Change it any time in Settings › Pixie › Location.")
                 }
             } actions: {
-                primary("Allow Location", id: "onboarding-location") {
-                    Task { await Locator.shared.requestPermission(); advance() }
+                switch access {
+                case .ask:
+                    primary("Allow Location", id: "onboarding-location") {
+                        Task { await Locator.shared.requestPermission(); advance() }
+                    }
+                    Button("Not Now") { advance() }
+                        .accessibilityIdentifier("onboarding-location-skip")
+                case .on:
+                    primary("Next", id: "onboarding-next") { advance() }
+                case .off:
+                    primary("Open Settings", id: "onboarding-location-settings") {
+                        if let url = URL(string: UIApplication.openSettingsURLString) { UIApplication.shared.open(url) }
+                    }
+                    Button("Not Now") { advance() }
+                        .accessibilityIdentifier("onboarding-location-skip")
                 }
-                Button("Not Now") { advance() }
-                    .accessibilityIdentifier("onboarding-location-skip")
             }
         case .firstCall:
             OnboardingPage(icon: stepCallDone ? "checkmark.circle.fill" : "phone.bubble.fill",
@@ -407,7 +425,7 @@ struct OnboardingView: View {
         switch step {
         case .access: return voice.keySource == "missing" || invite.code != nil
         case .permission: return voice.keySource != "missing" && !AIConsent.given
-        case .location: return canCall && CurrentLocation.undecided
+        case .location: return canCall
         case .firstCall, .heyLobby: return canCall
         case .actionButton: return canCall && Onboarding.hasActionButton
         case .welcome, .demo, .done: return true

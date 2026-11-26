@@ -74,15 +74,25 @@ enum CurrentLocation {
         await Locator.shared.locate()
     }
 
-    /// iOS hasn't asked the user yet (onboarding offers it then).
-    @MainActor static var undecided: Bool { Locator.shared.status == .notDetermined }
+    /// What onboarding's location page shows: ask, already on, or turned off.
+    enum Access: Equatable { case ask, on, off }
+
+    static func access(_ status: CLAuthorizationStatus) -> Access {
+        switch status {
+        case .notDetermined: return .ask
+        case .authorizedWhenInUse, .authorizedAlways: return .on
+        default: return .off
+        }
+    }
 }
 
 /// One CLLocationManager for the app: permission, one-shot fixes and the area's name.
 @MainActor
-final class Locator: NSObject, CLLocationManagerDelegate {
+final class Locator: NSObject, ObservableObject, CLLocationManagerDelegate {
     static let shared = Locator()
     private let manager = CLLocationManager()
+    /// iOS's answer, kept current for onboarding.
+    @Published private(set) var status: CLAuthorizationStatus = .notDetermined
     private var permission: CheckedContinuation<Void, Never>?
     private var fix: CheckedContinuation<CLLocation?, Never>?
 
@@ -90,9 +100,8 @@ final class Locator: NSObject, CLLocationManagerDelegate {
         super.init()
         manager.delegate = self
         manager.desiredAccuracy = kCLLocationAccuracyHundredMeters
+        status = manager.authorizationStatus
     }
-
-    var status: CLAuthorizationStatus { manager.authorizationStatus }
 
     /// Shows iOS's "Allow While Using App" prompt if it hasn't been answered, and waits for the answer.
     func requestPermission() async {
@@ -143,6 +152,7 @@ final class Locator: NSObject, CLLocationManagerDelegate {
     nonisolated func locationManagerDidChangeAuthorization(_ manager: CLLocationManager) {
         let status = manager.authorizationStatus
         MainActor.assumeIsolated {
+            self.status = status
             guard status != .notDetermined else { return }
             permission?.resume()
             permission = nil
