@@ -36,7 +36,7 @@ final class SpotifyPlayerTests: XCTestCase {
         let body = LiveVoiceConfig().requestBody(sdp: "v=0")
         let responses = ((body["session"] as? [String: Any])?["delegation"] as? [String: Any])?["responses"] as? [String: Any]
         let names = (responses?["tools"] as? [[String: Any]])?.compactMap { $0["name"] as? String }
-        XCTAssertEqual(names, ["play_spotify", "play_youtube", "control_media", "set_volume", "get_location", "alarms", "calendar", "reminders", "open_map", "show_visual", "mini_apps", "browser",
+        XCTAssertEqual(names, ["play_spotify", "play_youtube", "control_media", "set_volume", "get_location", "alarms", "calendar", "reminders", "contacts", "open_map", "show_visual", "mini_apps", "browser",
                                "send_feedback",
                                "remember", "recall", "zoom"])
         XCTAssertTrue((responses?["instructions"] as? String)?.contains("play_spotify") == true)

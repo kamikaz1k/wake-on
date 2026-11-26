@@ -354,6 +354,55 @@ final class HotAudioDevice: NSObject, @unchecked Sendable {
         return true
     }
 
+    // MARK: Thinking sound
+
+    /// Play the thinking sound while Pixie works (set from the main thread, read on the render
+    /// thread). It stops at the end of a loop once cleared, and at once when Pixie speaks.
+    var thinking = false
+    /// Room for a loop of up to 2.5 s at 96 kHz; written only while it isn't playing.
+    private let thinkingLoop = UnsafeMutablePointer<Int16>.allocate(capacity: 240_000)
+    private var thinkingLength = 0
+    private var thinkingPosition = -1 // render thread; -1 = not playing
+
+    private func makeThinkingLoop(sampleRate: Double) {
+        guard thinkingPosition < 0 else { return }
+        let loop = ThinkingSound.loop(sampleRate: sampleRate).prefix(240_000)
+        loop.withUnsafeBufferPointer { thinkingLoop.update(from: $0.baseAddress!, count: $0.count) }
+        thinkingLength = loop.count
+    }
+
+    /// Render thread: mixes the thinking sound into `output` after WebRTC's audio.
+    /// `pixieLoud`: Pixie's voice is in this buffer, so the sound gives way at once.
+    private func mixThinking(into output: UnsafeMutablePointer<AudioBufferList>, frames: Int, pixieLoud: Bool) -> Bool {
+        if pixieLoud { thinkingPosition = -1; return false }
+        if thinkingPosition < 0 {
+            guard thinking, thinkingLength > 0 else { return false }
+            thinkingPosition = 0
+        }
+        guard let data = UnsafeMutableAudioBufferListPointer(output).first?.mData else { return false }
+        let samples = data.assumingMemoryBound(to: Int16.self)
+        for index in 0..<frames {
+            if thinkingPosition >= thinkingLength {
+                // End of a loop: go round again only while still thinking.
+                guard thinking else { thinkingPosition = -1; break }
+                thinkingPosition = 0
+            }
+            let mixed = Int32(samples[index]) + Int32(thinkingLoop[thinkingPosition])
+            samples[index] = Int16(max(-32768, min(32767, mixed)))
+            thinkingPosition += 1
+        }
+        return true
+    }
+
+    /// Render thread: the loudest sample in `output`, 0...1.
+    private static func peak(_ output: UnsafeMutablePointer<AudioBufferList>, frames: Int) -> Double {
+        guard let data = UnsafeMutableAudioBufferListPointer(output).first?.mData else { return 0 }
+        let samples = data.assumingMemoryBound(to: Int16.self)
+        var peak: Int32 = 0
+        for index in 0..<frames { peak = max(peak, abs(Int32(samples[index]))) }
+        return Double(peak) / 32768
+    }
+
     /// Called on the audio thread the first time WebRTC is given microphone audio.
     var onFirstDelivery: (() -> Void)?
     private var deliveredOnce = false
@@ -506,6 +555,7 @@ final class HotAudioDevice: NSObject, @unchecked Sendable {
         VoiceAudioTap.shared.microphone.sampleRate = micFormat.sampleRate
         VoiceAudioTap.shared.assistant.sampleRate = speakerFormat.sampleRate
         makeChime(sampleRate: speakerFormat.sampleRate)
+        makeThinkingLoop(sampleRate: speakerFormat.sampleRate)
 
         let sink = AVAudioSinkNode { [unowned self] timestamp, frames, buffers in
             self.deliverMicrophone(timestamp: timestamp, frames: frames, buffers: buffers)
@@ -818,11 +868,15 @@ final class HotAudioDevice: NSObject, @unchecked Sendable {
         }
         var flags = AudioUnitRenderActionFlags()
         let status = playout(&flags, timestamp, 0, frames, output)
+        // Pixie's voice (about -40 dBFS and up) silences the thinking sound in the same buffer.
+        let pixieLoud = !flags.contains(.unitRenderAction_OutputIsSilence) && Self.peak(output, frames: Int(frames)) > 0.01
         if mixChime(into: output, frames: Int(frames), replace: false) { flags.remove(.unitRenderAction_OutputIsSilence) }
-        // Feed the visualizer what the speaker is about to play (Int16 mono).
+        // Feed the visualizer what the speaker is about to play (Int16 mono), without the
+        // thinking sound: the orb moves with Pixie's voice only.
         if let data = UnsafeMutableAudioBufferListPointer(output).first?.mData {
             VoiceAudioTap.shared.assistant.write(int16: data.assumingMemoryBound(to: Int16.self), count: Int(frames))
         }
+        if mixThinking(into: output, frames: Int(frames), pixieLoud: pixieLoud) { flags.remove(.unitRenderAction_OutputIsSilence) }
         if !playedOnce {
             playedOnce = true
             trace("first_playout frames=\(frames) status=\(status)")

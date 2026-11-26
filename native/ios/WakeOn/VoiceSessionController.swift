@@ -30,7 +30,7 @@ final class VoiceSessionController: ObservableObject {
     private var resuming: ChatLog?
     /// Estimated tokens of the chats this call resumes.
     private var historyTokens = 0
-    /// The whole chat so far in tokens (resumed chats plus this call), for the length warning.
+    /// The whole chat so far in tokens (resumed chats plus this call), for feedback's warnings.
     var threadTokens: Int { historyTokens + ChatTokens.estimate(fullTranscript) }
     /// The largest lookup request this call, measured by OpenAI (instructions, tools and
     /// transcript). The voice model itself only reports seconds.
@@ -47,10 +47,6 @@ final class VoiceSessionController: ObservableObject {
         return usage?["input_tokens"] as? Int
     }
 
-    /// The paused chat's length in tokens.
-    var pausedTokens: Int {
-        pausedThread.map { ChatTokens.estimate(ChatLogStore.shared.thread(endingWith: $0).flatMap(\.lines)) } ?? 0
-    }
     /// Why the app hung up (`stop`); the session's own end reason is the server's.
     private var stopReason: String?
     @Published private(set) var status = "Not connected"
@@ -429,6 +425,8 @@ final class VoiceSessionController: ObservableObject {
         serverEventCounts = [:]
         goodbyeHeard = false
         lastLobbyActive = nil
+        waitingSince = nil
+        lookupDoneAt = nil
         lastUserWordsAt = nil
         lastActivity = nil
         liveSince = nil
@@ -695,6 +693,7 @@ final class VoiceSessionController: ObservableObject {
         // and so does a change to what Pixie remembers.
         guard let prepared, DispatchTime.now().uptimeNanoseconds - preparedSince < Self.preparedMaxAge,
               prepared.config.notes == ObsidianVault.isSet, prepared.config.browser == BrowserTool.enabled,
+              prepared.config.contacts == PixieContacts.enabled,
               prepared.config.memory == MemoryStore.shared.callText else {
             prepared?.close(reason: "stale")
             return nil
@@ -706,6 +705,7 @@ final class VoiceSessionController: ObservableObject {
         var config = LiveVoiceConfig()
         config.history = history
         config.browser = BrowserTool.enabled
+        config.contacts = PixieContacts.enabled
         config.notes = ObsidianVault.isSet
         config.memory = MemoryStore.shared.callText
         #if DEBUG
@@ -1004,6 +1004,18 @@ final class VoiceSessionController: ObservableObject {
             }
             return
         }
+        if name == PixieContacts.toolName {
+            lookingUpSince = uptimeSeconds()
+            Task { @MainActor in
+                let (result, call) = await ContactBook.shared.perform(arguments)
+                // Calling hangs up first, as for Maps, then opens the call (finishCall).
+                if let call { self.pendingContactCall = call }
+                self.completeFunctionCall(name: name, callID: callID, arguments: arguments, result: result,
+                                          action: ["kind": "contacts", "action": arguments["action"] as? String ?? "",
+                                                   "calling": call != nil])
+            }
+            return
+        }
         if name == Alarms.toolName {
             lookingUpSince = uptimeSeconds()
             Task { @MainActor in
@@ -1017,8 +1029,11 @@ final class VoiceSessionController: ObservableObject {
             lookingUpSince = uptimeSeconds()
             let credential = callCredential
             Task { @MainActor in
+                let warnings = AppWarnings.current()
+                self.log("feedback warnings=\(warnings.count)")
                 let result = await Feedback.send(feedback: arguments["feedback"] as? String ?? "",
-                                                 context: arguments["context"] as? String ?? "", credential: credential)
+                                                 context: arguments["context"] as? String ?? "", credential: credential,
+                                                 warnings: warnings)
                 self.completeFunctionCall(name: name, callID: callID, arguments: arguments, result: result,
                                           action: ["kind": "feedback", "sent": result == Feedback.sentText])
             }
@@ -1148,6 +1163,7 @@ final class VoiceSessionController: ObservableObject {
         if pendingVolume != nil { stop(reason: "volume") }
         // Leaving for Google Maps: hang up first, as for Spotify, then open it (finishCall).
         if pendingMap != nil { stop(reason: "maps") }
+        if pendingContactCall != nil { stop(reason: "contact_call") }
     }
 
     // MARK: - Screen in view
@@ -1203,6 +1219,7 @@ final class VoiceSessionController: ObservableObject {
     private var pendingYouTube: YouTubePlayer.Request?
     /// Opened once the call has ended, like Spotify.
     private var pendingMap: MapsOpener.Request?
+    private var pendingContactCall: PixieContacts.Call?
     /// Sent once the call has ended. An exclusive (foreground) call pauses other apps, which may
     /// resume by themselves when it ends, so the command waits for that to settle.
     private var pendingMedia: MediaControl.Command?
@@ -1297,6 +1314,7 @@ final class VoiceSessionController: ObservableObject {
             }
         }
         checkInactivity(at: stats.time)
+        updateThinkingSound(at: stats.time)
         let events = tracker.ingest(time: stats.time,
                                     microphoneEnergy: muted ? nil : stats.microphoneEnergy,
                                     microphoneDuration: muted ? nil : stats.microphoneDuration,
@@ -1412,6 +1430,34 @@ final class VoiceSessionController: ObservableObject {
         reachingMs = ms
         log(String(format: "reaching triggerToReachingOpenAIMs=%.0f", ms))
         if !OpenAILiveVoiceProvider.useHotAudio { markLocalListening(at: DispatchTime.now().uptimeNanoseconds) }
+    }
+
+    /// The thinking sound plays while Pixie is quiet during a lookup, and after it until Pixie
+    /// starts answering (the voice model takes a second or two more), see ThinkingSound.
+    private var thinkingSoundOn = false
+    private var waitingSince: Double?
+    private var lookupDoneAt: Double?
+    private func updateThinkingSound(at time: Double) {
+        if let since = lookingUpSince {
+            waitingSince = since
+            lookupDoneAt = nil
+        } else if waitingSince != nil {
+            if lookupDoneAt == nil { lookupDoneAt = time }
+            if let done = lookupDoneAt,
+               (lastLobbyActive ?? 0) > done || time - done > ThinkingSound.answerWait { waitingSince = nil }
+        }
+        let on = ThinkingSound.enabled && sessionStarted && ThinkingSound.shouldPlay(
+            live: phase == .live, lookingUpFor: waitingSince.map { time - $0 },
+            pixieQuietFor: lastLobbyActive.map { time - $0 } ?? 0, connectionLost: connection == .lost, muted: muted)
+        setThinkingSound(on)
+    }
+
+    private func setThinkingSound(_ on: Bool) {
+        guard on != thinkingSoundOn else { return }
+        thinkingSoundOn = on
+        HotAudioDevice.shared.thinking = on
+        log("thinking_sound \(on ? "on" : "off")")
+        capture?.app("thinking_sound", ["on": on])
     }
 
     /// Ends the call after a goodbye followed by silence; checks in, then ends, when idle.
@@ -1572,6 +1618,7 @@ final class VoiceSessionController: ObservableObject {
     }
 
     private func finishCall(reason: String) {
+        setThinkingSound(false)
         audioWaitsForPause = false
         let lines = fullTranscript.compactMap { line -> ChatLog.Line? in
             let text = line.text.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -1721,6 +1768,18 @@ final class VoiceSessionController: ObservableObject {
                                                    "app_url": video.appURL.absoluteString])
                 YouTubePlayer.open(video) { outcome in
                     laterCapture?.app("youtube_opened", ["outcome": outcome])
+                }
+            }
+        }
+        if let call = pendingContactCall {
+            pendingContactCall = nil
+            Task {
+                // As for Spotify: leave the screen only once the restarting listener runs.
+                let wake = WakeController.shared
+                for _ in 0..<60 where wake.busy && !wake.enabled { try? await Task.sleep(for: .milliseconds(50)) }
+                laterCapture?.app("contact_call", ["scheme": call.url.scheme ?? ""])
+                PixieContacts.place(call) { outcome in
+                    laterCapture?.app("contact_call_opened", ["outcome": outcome])
                 }
             }
         }

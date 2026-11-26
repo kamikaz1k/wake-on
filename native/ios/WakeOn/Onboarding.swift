@@ -30,6 +30,7 @@ enum Onboarding {
         Starter(text: "Wake me up at 7 tomorrow", icon: "alarm", tools: ["alarms"]),
         Starter(text: "What's on my calendar tomorrow?", icon: "calendar", tools: ["calendar"]),
         Starter(text: "Remind me to call Mom at 6 p.m.", icon: "checklist", tools: ["reminders"]),
+        Starter(text: "Call Mom", icon: "phone", tools: ["contacts"]),
         Starter(text: "Play a song by Fleetwood Mac", icon: "music.note", tools: ["play_spotify"]),
         Starter(text: "Find a video on how to tie a tie", icon: "play.rectangle", tools: ["play_youtube"]),
         Starter(text: "Pause the music", icon: "playpause", tools: ["control_media"]),

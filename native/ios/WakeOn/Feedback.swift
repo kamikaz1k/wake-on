@@ -1,3 +1,7 @@
+import AVFoundation
+import Contacts
+import CoreLocation
+import EventKit
 import Foundation
 
 /// Pixie's send_feedback tool: when the user asks, their feedback about Pixie (a bug, something
@@ -43,14 +47,15 @@ enum Feedback {
         return "\(info["CFBundleShortVersionString"] as? String ?? "?") (\(info["CFBundleVersion"] as? String ?? "?"))"
     }
 
-    static func body(feedback: String, context: String, app: String = build) -> [String: Any] {
+    static func body(feedback: String, context: String, app: String = build, warnings: [String] = []) -> [String: Any] {
         ["feedback": feedback.trimmingCharacters(in: .whitespacesAndNewlines),
-         "context": context.trimmingCharacters(in: .whitespacesAndNewlines), "app": app]
+         "context": context.trimmingCharacters(in: .whitespacesAndNewlines), "app": app, "warnings": warnings]
     }
 
     /// Keeps a copy on the iPhone, then sends it with an invite code. Returns the tool's output.
-    static func send(feedback: String, context: String, credential: String?, server: URL? = LobbyServer.url) async -> String {
-        let body = body(feedback: feedback, context: context)
+    static func send(feedback: String, context: String, credential: String?, server: URL? = LobbyServer.url,
+                     warnings: [String] = []) async -> String {
+        let body = body(feedback: feedback, context: context, warnings: warnings)
         guard !(body["feedback"] as? String ?? "").isEmpty else { return emptyText }
         keep(body)
         guard let credential, LobbyServer.isInviteCode(credential), let server,
@@ -79,5 +84,68 @@ enum Feedback {
         } else {
             try? line.write(to: url)
         }
+    }
+}
+
+/// What the app is warning about or holding back at a moment, attached to feedback so a report
+/// like "the connection was bad" or "it forgot" comes with the state behind it.
+enum AppWarnings {
+    struct State {
+        var online = true
+        var interface = "wifi"
+        var connection: CallConnection.State = .good
+        var roundTripMs: Double?
+        var voiceNoteWaiting = false
+        var chatTokens = 0
+        var muted = false
+        var callError: String?
+        var listenerError: String?
+        var lowPower = false
+        var thermal: ProcessInfo.ThermalState = .nominal
+        /// Permissions the user said no to ("location", "contacts").
+        var denied: [String] = []
+    }
+
+    static func list(_ state: State) -> [String] {
+        var warnings: [String] = []
+        if !state.online { warnings.append("No internet connection") }
+        switch state.connection {
+        case .lost: warnings.append("Call connection lost")
+        case .weak: warnings.append("Weak call connection" + (state.roundTripMs.map { String(format: " (round trip %.0f ms)", $0) } ?? ""))
+        case .good: break
+        }
+        if state.voiceNoteWaiting { warnings.append("Voice note waiting to be sent") }
+        if state.chatTokens > ChatTokens.limit {
+            warnings.append("Chat is \(ChatTokens.label(state.chatTokens)): resumed calls leave out the oldest lines (limit \(ChatTokens.label(ChatTokens.limit)))")
+        }
+        if state.muted { warnings.append("Microphone muted in the call") }
+        if let error = state.callError, !error.isEmpty { warnings.append("Call error shown: \(error)") }
+        if let error = state.listenerError, !error.isEmpty { warnings.append("Listener error shown: \(error)") }
+        if state.lowPower { warnings.append("Low Power Mode on") }
+        switch state.thermal {
+        case .serious: warnings.append("iPhone is hot (thermal state serious)")
+        case .critical: warnings.append("iPhone is hot (thermal state critical)")
+        default: break
+        }
+        if !state.denied.isEmpty { warnings.append("Access turned off: \(state.denied.joined(separator: ", "))") }
+        if !warnings.isEmpty, state.online { warnings.append("Network: \(state.interface)") }
+        return warnings
+    }
+
+    @MainActor static func current() -> [String] {
+        let voice = VoiceSessionController.shared
+        let network = NetworkPath.shared
+        var denied: [String] = []
+        if AVAudioApplication.shared.recordPermission == .denied { denied.append("microphone") }
+        if [.denied, .restricted].contains(CLLocationManager().authorizationStatus) { denied.append("location") }
+        if [.denied, .restricted].contains(EKEventStore.authorizationStatus(for: .event)) { denied.append("calendar") }
+        if [.denied, .restricted].contains(EKEventStore.authorizationStatus(for: .reminder)) { denied.append("reminders") }
+        if [.denied, .restricted].contains(CNContactStore.authorizationStatus(for: .contacts)) { denied.append("contacts") }
+        return list(State(online: network.isUp, interface: network.interface, connection: voice.connection,
+                          roundTripMs: voice.roundTripMs, voiceNoteWaiting: voice.voiceNote != nil,
+                          chatTokens: voice.threadTokens, muted: voice.muted, callError: voice.error,
+                          listenerError: WakeController.shared.error,
+                          lowPower: ProcessInfo.processInfo.isLowPowerModeEnabled,
+                          thermal: ProcessInfo.processInfo.thermalState, denied: denied))
     }
 }

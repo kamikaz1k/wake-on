@@ -294,10 +294,11 @@ async function reportUsage(request, env, ctx) {
 
 export const FEEDBACK_DAILY = 20;
 const MAX_FEEDBACK = 2000;
+const MAX_WARNINGS = 12;
 const FEEDBACK_DAYS = 365;
 
-/** Feedback a person asked Pixie to send: their words, Pixie's note on what happened, and the
- * app's build. Kept a year for review (`scripts/feedback.mjs`); a few a day per person. */
+/** Feedback a person asked Pixie to send: their words, Pixie's note on what happened, the
+ * app's build and the warnings the app was showing. Kept a year for review (`scripts/feedback.mjs`); a few a day per person. */
 async function saveFeedback(request, env) {
   const code = (request.headers.get("Authorization") || "").replace(/^Bearer\s+/i, "").trim();
   if (!code) return error(401, "missing_code", PROBLEMS.invalid_code);
@@ -316,7 +317,10 @@ async function saveFeedback(request, env) {
   const countKey = `feedbackcount:${at.toISOString().slice(0, 10)}:${check.name}`;
   const sent = await count(env, countKey);
   if (sent >= FEEDBACK_DAILY) return error(429, "too_much_feedback", "That's a lot of feedback for one day. Try again tomorrow.");
-  const entry = { at: at.toISOString(), name: check.name, feedback, context: text("context", MAX_FEEDBACK), app: text("app", 200) };
+  // What the app was warning about when it was sent ("Weak connection", "Voice note waiting").
+  const warnings = (Array.isArray(body.warnings) ? body.warnings : []).slice(0, MAX_WARNINGS)
+    .map((w) => String(w).trim().slice(0, 200)).filter(Boolean);
+  const entry = { at: at.toISOString(), name: check.name, feedback, context: text("context", MAX_FEEDBACK), app: text("app", 200), warnings };
   const id = crypto.randomUUID().slice(0, 8);
   await Promise.all([
     env.USAGE.put(`feedback:${entry.at}:${check.name}:${id}`, JSON.stringify(entry), { expirationTtl: FEEDBACK_DAYS * 24 * 3600 }),

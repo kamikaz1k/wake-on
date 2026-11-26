@@ -1,6 +1,6 @@
 # Pixie privacy policy
 
-Last updated: November 26, 2026
+Last updated: November 26, 2026 (contacts, feedback warnings)
 
 Pixie is a voice assistant for iPhone. This page explains what
 the app does with your information. In short: your voice goes to OpenAI only while you're
@@ -37,6 +37,15 @@ include any Google, Outlook or iCloud calendars you've added there. iOS asks for
 first time. Only what a question needs (for example that day's events) is sent to OpenAI
 during the call, and Pixie only adds, changes or deletes items when you ask. Nothing is sent
 to the developer.
+
+## Your contacts
+
+When you ask Pixie to call someone ("call Sam"), it looks them up in your iPhone's contacts.
+iOS asks your permission the first time. The names that match and their number labels
+("mobile", "work") go to OpenAI in that call so Pixie can ask which one you mean; the phone
+numbers themselves stay on your iPhone. Pixie only starts a call after you say yes, and iOS
+asks you to confirm it too. You can turn this off in Settings › Pixie ("Find and call
+contacts") or in the iPhone's Settings › Pixie › Contacts.
 
 ## Saved apps
 
@@ -96,7 +105,9 @@ Pixie server isn't involved. Your key is stored in your iPhone's Keychain.
 
 If you ask Pixie to send feedback (for example "tell the developer the map was wrong"), the
 app sends the Pixie server your feedback as Pixie heard it, Pixie's short note on what it was
-about, the app's version, and the name your invite code was made for. The developer reads
+about, the app's version, the name your invite code was made for, and any warnings the app was
+showing at the time (for example "Weak call connection", "Low Power Mode on", or that a
+permission is turned off), so problems can be traced. The developer reads
 it to fix and improve Pixie. It is kept for a year and then deleted. Nothing is sent unless
 you ask, and no audio or full transcript goes with it. Feedback is only sent from calls with
 an invite code; with your own OpenAI key it stays on your iPhone. A copy is always kept on

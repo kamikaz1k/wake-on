@@ -622,8 +622,7 @@ struct BrowserSheet: View {
                                 else { voice.pause() }
                             },
                             stop: { mode == .paused ? voice.forgetPause() : voice.stop() },
-                            disabled: voice.phase == .ending,
-                            longChat: mode == .paused && ChatTokens.level(voice.pausedTokens) != .ok)
+                            disabled: voice.phase == .ending)
             .accessibilityValue(lobbyStatus)
     }
 
@@ -686,8 +685,6 @@ struct LobbyControl<Orb: View>: View {
     let pauseOrResume: () -> Void
     let stop: () -> Void
     var disabled = false
-    /// Resuming would leave out the oldest parts: the orb gets a warning badge.
-    var longChat = false
 
     private var open: Bool { mode != .idle }
 
@@ -697,14 +694,6 @@ struct LobbyControl<Orb: View>: View {
                 orb(open ? LobbyMetrics.orbSize : LobbyMetrics.idleSize)
                     .overlay {
                         if working { ProgressView().tint(.white).transaction { $0.animation = nil } }
-                    }
-                    .overlay(alignment: .topTrailing) {
-                        if longChat {
-                            Image(systemName: "exclamationmark.triangle.fill")
-                                .symbolRenderingMode(.multicolor)
-                                .font(.caption2)
-                                .accessibilityLabel(ChatTokens.warning(ChatTokens.limit + 1) ?? "Long chat")
-                        }
                     }
             }
             .buttonStyle(.plain)

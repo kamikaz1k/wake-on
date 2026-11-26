@@ -340,7 +340,7 @@ test("feedback is kept a year with the person's name, Pixie's note and the build
   const ttls = {};
   const put = t.usage.put;
   t.usage.put = (key, value, options) => { ttls[key] = options && options.expirationTtl; return put(key, value); };
-  const response = await handle(feedbackRequest({ feedback: "The map opened the wrong place", context: "Asked for Xiang Zi HotPot; map opened Markham", app: "202611260320" }, t.code), t.env, t.upstream);
+  const response = await handle(feedbackRequest({ feedback: "The map opened the wrong place", context: "Asked for Xiang Zi HotPot; map opened Markham", app: "202611260320", warnings: ["Weak connection", "", 7] }, t.code), t.env, t.upstream);
   assert.equal(response.status, 200);
   const key = [...t.usage.map.keys()].find((k) => k.startsWith("feedback:"));
   assert.match(key, /^feedback:\d{4}-\d\d-\d\dT[^:]+:\d\d:[\d.]+Z:alex:[0-9a-f]{8}$/);
@@ -349,6 +349,7 @@ test("feedback is kept a year with the person's name, Pixie's note and the build
   assert.equal(entry.feedback, "The map opened the wrong place");
   assert.equal(entry.context, "Asked for Xiang Zi HotPot; map opened Markham");
   assert.equal(entry.app, "202611260320");
+  assert.deepEqual(entry.warnings, ["Weak connection", "7"]);
   assert.equal(ttls[key], 365 * 24 * 3600);
   assert.ok(!t.usage.map.get(key).includes(t.code), "the invite code itself isn't stored");
 });

@@ -210,6 +210,8 @@ struct SettingsView: View {
     @AppStorage(ListenerSettings.Key.talkOnWake) private var talkOnWake = false
     @AppStorage(ScreenAwake.key) private var awakeWhileCharging = true
     @AppStorage(BrowserTool.enabledKey) private var browserEnabled = true
+    @AppStorage(PixieContacts.enabledKey) private var contactsEnabled = true
+    @AppStorage(ThinkingSound.enabledKey) private var thinkingSound = true
     @AppStorage(AIConsent.key) private var openAIConsent = false
     @AppStorage(Onboarding.doneKey) private var onboardingDone = true
     @Environment(\.dismiss) private var dismiss
@@ -240,7 +242,13 @@ struct SettingsView: View {
                         LabeledContent("Memory", value: "\(memory.memory.notes.count)")
                     }
                     .accessibilityIdentifier("settings-memory")
-                } header: { Text(Agent.name) }
+                    Toggle("Thinking sound", isOn: $thinkingSound)
+                        .accessibilityIdentifier("settings-thinking-sound")
+                    Toggle("Find and call contacts", isOn: $contactsEnabled)
+                        .accessibilityIdentifier("settings-contacts")
+                } header: { Text(Agent.name) } footer: {
+                    Text("A soft sound plays while \(Agent.name) looks something up. With contacts on, \(Agent.name) can find people and offer to call them; iOS asks for access the first time.")
+                }
 
                 Section {
                     // One switch: background listening that starts a conversation on "Hey Pixie".
@@ -341,7 +349,6 @@ struct LiveCallScreen: View {
                 .animation(.easeInOut(duration: 0.25), value: voice.connection)
             ChatTranscriptView(items: transcript.items, call: transcript.call, showsHeader: false)
                 .accessibilityIdentifier("live-chat")
-            ChatLengthWarning(tokens: voice.threadTokens)
             controls
         }
         .navigationBarTitleDisplayMode(.inline)

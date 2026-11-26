@@ -742,6 +742,9 @@ final class WakeController: NSObject, ObservableObject, UNUserNotificationCenter
            let app = (info["youtubeAppURL"] as? String).flatMap(URL.init(string:)) {
             DispatchQueue.main.async { MainActor.assumeIsolated { YouTubePlayer.openNow(web: web, app: app) } }
         }
+        if let call = (info["callURL"] as? String).flatMap(URL.init(string:)) {
+            DispatchQueue.main.async { UIApplication.shared.open(call) }
+        }
         if let web = (info["mapsWebURL"] as? String).flatMap(URL.init(string:)),
            let app = (info["mapsAppURL"] as? String).flatMap(URL.init(string:)) {
             DispatchQueue.main.async { MainActor.assumeIsolated { MapsOpener.openNow(web: web, app: app) } }

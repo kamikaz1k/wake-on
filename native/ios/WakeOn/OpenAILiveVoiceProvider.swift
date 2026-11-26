@@ -73,6 +73,8 @@ struct LiveVoiceConfig {
     var feedback = true
     /// The calendar and reminders tools: Apple Calendar and Reminders (see PixieCalendar).
     var calendar = true
+    /// The contacts tool: find someone and call them (see PixieContacts). Off in Settings.
+    var contacts = true
     /// The alarms tool: alarms and timers with AlarmKit, iOS 26 and later (see Alarms).
     var alarms: Bool = { if #available(iOS 26.0, *) { true } else { false } }()
     /// The remember and recall tools (see Memory).
@@ -96,6 +98,7 @@ struct LiveVoiceConfig {
         if location { text += " " + CurrentLocation.delegationInstructions }
         if alarms { text += " " + Alarms.delegationInstructions }
         if calendar { text += " " + PixieCalendar.delegationInstructions }
+        if contacts { text += " " + PixieContacts.delegationInstructions }
         if maps { text += " " + MapsOpener.delegationInstructions }
         if visuals { text += " " + ShowVisual.delegationInstructions }
         if visuals, apps { text += " " + MiniApps.delegationInstructions }
@@ -162,6 +165,7 @@ struct LiveVoiceConfig {
         if location { tools.append(CurrentLocation.tool) }
         if alarms { tools.append(Alarms.tool) }
         if calendar { tools += PixieCalendar.tools }
+        if contacts { tools.append(PixieContacts.tool) }
         if maps { tools.append(MapsOpener.tool) }
         if visuals { tools.append(ShowVisual.tool) }
         if visuals, apps { tools.append(MiniApps.tool) }

@@ -45,6 +45,8 @@
 	<string>Pixie reads and adds events in your calendars when you ask, like “what’s on tomorrow?” or “add lunch with Sam on Friday”.</string>
 	<key>NSCameraUsageDescription</key>
 	<string>Pixie doesn’t use your camera: calls with Pixie are voice only. A website you open in Pixie’s browser could ask for it, and iOS asks you first.</string>
+	<key>NSContactsUsageDescription</key>
+	<string>When you ask Pixie to call someone, it looks them up in your contacts. Names and number labels are used in the call; the numbers stay on your iPhone.</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string>When you ask about something near you, like the weather or places nearby, Pixie looks up your location once and uses it to answer.</string>
 	<key>NSMicrophoneUsageDescription</key>

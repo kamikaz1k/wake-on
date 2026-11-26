@@ -20,5 +20,6 @@ for (const key of keys) {
   console.log(`${f.at.slice(0, 16).replace("T", " ")} UTC  ${f.name}  build ${f.app || "?"}`);
   console.log(`  ${f.feedback}`);
   if (f.context) console.log(`  Pixie's note: ${f.context}`);
+  if (f.warnings?.length) console.log(`  App warnings: ${f.warnings.join("; ")}`);
   console.log();
 }

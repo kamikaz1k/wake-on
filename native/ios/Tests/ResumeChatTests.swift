@@ -55,19 +55,13 @@ final class ResumeChatTests: XCTestCase {
         XCTAssertFalse(LiveVoiceConfig().backendInstructions().contains("resumes an earlier conversation"))
     }
 
-    func testTokenEstimatesAndWarnings() {
+    func testTokenEstimates() {
         XCTAssertEqual(ChatTokens.estimate("abcd"), 1)
         XCTAssertEqual(ChatTokens.estimate("abcde"), 2)
         // "User: hi" is 8 characters, 2 tokens.
         XCTAssertEqual(ChatTokens.estimate([.init(speaker: "You", text: "hi")]), 2)
         XCTAssertEqual(ChatTokens.label(850), "~850 tokens")
         XCTAssertEqual(ChatTokens.label(1420), "~1.4k tokens")
-        XCTAssertEqual(ChatTokens.level(ChatTokens.warnAt - 1), .ok)
-        XCTAssertEqual(ChatTokens.level(ChatTokens.warnAt), .long)
-        XCTAssertEqual(ChatTokens.level(ChatTokens.limit + 1), .truncated)
-        XCTAssertNil(ChatTokens.warning(100))
-        XCTAssertTrue(ChatTokens.warning(1300)?.contains("getting long") == true)
-        XCTAssertTrue(ChatTokens.warning(2100)?.contains("keeps only the newest") == true)
     }
 
     func testLookupTokensComeFromTheBackendUsage() {
