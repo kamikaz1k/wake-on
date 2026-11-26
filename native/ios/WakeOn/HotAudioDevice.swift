@@ -49,8 +49,16 @@ final class HotAudioDevice: NSObject, @unchecked Sendable {
 
     // Local buffering ("listen before connected"). The backlog is touched only on the
     // microphone thread; other threads request a reset through a flag.
-    private let backlogCapacity = 960_000 // 20 s at 48 kHz: the bridge (up to 10 s) goes in front
-    private let backlog = UnsafeMutablePointer<Int16>.allocate(capacity: 960_000)
+    // 60 s at 48 kHz: the bridge (up to 10 s) goes in front, and a call that lost its network
+    // keeps recording a voice note to send when it resumes.
+    static let backlogSeconds = 60.0
+    private let backlogCapacity = 2_880_000
+    private let backlog = UnsafeMutablePointer<Int16>.allocate(capacity: 2_880_000)
+    /// The next reset keeps what is in the backlog (a voice note carried into a new call).
+    private var keepBacklogOnReset = false
+    private var backlogFullReported = false
+    /// Microphone thread: the backlog is full while holding audio. Nothing more is kept.
+    var onBacklogFull: (() -> Void)?
     private var backlogCount = 0
     private var backlogRead = 0
     private var backlogResetRequested = false
@@ -77,11 +85,13 @@ final class HotAudioDevice: NSObject, @unchecked Sendable {
     /// Microphone thread: the backlog has been sent; the stream is live. Argument: frames sent.
     var onBacklogDrained: ((Int) -> Void)?
 
-    /// Starts a new call's local capture: empty backlog, hold audio until released.
-    func beginBuffering() {
+    /// Starts a new call's local capture: empty backlog (or, `keeping`, the voice note already in
+    /// it), hold audio until released.
+    func beginBuffering(keeping: Bool = false) {
         #if DEBUG
         sentResetRequested = true
         #endif
+        keepBacklogOnReset = keeping
         backlogResetRequested = true
         released = false
         buffering = true
@@ -90,8 +100,37 @@ final class HotAudioDevice: NSObject, @unchecked Sendable {
     func endBuffering() {
         buffering = false
         released = false
+        keepBacklogOnReset = false
         backlogResetRequested = true
     }
+
+    /// Removes silence from 48 kHz Int16 audio in place, keeping 300 ms around anything louder
+    /// than -45 dBFS (20 ms windows). Returns the new length; 0 if nothing was said.
+    static func compactSilence(_ samples: UnsafeMutablePointer<Int16>, count: Int) -> Int {
+        let window = 960, pad = 15
+        let windows = count / window
+        guard windows > 0 else { return 0 }
+        var loud = [Bool](repeating: false, count: windows)
+        let threshold = 184.0 * 184.0 // -45 dBFS
+        for w in 0..<windows {
+            var energy = 0.0
+            for i in 0..<window { let v = Double(samples[w * window + i]); energy += v * v }
+            loud[w] = energy / Double(window) > threshold
+        }
+        var keep = [Bool](repeating: false, count: windows)
+        for w in 0..<windows where loud[w] {
+            for k in max(0, w - pad)...min(windows - 1, w + pad) { keep[k] = true }
+        }
+        var written = 0
+        for w in 0..<windows where keep[w] {
+            if written != w * window { (samples + written).update(from: samples + w * window, count: window) }
+            written += window
+        }
+        return written
+    }
+
+    /// Whether the microphone is running (a dropped call's voice note is still recording).
+    var isCapturing: Bool { isRunning }
 
     // MARK: Wake-word handover
     //
@@ -633,8 +672,20 @@ final class HotAudioDevice: NSObject, @unchecked Sendable {
         #endif
         if backlogResetRequested {
             backlogResetRequested = false
-            backlogCount = 0
-            backlogRead = 0
+            if !keepBacklogOnReset {
+                backlogCount = 0
+                backlogRead = 0
+            } else {
+                // A voice note: send only the speech. Long silences sent at 4× had the model
+                // talk over nothing (it made up a line for the user once).
+                let kept = Self.compactSilence(backlog + backlogRead, count: backlogCount - backlogRead)
+                (backlog).update(from: backlog + backlogRead, count: kept)
+                trace("voice_note_compacted fromMs=\((backlogCount - backlogRead) / 48) toMs=\(kept / 48)")
+                backlogCount = kept
+                backlogRead = 0
+            }
+            keepBacklogOnReset = false
+            backlogFullReported = false
             capturedOnce = false
             callFirstHost = 0
             bridgeSettled = false
@@ -683,6 +734,9 @@ final class HotAudioDevice: NSObject, @unchecked Sendable {
             if room > 0 {
                 (backlog + backlogCount).update(from: scratch, count: room)
                 backlogCount += room
+            } else if !backlogFullReported {
+                backlogFullReported = true
+                onBacklogFull?()
             }
             return noErr
         }

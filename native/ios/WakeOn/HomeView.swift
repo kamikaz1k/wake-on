@@ -7,6 +7,7 @@ struct HomeView: View {
     @ObservedObject var voice: VoiceSessionController = .shared
     @ObservedObject var logs: ChatLogStore = .shared
     @ObservedObject private var invite = InviteLink.shared
+    @ObservedObject private var network = NetworkPath.shared
     @AppStorage(VoiceVisualizerSettings.styleKey) private var visualizerStyle: VoiceVisualizerStyle = .skyOrb
     @AppStorage(VoiceVisualizerSettings.paletteKey) private var visualizerPalette = VoicePalette.default.name
     /// Screenshot/debug launch argument: open straight to the chat logs.
@@ -137,13 +138,17 @@ struct HomeView: View {
                 // Nothing to call with yet: the main button sets that up instead.
                 bigButton("Add Invite Code or Key", id: "simple-add-key") { openKeySetup = true }
             case .idle:
-                if voice.droppedChat != nil {
-                    Button("Reconnect", systemImage: "arrow.clockwise") { voice.reconnect() }
-                        .buttonStyle(.borderedProminent)
-                        .accessibilityIdentifier("simple-reconnect")
+                if let note = voice.voiceNote {
+                    VoiceNoteCard(note: note, online: network.isUp,
+                                  resume: { voice.resumeVoiceNote() }, discard: { voice.discardVoiceNote() })
+                } else if !network.isUp {
+                    NetworkStatusBadge()
                 }
                 orbButton
-                Text("Tap the orb, or press the Action Button.\nSay “bye” to hang up.")
+                    .disabled(!network.isUp)
+                    .opacity(network.isUp ? 1 : 0.35)
+                Text(network.isUp ? "Tap the orb, or press the Action Button.\nSay “bye” to hang up."
+                                  : "Pixie needs an internet connection.")
                     .multilineTextAlignment(.center)
                     .font(.footnote).foregroundStyle(.secondary)
             case .connecting, .live, .ending:
@@ -384,5 +389,61 @@ struct ConnectionBanner: View {
                 .transition(.opacity.combined(with: .move(edge: .top)))
                 .accessibilityIdentifier("connection-banner")
         }
+    }
+}
+
+/// Home, while the phone has no network: the orb is disabled underneath.
+struct NetworkStatusBadge: View {
+    var body: some View {
+        Label("No internet connection", systemImage: "wifi.slash")
+            .font(.footnote.weight(.semibold))
+            .foregroundStyle(.orange)
+            .padding(.horizontal, 12).padding(.vertical, 6)
+            .background(.thinMaterial, in: Capsule())
+            .accessibilityIdentifier("network-status")
+    }
+}
+
+/// After a call lost its network: what the user said since is kept as a voice note. Once the
+/// network is back they can carry on the chat with it (Pixie hears it first) or discard it.
+struct VoiceNoteCard: View {
+    let note: VoiceSessionController.VoiceNote
+    let online: Bool
+    let resume: () -> Void
+    let discard: () -> Void
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            if online {
+                Label("Back online", systemImage: "wifi").font(.subheadline.weight(.semibold))
+            } else {
+                NetworkStatusBadge()
+            }
+            TimelineView(.periodic(from: .now, by: 1)) { context in
+                Label(detail(at: context.date), systemImage: note.recording ? "record.circle" : "waveform")
+                    .font(.footnote)
+                    .foregroundStyle(note.recording ? .red : .secondary)
+            }
+            HStack {
+                Button("Resume with Voice Note", systemImage: "play.fill", action: resume)
+                    .buttonStyle(.borderedProminent)
+                    .disabled(!online)
+                    .accessibilityIdentifier("voice-note-resume")
+                Spacer()
+                Button("Discard", role: .destructive, action: discard)
+                    .buttonStyle(.bordered)
+                    .accessibilityIdentifier("voice-note-discard")
+            }
+        }
+        .padding()
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Color(.secondarySystemBackground), in: RoundedRectangle(cornerRadius: 16))
+        .accessibilityIdentifier("voice-note")
+    }
+
+    private func detail(at date: Date) -> String {
+        let seconds = Int(min(HotAudioDevice.backlogSeconds, max(0, date.timeIntervalSince(note.since))))
+        let length = String(format: "%d:%02d", seconds / 60, seconds % 60)
+        return note.recording ? "Recording what you say · \(length)" : "Voice note · \(length)"
     }
 }

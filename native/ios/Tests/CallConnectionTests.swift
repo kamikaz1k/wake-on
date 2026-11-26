@@ -72,3 +72,17 @@ final class CallConnectionTests: XCTestCase {
         XCTAssertTrue(source.contains("continualGatheringPolicy = .gatherContinually"))
     }
 }
+
+/// A voice note sends only its speech: silence sent at 4× had the model talk over nothing.
+final class VoiceNoteCompactionTests: XCTestCase {
+    func testKeepsSpeechWithPaddingAndDropsSilence() {
+        // 10 s: silence, 1 s of tone at 4 s, silence.
+        var audio = [Int16](repeating: 0, count: 480_000)
+        for i in 192_000..<240_000 { audio[i] = Int16(8000 * sin(Double(i) * 0.05)) }
+        let kept = audio.withUnsafeMutableBufferPointer { HotAudioDevice.compactSilence($0.baseAddress!, count: $0.count) }
+        XCTAssertEqual(Double(kept) / 48_000, 1.6, accuracy: 0.05, "1 s of speech plus 300 ms either side")
+        XCTAssertNotEqual(audio[14_400 + 100], 0, "Speech starts 300 ms in")
+        var silent = [Int16](repeating: 3, count: 96_000)
+        XCTAssertEqual(silent.withUnsafeMutableBufferPointer { HotAudioDevice.compactSilence($0.baseAddress!, count: $0.count) }, 0)
+    }
+}

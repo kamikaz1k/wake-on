@@ -11,7 +11,7 @@ struct CallConnection {
     enum State: Equatable { case good, weak, lost }
 
     /// The call gives up and hangs up after this long without a connection. The microphone
-    /// backlog holds 20 s, so nothing said in that time is dropped.
+    /// microphone keeps recording after that as a voice note (60 s in all) for when the chat resumes.
     static let lostLimit = 20.0
     /// Weak when more than this share of the received packets went missing...
     static let weakLoss = 0.08

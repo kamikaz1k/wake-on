@@ -147,21 +147,23 @@ final class VoiceSessionController: ObservableObject {
     @Published private(set) var connection: CallConnection.State = .good
     private var link = CallConnection()
     private var pathWatch: AnyCancellable?
-    /// A call that ended because the connection went away. Reconnect carries on its chat.
-    @Published private(set) var droppedChat: ChatLog?
-    /// When the call dropped, while an automatic reconnect may still be tried (once per drop).
-    private var autoReconnectFrom: Double?
-    /// A dropped call reconnects by itself only this soon after it dropped, on screen.
-    static let autoReconnectWindow = 60.0
+    /// What the user said after a call lost its network, kept to send when the chat resumes.
+    struct VoiceNote: Equatable {
+        /// The chat to carry on (nil if nothing was said in the call).
+        let chat: ChatLog?
+        /// When the connection went (the note includes what the call held before hanging up).
+        let since: Date
+        /// The microphone is still recording it (stops when it reaches 60 s).
+        var recording: Bool
+    }
+    @Published private(set) var voiceNote: VoiceNote?
+    /// The wake listener comes back once the voice note is sent or discarded.
+    private var wakeAfterNote = false
     static let lostStatus = "Reconnecting…"
 
     private func networkPathChanged(up: Bool) {
         log("network_path up=\(up) interface=\(NetworkPath.shared.interface) phase=\(phase)")
-        if phase == .live {
-            changeLink { $0.path(up: up, at: uptimeSeconds()) }
-        } else if up {
-            reconnectIfReady()
-        }
+        if phase == .live { changeLink { $0.path(up: up, at: uptimeSeconds()) } }
     }
 
     /// Applies a change to the connection and acts on a new state: holds the microphone's
@@ -197,33 +199,59 @@ final class VoiceSessionController: ObservableObject {
     }
     private var statusBeforeLost: String?
 
-    /// Starts a call that carries on the dropped chat (the Reconnect button).
-    func reconnect() {
-        guard phase == .idle, let chat = droppedChat else { return }
-        autoReconnectFrom = nil
-        resume(chat, trigger: "reconnect")
+    /// Carries on the dropped chat, sending the voice note first (faster than real time).
+    func resumeVoiceNote() {
+        guard phase == .idle, let note = voiceNote else { return }
+        voiceNote = nil
+        let wake = wakeAfterNote
+        wakeAfterNote = false
+        log("voice_note resume seconds=\(Int(Date().timeIntervalSince(note.since)))")
+        start(trigger: "voice_note", resuming: note.chat, keepingNote: true)
+        if wake { resumeWakeListener = true }
     }
 
-    /// Reconnects a dropped call by itself once the network is back, if it dropped moments ago
-    /// and the app is on screen.
-    private func reconnectIfReady() {
-        guard phase == .idle, droppedChat != nil, let from = autoReconnectFrom,
-              uptimeSeconds() - from < Self.autoReconnectWindow, NetworkPath.shared.isUp,
-              UIApplication.shared.applicationState == .active else { return }
-        log("reconnect auto")
-        reconnect()
+    /// Throws the voice note away and frees the microphone. `freeMicrophone` false when a new
+    /// call is about to use it anyway.
+    func discardVoiceNote(freeMicrophone: Bool = true) {
+        guard voiceNote != nil else { return }
+        voiceNote = nil
+        log("voice_note discarded")
+        guard OpenAILiveVoiceProvider.useHotAudio else { return }
+        HotAudioDevice.shared.endBuffering()
+        guard freeMicrophone else { return }
+        HotAudioDevice.shared.disarm()
+        if wakeAfterNote {
+            wakeAfterNote = false
+            WakeController.shared.start()
+        }
+    }
+
+    /// The note reached its limit: stop the microphone, keep what was recorded.
+    private func voiceNoteFull() {
+        guard phase == .idle, var note = voiceNote, note.recording else { return }
+        note.recording = false
+        voiceNote = note
+        HotAudioDevice.shared.disarm()
+        log("voice_note full seconds=\(Int(HotAudioDevice.backlogSeconds))")
     }
 
     // MARK: - Control
 
     /// Starts a call. `origin` is when the trigger happened (an Action Button press, a tap).
     func start(trigger: String, origin: UInt64 = DispatchTime.now().uptimeNanoseconds, probe: Probe? = nil,
-               resuming: ChatLog? = nil) {
+               resuming: ChatLog? = nil, keepingNote: Bool = false) {
         if phase != .idle {
             WakeController.shared.cancelHandover()
             if phase == .live, let probe { runProbe(probe); return }
             // A second Action Button press hangs up.
             if trigger.hasPrefix("app_intent") { stop(reason: "action_button") }
+            return
+        }
+        // Offline with a voice note waiting: starting would throw it away and couldn't connect.
+        if voiceNote != nil, !keepingNote, !NetworkPath.shared.isUp {
+            WakeController.shared.cancelHandover()
+            error = "No internet connection. Your voice note is kept."
+            log("start_blocked offline_with_voice_note trigger=\(trigger)")
             return
         }
         // Nothing goes to OpenAI before the user agrees (Guideline 5.1.2(i)). One UserDefaults
@@ -287,7 +315,10 @@ final class VoiceSessionController: ObservableObject {
             // Documents/sent-<time>.wav: everything the call sent (backlog and live).
             device.onSentDump = { pcm in Self.writeDebugWav(pcm, prefix: "sent") }
             #endif
-            device.beginBuffering()
+            device.beginBuffering(keeping: keepingNote)
+            device.onBacklogFull = { [weak self] in
+                Task { @MainActor in self?.voiceNoteFull() }
+            }
         }
         if OpenAILiveVoiceProvider.useHotAudio {
             // A wake-word call starts its audio inside the listener's running session, on screen
@@ -398,8 +429,9 @@ final class VoiceSessionController: ObservableObject {
         lookingUpSince = nil
         link = CallConnection()
         connection = .good
-        droppedChat = nil
-        autoReconnectFrom = nil
+        // A new chat instead of resuming: the old voice note goes (the microphone is reused).
+        if !keepingNote { discardVoiceNote(freeMicrophone: false) }
+        if wakeAfterNote && !keepingNote { wakeAfterNote = false; resumeWakeListener = true }
         record("start_entered", at: origin + 1)
         if OpenAILiveVoiceProvider.useHotAudio {
             record("listening_shown")
@@ -573,6 +605,11 @@ final class VoiceSessionController: ObservableObject {
         status = "Ending…"
         stopReason = reason
         log("stop reason=\(reason)")
+        if reason == "network" {
+            // Nobody is there to hear a close request, and a chime would land in the voice note.
+            provider.close(reason: reason)
+            return
+        }
         var chimeDelay: Duration = .zero
         if OpenAILiveVoiceProvider.useHotAudio {
             // Hang-up chime: keep the call's audio running until it has played, and keep the
@@ -712,11 +749,23 @@ final class VoiceSessionController: ObservableObject {
         if callTrigger == "launch_argument", let index = args.firstIndex(of: "--say-file"), index + 1 < args.count,
            let wav = FileManager.default.contents(atPath: args[index + 1]),
            let data = wav.range(of: Data("data".utf8)) {
-            let at = args.firstIndex(of: "--say-at").flatMap { $0 + 1 < args.count ? Double(args[$0 + 1]) : nil } ?? 6
+            // --say-at takes a comma-separated list of times ("12,26").
+            let times = args.firstIndex(of: "--say-at").flatMap { $0 + 1 < args.count ? args[$0 + 1] : nil }?
+                .split(separator: ",").compactMap { Double($0) } ?? [6]
             let samples = Data(wav[(data.upperBound + 4)...]).withUnsafeBytes { Array($0.bindMemory(to: Int16.self)) }
-            Task {
+            for at in times {
+                Task {
+                    try? await Task.sleep(for: .seconds(at))
+                    HotAudioDevice.shared.inject(samples)
+                }
+            }
+        }
+        // --resume-note-at N: press Resume with Voice Note N s after the launch call starts.
+        if callTrigger == "launch_argument", let index = args.firstIndex(of: "--resume-note-at"), index + 1 < args.count,
+           let at = Double(args[index + 1]) {
+            Task { [weak self] in
                 try? await Task.sleep(for: .seconds(at))
-                HotAudioDevice.shared.inject(samples)
+                self?.resumeVoiceNote()
             }
         }
         #endif
@@ -1528,11 +1577,17 @@ final class VoiceSessionController: ObservableObject {
         // In the browser, pausing or going quiet ends the call (no tokens while you read) but
         // keeps the chat to resume. A call with nothing said keeps the one it resumed.
         let dropped = (stopReason ?? reason) == "network"
-        if dropped {
-            // Lost the connection: keep the chat so the call can carry on once it's back.
-            droppedChat = kept ? chatLog : resuming
-            autoReconnectFrom = droppedChat == nil ? nil : uptimeSeconds()
-            log("call_dropped chat=\(droppedChat?.id.uuidString ?? "none")")
+        let hot = OpenAILiveVoiceProvider.useHotAudio
+        // Lost the connection: keep recording what the user says, to send when the chat resumes.
+        // Not when muted (the note would carry what they muted) or before the call was set up.
+        let keepsNote = dropped && hot && sessionStarted && !muted
+        if keepsNote {
+            let lostAgo = link.lostSince.map { uptimeSeconds() - $0 } ?? 0
+            voiceNote = VoiceNote(chat: kept ? chatLog : resuming, since: Date().addingTimeInterval(-lostAgo),
+                                  recording: HotAudioDevice.shared.isCapturing)
+            log("call_dropped voice_note recording=\(voiceNote?.recording == true) chat=\((kept ? chatLog : resuming)?.id.uuidString ?? "none")")
+        } else if dropped && hot {
+            HotAudioDevice.shared.disarm()
         }
         if Self.pausesThread(reason: stopReason ?? reason, browserOpen: BrowserSession.shared.isOpen) {
             pausedThread = kept ? chatLog : resuming
@@ -1567,18 +1622,16 @@ final class VoiceSessionController: ObservableObject {
         log(String(format: "ended reason=%@ callMs=%.0f usageSeconds=%.1f", reason, callMs, usageSeconds ?? -1))
         phase = .idle
         timeline = pendingTimeline
-        if OpenAILiveVoiceProvider.useHotAudio {
-            HotAudioDevice.shared.endBuffering()
+        if hot {
+            if !keepsNote { HotAudioDevice.shared.endBuffering() }
             HotAudioDevice.shared.backgroundStart = false
             HotAudioDevice.shared.chimeOnFirstCapture = false
         }
         connection = .good
         if dropped {
             status = "Call dropped"
-            if error == nil { error = NetworkPath.shared.isUp ? "Lost the connection to Pixie." : "No internet connection." }
-            Task { [weak self] in
-                try? await Task.sleep(for: .seconds(1.5))
-                self?.reconnectIfReady()
+            if !keepsNote, error == nil {
+                error = NetworkPath.shared.isUp ? "Lost the connection to Pixie." : "No internet connection."
             }
         } else if error == nil { status = "Call ended" }
         #if DEBUG
@@ -1586,7 +1639,12 @@ final class VoiceSessionController: ObservableObject {
         #else
         let noPrepare = false
         #endif
-        if !noPrepare { prepareNext() }
+        if !noPrepare && !keepsNote { prepareNext() }
+        if keepsNote && resumeWakeListener {
+            // The microphone is busy with the voice note; the listener comes back after it.
+            resumeWakeListener = false
+            wakeAfterNote = true
+        }
         if WakeController.shared.handingOver {
             // Ended before its microphone took over: the listener never stopped.
             WakeController.shared.cancelHandover()
@@ -1724,7 +1782,6 @@ final class VoiceSessionController: ObservableObject {
         log("failed \(message)")
         // A resume that couldn't connect stays paused, so Resume can try again.
         if let resuming, BrowserSession.shared.isOpen { pausedThread = resuming }
-        if let resuming, callTrigger == "reconnect" { droppedChat = resuming }
         // Without a network the underlying error (a URL or ICE failure) only confuses.
         let message = NetworkPath.shared.isUp ? message : "No internet connection."
         error = localListening ? message + " Anything you said was not sent." : message

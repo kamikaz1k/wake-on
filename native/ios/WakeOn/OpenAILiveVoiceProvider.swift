@@ -564,6 +564,9 @@ final class OpenAILiveVoiceProvider: NSObject {
         track = nil
         if !started {
             // An unused prepared call: nothing else to release.
+        } else if Self.useHotAudio && reason == "network" {
+            // Lost the network: the controller decides whether the microphone keeps recording a
+            // voice note to send when the chat resumes.
         } else if Self.useHotAudio {
             HotAudioDevice.shared.disarm()
         } else {
