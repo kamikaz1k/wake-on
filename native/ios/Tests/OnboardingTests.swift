@@ -2,7 +2,7 @@ import CoreLocation
 import XCTest
 @testable import WakeOn
 
-/// Invite links fill in a friend's code; onboarding's demo has recorded calls to play.
+/// Invite links fill in a friend's code; onboarding ends with starter prompts.
 @MainActor
 final class OnboardingTests: XCTestCase {
     func testInviteLinkCode() {
@@ -13,11 +13,20 @@ final class OnboardingTests: XCTestCase {
         XCTAssertNil(InviteLink.code(from: URL(string: "https://example.com/invite?code=x")!))
     }
 
-    func testDemoCallsAreBundled() {
-        let urls = Bundle.main.urls(forResourcesWithExtension: "jsonl", subdirectory: nil) ?? []
-        let calls = urls.compactMap(CapturedCall.load)
-        XCTAssertGreaterThanOrEqual(calls.count, 3, "The onboarding demo replays the sample calls")
-        XCTAssertTrue(calls.allSatisfy { !CaptureReplay(lines: $0.lines, rawEvents: false).steps.isEmpty })
+    /// Every tool Pixie has gets a starter prompt on the last onboarding page, so a new
+    /// capability shows up there.
+    func testEveryToolHasAStarterPrompt() {
+        var config = LiveVoiceConfig()
+        config.alarms = true
+        let body = config.requestBody(sdp: "v=0")
+        let responses = ((body["session"] as? [String: Any])?["delegation"] as? [String: Any])?["responses"] as? [String: Any]
+        let tools = (responses?["tools"] as? [[String: Any]]) ?? []
+        let names = Set(tools.compactMap { $0["name"] as? String ?? $0["type"] as? String })
+        XCTAssertTrue(names.contains("calendar"))
+        let covered = Set(Onboarding.starters.flatMap(\.tools)).union(Onboarding.backgroundTools)
+        XCTAssertEqual(names.subtracting(covered), [], "Add a starter prompt for each new tool")
+        XCTAssertEqual(covered.subtracting(names), [], "A starter names a tool that doesn't exist")
+        XCTAssertEqual(Set(Onboarding.starters.map(\.text)).count, Onboarding.starters.count)
     }
 
     /// Location is offered right after the microphone and before the first call, whose weather

@@ -2,7 +2,7 @@ import AVFoundation
 import SwiftUI
 
 /// First-run setup: access (invite code or key), permission, location (optional), a first call, the Action Button,
-/// "Hey Pixie" listening and a demo of recorded calls. Every step after Welcome can be skipped;
+/// "Hey Pixie" listening and starter prompts to try. Every step after Welcome can be skipped;
 /// steps that can't work yet (no code, no permission, no Action Button) are passed over.
 enum Onboarding {
     static let doneKey = "onboarding.done"
@@ -13,6 +13,36 @@ enum Onboarding {
         ("Where's the Eiffel Tower?", "map", "Where's the Eiffel Tower?"),
         ("What's in the news today?", "newspaper", "What's in the news today?"),
     ]
+
+    /// Starter prompts on the last onboarding page, one or more per thing Pixie can do. When
+    /// you add a tool, add a prompt that uses it (OnboardingTests checks every tool has one).
+    struct Starter {
+        let text: String
+        let icon: String
+        /// The tools this prompt shows off.
+        let tools: [String]
+    }
+
+    static let starters: [Starter] = [
+        Starter(text: "Show me this week's weather", icon: "chart.xyaxis.line", tools: ["show_visual", "get_location"]),
+        Starter(text: "Set a timer for 10 minutes", icon: "timer", tools: ["alarms"]),
+        Starter(text: "Wake me up at 7 tomorrow", icon: "alarm", tools: ["alarms"]),
+        Starter(text: "What's on my calendar tomorrow?", icon: "calendar", tools: ["calendar"]),
+        Starter(text: "Remind me to call Mom at 6 p.m.", icon: "checklist", tools: ["reminders"]),
+        Starter(text: "Play a song by Fleetwood Mac", icon: "music.note", tools: ["play_spotify"]),
+        Starter(text: "Find a video on how to tie a tie", icon: "play.rectangle", tools: ["play_youtube"]),
+        Starter(text: "Pause the music", icon: "playpause", tools: ["control_media"]),
+        Starter(text: "Turn the volume down", icon: "speaker.wave.2", tools: ["set_volume"]),
+        Starter(text: "Find a coffee shop near me", icon: "map", tools: ["open_map", "get_location"]),
+        Starter(text: "What's in the news today?", icon: "newspaper", tools: ["web_search"]),
+        Starter(text: "Open the BBC website", icon: "globe", tools: ["browser"]),
+        Starter(text: "Remember that I'm allergic to peanuts", icon: "brain", tools: ["remember"]),
+        Starter(text: "What do you remember about me?", icon: "brain", tools: ["recall"]),
+        Starter(text: "Send feedback that the map was wrong", icon: "envelope", tools: ["send_feedback"]),
+    ]
+
+    /// Tools that only work behind the scenes, so no starter prompt shows them.
+    static let backgroundTools: Set<String> = ["zoom"]
 
     /// iPhone 15 Pro and later have the Action Button.
     static var hasActionButton: Bool {
@@ -330,9 +360,19 @@ struct OnboardingView: View {
                 if step == .heyLobby, heySub == 3, old != .idle, new == .idle, voice.lastTrigger == "wake_word" { heySub = 4 }
             }
         case .demo:
-            OnboardingPage(icon: "play.rectangle.on.rectangle.fill", title: "See what \(Agent.name) can do",
-                           text: "Recorded calls, played back as they happened.") {
-                DemoList()
+            OnboardingPage(icon: "sparkles", title: "Things to try",
+                           text: "Tap one to ask it now, or say it any time in a call.") {
+                VStack(spacing: 10) {
+                    ForEach(Onboarding.starters, id: \.text) { starter in
+                        Button { voice.start(trigger: "onboarding", prompt: starter.text) } label: {
+                            Label(starter.text, systemImage: starter.icon)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                                .padding(.vertical, 6)
+                        }
+                        .buttonStyle(.bordered)
+                        .disabled(voice.phase != .idle)
+                    }
+                }
             } actions: {
                 primary("Next", id: "onboarding-next") { advance() }
             }
@@ -541,71 +581,4 @@ struct OnboardingPage<Content: View, Actions: View>: View {
                 .padding()
         }
     }
-}
-
-/// The recorded sample calls (also used by Chat Lab), each played back on tap.
-struct DemoList: View {
-    private let calls: [CapturedCall] = (Bundle.main.urls(forResourcesWithExtension: "jsonl", subdirectory: nil) ?? [])
-        .sorted { $0.lastPathComponent < $1.lastPathComponent }
-        .compactMap(CapturedCall.load)
-
-    var body: some View {
-        VStack(spacing: 10) {
-            ForEach(calls) { call in
-                if #available(iOS 18.0, *) {
-                    NavigationLink { DemoReplayView(call: call) } label: {
-                        Label(call.title, systemImage: "play.circle")
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                            .padding(.vertical, 6)
-                    }
-                    .buttonStyle(.bordered)
-                }
-            }
-        }
-    }
-}
-
-/// A recorded call played back at its own timing in Pixie's chat view.
-@available(iOS 18.0, *)
-struct DemoReplayView: View {
-    let call: CapturedCall
-    @StateObject private var player = DemoPlayer()
-
-    var body: some View {
-        ChatTranscriptView(items: player.items, call: player.call, showsHeader: false)
-            .navigationTitle(call.title)
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                Button("Replay", systemImage: "arrow.counterclockwise") { play() }
-            }
-            .onAppear(perform: play)
-            .onDisappear { player.stop() }
-    }
-
-    private func play() { player.play(CaptureReplay(lines: call.lines, rawEvents: false).steps) }
-}
-
-/// Applies replay steps over time (Chat Lab's LabPlayer, without its lab controls).
-@MainActor
-final class DemoPlayer: ChatTranscript {
-    private var task: Task<Void, Never>?
-
-    func play(_ steps: [ChatStep]) {
-        task?.cancel()
-        items = []
-        call = ChatCallState()
-        touched()
-        let steps = steps.sorted { $0.at < $1.at }
-        let start = Date()
-        task = Task { @MainActor [weak self] in
-            for step in steps {
-                let wait = step.at - Date().timeIntervalSince(start)
-                if wait > 0 { try? await Task.sleep(for: .seconds(wait)) }
-                guard let self, !Task.isCancelled else { return }
-                step.apply(self)
-            }
-        }
-    }
-
-    func stop() { task?.cancel() }
 }

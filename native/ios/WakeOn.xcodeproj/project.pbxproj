@@ -41,9 +41,6 @@
 				<string>AB253D8DEF578F882C3AD98F</string>
 				<string>DFE2289E0900BFE0098B1A52</string>
 				<string>7964352DDE2EB6CBD9B52FFD</string>
-				<string>74ACB5CCD03DBDEDD28A8655</string>
-				<string>3EE874D6094F498B3EB38F4D</string>
-				<string>B14B0BC8CCC712BB507DF782</string>
 			</array>
 			<key>isa</key>
 			<string>PBXResourcesBuildPhase</string>
@@ -897,13 +894,6 @@
 		<dict>
 			<key>fileRef</key>
 			<string>8D6F34E7725B3AD5A0F6CAF0</string>
-			<key>isa</key>
-			<string>PBXBuildFile</string>
-		</dict>
-		<key>3EE874D6094F498B3EB38F4D</key>
-		<dict>
-			<key>fileRef</key>
-			<string>0088B281E196A96BE9595A8C</string>
 			<key>isa</key>
 			<string>PBXBuildFile</string>
 		</dict>
@@ -1877,13 +1867,6 @@
 			<key>isa</key>
 			<string>PBXBuildFile</string>
 		</dict>
-		<key>74ACB5CCD03DBDEDD28A8655</key>
-		<dict>
-			<key>fileRef</key>
-			<string>FB9F4FD9552779739A9F2E45</string>
-			<key>isa</key>
-			<string>PBXBuildFile</string>
-		</dict>
 		<key>74C3E4252EFD564EB7FA8736</key>
 		<dict>
 			<key>isa</key>
@@ -2822,13 +2805,6 @@
 		<dict>
 			<key>fileRef</key>
 			<string>64295C11BF3C861396064B44</string>
-			<key>isa</key>
-			<string>PBXBuildFile</string>
-		</dict>
-		<key>B14B0BC8CCC712BB507DF782</key>
-		<dict>
-			<key>fileRef</key>
-			<string>919AD98241FE3E02313AEA0F</string>
 			<key>isa</key>
 			<string>PBXBuildFile</string>
 		</dict>
