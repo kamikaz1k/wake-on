@@ -4,7 +4,10 @@ import WidgetKit
 
 @main
 struct WakeOnLiveActivityBundle: WidgetBundle {
-    var body: some Widget { ListeningLiveActivity() }
+    var body: some Widget {
+        ListeningLiveActivity()
+        if #available(iOS 26.0, *) { AlarmLiveActivity() }
+    }
 }
 
 /// The listener's Live Activity: the sky orb, calm while listening and bright once it hears

@@ -196,6 +196,13 @@
 			<key>isa</key>
 			<string>XCConfigurationList</string>
 		</dict>
+		<key>0CDC562B8A121BDE93EABDFD</key>
+		<dict>
+			<key>fileRef</key>
+			<string>206BD1A09834FA0089A26B53</string>
+			<key>isa</key>
+			<string>PBXBuildFile</string>
+		</dict>
 		<key>0D9FF04E5D4B80F4BC1A0698</key>
 		<dict>
 			<key>fileRef</key>
@@ -480,6 +487,17 @@
 			<string>BAA884D912E3425D1C2D1458</string>
 			<key>isa</key>
 			<string>PBXBuildFile</string>
+		</dict>
+		<key>206BD1A09834FA0089A26B53</key>
+		<dict>
+			<key>isa</key>
+			<string>PBXFileReference</string>
+			<key>lastKnownFileType</key>
+			<string>sourcecode.swift</string>
+			<key>path</key>
+			<string>WakeOnLiveActivity/AlarmLiveActivity.swift</string>
+			<key>sourceTree</key>
+			<string>&lt;group&gt;</string>
 		</dict>
 		<key>20B70E15FDC36C625E57F658</key>
 		<dict>
@@ -1247,6 +1265,17 @@
 			<key>isa</key>
 			<string>PBXBuildFile</string>
 		</dict>
+		<key>575F999A9F416771ED8186A6</key>
+		<dict>
+			<key>isa</key>
+			<string>PBXFileReference</string>
+			<key>lastKnownFileType</key>
+			<string>sourcecode.swift</string>
+			<key>path</key>
+			<string>WakeOn/Alarms.swift</string>
+			<key>sourceTree</key>
+			<string>&lt;group&gt;</string>
+		</dict>
 		<key>579F4EE51E22157FC1503151</key>
 		<dict>
 			<key>isa</key>
@@ -1325,6 +1354,8 @@
 				<array>
 					<string>$(inherited)</string>
 					<string>-lc++</string>
+					<string>-weak_framework</string>
+					<string>AlarmKit</string>
 				</array>
 				<key>PRODUCT_BUNDLE_IDENTIFIER</key>
 				<string>com.kamikaz1k.wakeon</string>
@@ -1723,6 +1754,7 @@
 			<key>files</key>
 			<array>
 				<string>A851883D2D56FA2D0CDAB29D</string>
+				<string>6FF4B903D4CD08CBDD46391C</string>
 				<string>EE72E66061F34F35D9E2A154</string>
 				<string>5BEA58C43D2321DE0F5E9EB9</string>
 				<string>5655D4377A320893D7964C00</string>
@@ -1783,6 +1815,13 @@
 				<key>minimumVersion</key>
 				<string>0.1.1</string>
 			</dict>
+		</dict>
+		<key>6FF4B903D4CD08CBDD46391C</key>
+		<dict>
+			<key>fileRef</key>
+			<string>93D033FE52F13A9BF972894C</string>
+			<key>isa</key>
+			<string>PBXBuildFile</string>
 		</dict>
 		<key>70053AA9C4496BF9C7EC65FB</key>
 		<dict>
@@ -1974,6 +2013,12 @@
 					<string>$(inherited)</string>
 					<string>@executable_path/Frameworks</string>
 					<string>@executable_path/../../Frameworks</string>
+				</array>
+				<key>OTHER_LDFLAGS</key>
+				<array>
+					<string>$(inherited)</string>
+					<string>-weak_framework</string>
+					<string>AlarmKit</string>
 				</array>
 				<key>PRODUCT_BUNDLE_IDENTIFIER</key>
 				<string>com.kamikaz1k.wakeon.LiveActivity</string>
@@ -2499,6 +2544,17 @@
 			<key>sourceTree</key>
 			<string>&lt;group&gt;</string>
 		</dict>
+		<key>93D033FE52F13A9BF972894C</key>
+		<dict>
+			<key>isa</key>
+			<string>PBXFileReference</string>
+			<key>lastKnownFileType</key>
+			<string>sourcecode.swift</string>
+			<key>path</key>
+			<string>Tests/AlarmsTests.swift</string>
+			<key>sourceTree</key>
+			<string>&lt;group&gt;</string>
+		</dict>
 		<key>96BED2CC5F692481EDA9CC0A</key>
 		<dict>
 			<key>fileRef</key>
@@ -2589,6 +2645,13 @@
 			<string>WakeOn/Assets.xcassets</string>
 			<key>sourceTree</key>
 			<string>&lt;group&gt;</string>
+		</dict>
+		<key>9DE50567EB25220EB9BD3638</key>
+		<dict>
+			<key>fileRef</key>
+			<string>575F999A9F416771ED8186A6</string>
+			<key>isa</key>
+			<string>PBXBuildFile</string>
 		</dict>
 		<key>9F2F0D7B8211BA8CBE1CF982</key>
 		<dict>
@@ -2883,6 +2946,7 @@
 			<key>files</key>
 			<array>
 				<string>8E822F5F5DE4A920CD1B1B85</string>
+				<string>9DE50567EB25220EB9BD3638</string>
 				<string>1DA5A8F982B7C161E74C041E</string>
 				<string>F29E91B590F34040D4912AA5</string>
 				<string>206BA2F968C3FC3C92318888</string>
@@ -2937,6 +3001,7 @@
 				<string>7C5A1951B4BEF1420051F995</string>
 				<string>02B8460E42E4448671024FA7</string>
 				<string>3B8E250EBF1A2DB5C7F29222</string>
+				<string>DD5DD65D7A0E6D3B3A2B150C</string>
 				<string>3A7271DD402160791BE63A46</string>
 				<string>6DB45D0ABFC30C29101B6B1D</string>
 				<string>C2BDFA30693C6EA13F39754C</string>
@@ -3418,6 +3483,7 @@
 			<key>children</key>
 			<array>
 				<string>F0EB0913A01EEAD3C5C8FE4F</string>
+				<string>575F999A9F416771ED8186A6</string>
 				<string>B29C300FCD297635482D352B</string>
 				<string>E8B8A81C6CA1C88BC84CAD95</string>
 				<string>BAA884D912E3425D1C2D1458</string>
@@ -3472,9 +3538,12 @@
 				<string>E31B5919A1444094040D0A2C</string>
 				<string>E30CA39BBEB87865BF86F028</string>
 				<string>38534BB08E9D76D11C587E49</string>
+				<string>F226208CAC0D7BEA3C43BEF8</string>
+				<string>206BD1A09834FA0089A26B53</string>
 				<string>EA887A74159053229BB4FA1B</string>
 				<string>B81F7C4987416DEB2976F4B6</string>
 				<string>8CEFD2EE710915B5D2E5CD71</string>
+				<string>93D033FE52F13A9BF972894C</string>
 				<string>694224480C1EF786AF578D9C</string>
 				<string>4025FAD5BADBA37E3C524972</string>
 				<string>93421563D67A7CA1779FC6D5</string>
@@ -3585,6 +3654,13 @@
 			<string>WakeOn/OpenAILiveVoiceProvider.swift</string>
 			<key>sourceTree</key>
 			<string>&lt;group&gt;</string>
+		</dict>
+		<key>DD5DD65D7A0E6D3B3A2B150C</key>
+		<dict>
+			<key>fileRef</key>
+			<string>F226208CAC0D7BEA3C43BEF8</string>
+			<key>isa</key>
+			<string>PBXBuildFile</string>
 		</dict>
 		<key>DDB2574CFA5C25FCC5D10F1B</key>
 		<dict>
@@ -3835,9 +3911,11 @@
 			<integer>2147483647</integer>
 			<key>files</key>
 			<array>
+				<string>0CDC562B8A121BDE93EABDFD</string>
 				<string>F44CA5104F181FD84D777C1E</string>
 				<string>02B8460E42E4448671024FA7</string>
 				<string>3B8E250EBF1A2DB5C7F29222</string>
+				<string>DD5DD65D7A0E6D3B3A2B150C</string>
 			</array>
 			<key>isa</key>
 			<string>PBXSourcesBuildPhase</string>
@@ -3903,6 +3981,8 @@
 				<array>
 					<string>$(inherited)</string>
 					<string>-lc++</string>
+					<string>-weak_framework</string>
+					<string>AlarmKit</string>
 				</array>
 				<key>PRODUCT_BUNDLE_IDENTIFIER</key>
 				<string>com.kamikaz1k.wakeon</string>
@@ -3955,6 +4035,12 @@
 					<string>$(inherited)</string>
 					<string>@executable_path/Frameworks</string>
 					<string>@executable_path/../../Frameworks</string>
+				</array>
+				<key>OTHER_LDFLAGS</key>
+				<array>
+					<string>$(inherited)</string>
+					<string>-weak_framework</string>
+					<string>AlarmKit</string>
 				</array>
 				<key>PRODUCT_BUNDLE_IDENTIFIER</key>
 				<string>com.kamikaz1k.wakeon.LiveActivity</string>
@@ -4013,6 +4099,17 @@
 			<string>sourcecode.swift</string>
 			<key>path</key>
 			<string>WakeOn/AIConsent.swift</string>
+			<key>sourceTree</key>
+			<string>&lt;group&gt;</string>
+		</dict>
+		<key>F226208CAC0D7BEA3C43BEF8</key>
+		<dict>
+			<key>isa</key>
+			<string>PBXFileReference</string>
+			<key>lastKnownFileType</key>
+			<string>sourcecode.swift</string>
+			<key>path</key>
+			<string>Shared/PixieAlarm.swift</string>
 			<key>sourceTree</key>
 			<string>&lt;group&gt;</string>
 		</dict>

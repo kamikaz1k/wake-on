@@ -816,6 +816,15 @@ final class VoiceSessionController: ObservableObject {
             }
             return
         }
+        if name == Alarms.toolName {
+            lookingUpSince = uptimeSeconds()
+            Task { @MainActor in
+                let result = await Alarms.perform(arguments)
+                self.completeFunctionCall(name: name, callID: callID, arguments: arguments, result: result,
+                                          action: ["kind": "alarm", "action": arguments["action"] as? String ?? ""])
+            }
+            return
+        }
         if name == Feedback.toolName {
             lookingUpSince = uptimeSeconds()
             let credential = callCredential

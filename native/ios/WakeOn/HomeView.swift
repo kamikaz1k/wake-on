@@ -253,6 +253,15 @@ struct SettingsView: View {
                     Text("With the browser on, \(Agent.name) can open, search and read websites; it keeps you signed in only to the sites you choose.")
                 }
 
+                if #available(iOS 26.0, *) {
+                    Section {
+                        NavigationLink("Alarms and Timers") { AlarmsView() }
+                            .accessibilityIdentifier("settings-alarms")
+                    } footer: {
+                        Text("Alarms and timers \(Agent.name) set for you. Swipe one to cancel it.")
+                    }
+                }
+
                 Section {
                     Toggle("Send voice to OpenAI in calls", isOn: $openAIConsent)
                         .accessibilityIdentifier("simple-openai-consent")

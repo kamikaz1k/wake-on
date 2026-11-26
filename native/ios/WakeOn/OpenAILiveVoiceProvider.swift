@@ -69,6 +69,8 @@ struct LiveVoiceConfig {
     var browser = true
     /// The send_feedback tool: the user's feedback to the developer (see Feedback).
     var feedback = true
+    /// The alarms tool: alarms and timers with AlarmKit, iOS 26 and later (see Alarms).
+    var alarms: Bool = { if #available(iOS 26.0, *) { true } else { false } }()
     /// The remember and recall tools (see Memory).
     var memoryTools = true
     /// What Pixie remembers, for both models' instructions (`Memory.callText`).
@@ -88,11 +90,13 @@ struct LiveVoiceConfig {
         if volume { text += " " + VolumeControl.delegationInstructions }
         if notes { text += " " + ObsidianNotes.delegationInstructions }
         if location { text += " " + CurrentLocation.delegationInstructions }
+        if alarms { text += " " + Alarms.delegationInstructions }
         if maps { text += " " + MapsOpener.delegationInstructions }
         if visuals { text += " " + ShowVisual.delegationInstructions }
         if browser { text += " " + BrowserTool.delegationInstructions }
         if feedback { text += " " + Feedback.delegationInstructions }
         if memoryTools { text += " " + Memory.delegationInstructions }
+        text += "\n" + Self.clockLine()
         if visuals || maps || browser {
             text += " " + ScreenPresence.backendGuidance
             if let screen { text += "\n" + screen.backendLine }
@@ -101,6 +105,14 @@ struct LiveVoiceConfig {
         if let memory { text += "\n\n" + memory }
         if let earlier = Self.historyNote(history) { text += "\n\n" + earlier }
         return text
+    }
+
+    /// "Now: Thursday, November 26, 2026, 4:20 AM (America/Toronto)." The backend has no clock,
+    /// and alarms, timers and "tonight" need one. Near the end so the cached prefix holds.
+    static func clockLine(_ now: Date = Date(), timeZone: TimeZone = .current, locale: Locale = Locale(identifier: "en_US")) -> String {
+        var style = Date.FormatStyle(date: .complete, time: .shortened, locale: locale)
+        style.timeZone = timeZone
+        return "Now: \(now.formatted(style)) (\(timeZone.identifier))."
     }
 
     /// Mid-call update for the backend when the screen comes into view or goes away. The
@@ -142,6 +154,7 @@ struct LiveVoiceConfig {
         if volume { tools.append(VolumeControl.tool) }
         if notes { tools.append(ObsidianNotes.tool) }
         if location { tools.append(CurrentLocation.tool) }
+        if alarms { tools.append(Alarms.tool) }
         if maps { tools.append(MapsOpener.tool) }
         if visuals { tools.append(ShowVisual.tool) }
         if browser { tools.append(BrowserTool.tool) }

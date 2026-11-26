@@ -90,6 +90,7 @@ your iPhone.
   app's browser.
 - Notes Pixie saves for you go to the folder you choose (for example an Obsidian vault).
 - A copy of feedback you asked Pixie to send.
+- Alarms and timers you ask Pixie to set: iOS keeps them, and Pixie keeps their labels.
 
 None of this is sent to the developer, apart from feedback you ask Pixie to send.
 

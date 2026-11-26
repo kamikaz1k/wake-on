@@ -142,6 +142,7 @@ enum ChatToolSteps {
         case "set_volume": "speaker.wave.2"
         case "get_location": "location"
         case "send_feedback": "envelope"
+        case "alarms": "alarm"
         default: "wrench.and.screwdriver"
         }
     }
@@ -178,6 +179,7 @@ enum ChatToolSteps {
             quoted("query").map { done ? "Recalled \($0)" : "Recalling \($0)" } ?? (done ? "Searched memory" : "Searching memory")
         case "get_location": done ? "Checked your location" : "Checking your location"
         case "send_feedback": done ? "Sent feedback" : "Sending feedback"
+        case "alarms": alarms(args, done: done)
         default:
             done ? readable(tool.name).capitalizedFirst : "Running \(readable(tool.name))"
         }
@@ -200,6 +202,7 @@ enum ChatToolSteps {
             case "recall": "searched memory"
             case "get_location": "checked your location"
             case "send_feedback": "sent feedback"
+            case "alarms": "alarms"
             default: readable(tool.name)
             }
             if !parts.contains(part) { parts.append(part) }
@@ -207,6 +210,16 @@ enum ChatToolSteps {
         let shown = parts.prefix(2).joined(separator: ", ")
         let more = parts.count > 2 ? " and \(parts.count - 2) more" : ""
         return (shown + more).capitalizedFirst
+    }
+
+    private static func alarms(_ args: [String: Any], done: Bool) -> String {
+        let label = (args["label"] as? String).flatMap { $0.isEmpty ? nil : " “\($0)”" } ?? ""
+        return switch args["action"] as? String ?? "" {
+        case "set_alarm": (done ? "Set an alarm" : "Setting an alarm") + ((args["time"] as? String).map { " for \($0)" } ?? "") + label
+        case "set_timer": (done ? "Set a timer" : "Setting a timer") + label
+        case "cancel": done ? "Cancelled an alarm" : "Cancelling an alarm"
+        default: done ? "Checked your alarms" : "Checking your alarms"
+        }
     }
 
     private static func browser(_ action: String, _ text: String, done: Bool) -> String {

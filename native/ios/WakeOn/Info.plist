@@ -39,6 +39,8 @@
 	<false/>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
+	<key>NSAlarmKitUsageDescription</key>
+	<string>Pixie sets the alarms and timers you ask for, so they ring even when your iPhone is locked or silenced.</string>
 	<key>NSCameraUsageDescription</key>
 	<string>Pixie doesn’t use your camera: calls with Pixie are voice only. A website you open in Pixie’s browser could ask for it, and iOS asks you first.</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
