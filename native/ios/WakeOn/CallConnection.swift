@@ -93,7 +93,19 @@ final class NetworkPath: ObservableObject {
     private init() {
         #if DEBUG
         // --offline: pretend the phone has no network (screenshots of the offline states).
-        if ProcessInfo.processInfo.arguments.contains("--offline") { isUp = false; interface = "none"; return }
+        let args = ProcessInfo.processInfo.arguments
+        if args.contains("--offline") { isUp = false; interface = "none"; return }
+        // --offline-for N: offline at launch, back online N s later (the back-online transition).
+        if let index = args.firstIndex(of: "--offline-for"), index + 1 < args.count, let seconds = Double(args[index + 1]) {
+            isUp = false
+            interface = "none"
+            Task { @MainActor in
+                try? await Task.sleep(for: .seconds(seconds))
+                self.interface = "wifi"
+                self.isUp = true
+            }
+            return
+        }
         #endif
         monitor.pathUpdateHandler = { [weak self] path in
             let up = path.status == .satisfied

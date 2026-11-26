@@ -138,7 +138,7 @@ struct HomeView: View {
                 // Nothing to call with yet: the main button sets that up instead.
                 bigButton("Add Invite Code or Key", id: "simple-add-key") { openKeySetup = true }
             case .idle:
-                if !network.isUp { NetworkStatusBadge() }
+                NetworkStatusBanner(online: network.isUp)
                 if let note = voice.voiceNote, note.recording {
                     // While it records, the voice note takes the orb's place.
                     VoiceNoteCard(note: note, online: network.isUp,
@@ -398,6 +398,42 @@ struct ConnectionBanner: View {
     }
 }
 
+/// Home's network status: "No internet connection" while offline; when the network returns it
+/// turns into "Back online" for a moment, then fades away like a notification.
+struct NetworkStatusBanner: View {
+    let online: Bool
+    @State private var showsBackOnline = false
+    @State private var hideTask: Task<Void, Never>?
+
+    var body: some View {
+        Group {
+            if !online {
+                NetworkStatusBadge()
+            } else if showsBackOnline {
+                Label("Back online", systemImage: "wifi")
+                    .font(.headline)
+                    .foregroundStyle(.green)
+                    .padding(.horizontal, 18).padding(.vertical, 10)
+                    .background(.green.opacity(0.15), in: Capsule())
+                    .frame(maxWidth: .infinity)
+                    .accessibilityIdentifier("network-back-online")
+            }
+        }
+        .transition(.opacity.combined(with: .scale(scale: 0.95)))
+        .animation(.easeInOut(duration: 0.35), value: online)
+        .animation(.easeInOut(duration: 0.5), value: showsBackOnline)
+        .onChange(of: online) { _, isOnline in
+            hideTask?.cancel()
+            guard isOnline else { showsBackOnline = false; return }
+            showsBackOnline = true
+            hideTask = Task {
+                try? await Task.sleep(for: .seconds(2.5))
+                if !Task.isCancelled { showsBackOnline = false }
+            }
+        }
+    }
+}
+
 /// Home, while the phone has no network: the orb is disabled underneath.
 struct NetworkStatusBadge: View {
     var body: some View {
@@ -420,28 +456,30 @@ struct VoiceNoteCard: View {
     let discard: () -> Void
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            if online {
-                Label("Back online", systemImage: "wifi").font(.subheadline.weight(.semibold))
-            }
+        VStack(spacing: 14) {
             TimelineView(.periodic(from: .now, by: 1)) { context in
                 Label(detail(at: context.date), systemImage: note.recording ? "record.circle" : "waveform")
-                    .font(.footnote)
+                    .font(.subheadline.weight(.medium))
                     .foregroundStyle(note.recording ? .red : .secondary)
+                    .monospacedDigit()
             }
-            HStack {
-                Button("Resume with Voice Note", systemImage: "play.fill", action: resume)
-                    .buttonStyle(.borderedProminent)
-                    .disabled(!online)
-                    .accessibilityIdentifier("voice-note-resume")
-                Spacer()
-                Button("Discard", role: .destructive, action: discard)
-                    .buttonStyle(.bordered)
-                    .accessibilityIdentifier("voice-note-discard")
+            HStack(spacing: 12) {
+                Button(action: resume) {
+                    Label("Resume", systemImage: "play.fill").frame(maxWidth: .infinity)
+                }
+                .buttonStyle(.borderedProminent)
+                .disabled(!online)
+                .accessibilityIdentifier("voice-note-resume")
+                Button(role: .destructive, action: discard) {
+                    Label("Discard", systemImage: "trash").frame(maxWidth: .infinity)
+                }
+                .buttonStyle(.bordered)
+                .accessibilityIdentifier("voice-note-discard")
             }
+            .controlSize(.large)
         }
         .padding()
-        .frame(maxWidth: .infinity, alignment: .leading)
+        .frame(maxWidth: .infinity)
         .background(Color(.secondarySystemBackground), in: RoundedRectangle(cornerRadius: 16))
         .accessibilityIdentifier("voice-note")
     }
