@@ -20,10 +20,9 @@ struct StartRecordingIntent: AppIntent {
 
 struct WakeShortcuts: AppShortcutsProvider {
     static var appShortcuts: [AppShortcut] {
-        AppShortcut(intent: TalkIntent(), phrases: ["Talk to \(.applicationName)"],
+        // The fast start is the only Talk shortcut: it connects while iOS brings Pixie forward.
+        AppShortcut(intent: FastTalkIntent(), phrases: ["Talk to \(.applicationName)", "Fast talk to \(.applicationName)"],
                     shortTitle: "Talk to Pixie", systemImageName: "waveform")
-        AppShortcut(intent: FastTalkIntent(), phrases: ["Fast talk to \(.applicationName)"],
-                    shortTitle: "Talk to Pixie (fast start)", systemImageName: "bolt.fill")
         AppShortcut(intent: EndTalkIntent(), phrases: ["End the \(.applicationName) call"],
                     shortTitle: "End Pixie call", systemImageName: "phone.down.fill")
         AppShortcut(intent: OpenMiniAppIntent(), phrases: ["Open \(\.$app) in \(.applicationName)"],

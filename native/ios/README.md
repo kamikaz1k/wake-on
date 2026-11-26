@@ -301,7 +301,7 @@ Setup:
    Product › Scheme › Edit Scheme › Run › Environment Variables). The app moves it
    into the Keychain on first use, so later launches by iOS still have it. The
    key is never written into the app bundle. Do not give this build to anyone else.
-3. Settings › Action Button › Shortcut › Pixie › **Talk to Pixie (fast start)**.
+3. Settings › Action Button › Shortcut › Pixie › **Talk to Pixie**.
    It starts connecting before iOS brings the app forward, about 600 ms sooner
    than plain **Talk to Pixie**, which iOS runs only ~700 ms after the app is on
    screen. **End Pixie call** is also available. The wake listener pauses during

@@ -5,8 +5,11 @@ import UIKit
 /// Assign this to the Action Button (Settings › Action Button › Shortcut › Pixie › Talk to Pixie).
 /// It brings the app forward, because iOS only lets a foreground app start the microphone reliably,
 /// and starts the call without waiting for it to connect.
+/// The older, slower start (iOS runs it only once the app is on screen). Kept, hidden, so an
+/// Action Button or shortcut already set to it keeps working; new ones get FastTalkIntent.
 struct TalkIntent: AppIntent {
-    static var title: LocalizedStringResource = "Talk to Pixie"
+    static var title: LocalizedStringResource = "Talk to Pixie (classic)"
+    static var isDiscoverable = false
     static var description = IntentDescription("Open Pixie and start a realtime voice conversation.")
     static var openAppWhenRun: Bool = true
     @available(iOS 26.0, *)
@@ -22,11 +25,11 @@ struct TalkIntent: AppIntent {
     }
 }
 
-/// Experimental: starts the call in the background, then brings the app forward, so the
+/// "Talk to Pixie": starts the call in the background, then brings the app forward, so the
 /// ~700 ms iOS spends foregrounding the app overlaps the network set-up. The microphone
 /// starts once the app is active, because iOS does not allow starting it in the background.
 struct FastTalkIntent: AppIntent {
-    static var title: LocalizedStringResource = "Talk to Pixie (fast start)"
+    static var title: LocalizedStringResource = "Talk to Pixie"
     static var description = IntentDescription("Start connecting immediately, then open Pixie.")
     static var openAppWhenRun: Bool = false
     @available(iOS 26.0, *)
