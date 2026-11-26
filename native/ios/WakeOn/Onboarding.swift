@@ -25,6 +25,7 @@ enum Onboarding {
 
     static let starters: [Starter] = [
         Starter(text: "Show me this week's weather", icon: "chart.xyaxis.line", tools: ["show_visual", "get_location"]),
+        Starter(text: "Make me a tip calculator I can keep", icon: "square.grid.2x2", tools: ["show_visual", "mini_apps"]),
         Starter(text: "Set a timer for 10 minutes", icon: "timer", tools: ["alarms"]),
         Starter(text: "Wake me up at 7 tomorrow", icon: "alarm", tools: ["alarms"]),
         Starter(text: "What's on my calendar tomorrow?", icon: "calendar", tools: ["calendar"]),

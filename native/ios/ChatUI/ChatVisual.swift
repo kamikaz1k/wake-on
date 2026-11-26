@@ -23,8 +23,10 @@ enum ShowVisual {
             "properties": [
                 "title": ["type": "string", "description": "A short title, a few words."],
                 "html": ["type": "string", "description": "One complete, self-contained HTML document."],
+                "icon": ["type": "string", "description": "An SF Symbol name for the page if the user saves it as an app, such as cloud.sun or percent."],
+                "refresh": ["type": "string", "description": "If the page shows data that goes stale (weather, news, scores, prices, schedules), the request that remakes it with fresh data, naming any place, such as \"This week's weather in Toronto\". Empty for pages that work on their own (calculators, checklists, converters, games)."],
             ],
-            "required": ["title", "html"],
+            "required": ["title", "html", "icon", "refresh"],
             "additionalProperties": false,
         ] as [String: Any],
     ]
@@ -43,14 +45,21 @@ enum ShowVisual {
     readable at 16px, and support light and dark mode with prefers-color-scheme. Inline SVG and \
     CSS are best; you may load libraries from cdn.jsdelivr.net or cdnjs.cloudflare.com. Keep the \
     HTML compact, about 5 KB at most, so it appears quickly. After it is shown, reply in one \
-    sentence saying what is on their screen.
+    sentence saying what is on their screen. The user can save a page as an app on their phone, \
+    so make small tools (calculators, checklists, trackers) work fully on their own, keeping any \
+    data they enter in localStorage.
     """
 
     /// Title and HTML from the tool's arguments, which may still be streaming in (a JSON
     /// prefix): strings are read up to where the text has got to.
     static func visual(fromArguments json: String, complete: Bool) -> ChatItem.Visual? {
         guard let html = stringPrefix(of: "html", in: json), !(complete && html.isEmpty) else { return nil }
-        return ChatItem.Visual(title: stringPrefix(of: "title", in: json) ?? "", html: html, complete: complete)
+        var visual = ChatItem.Visual(title: stringPrefix(of: "title", in: json) ?? "", html: html, complete: complete)
+        if complete {
+            visual.icon = stringPrefix(of: "icon", in: json) ?? ""
+            visual.refresh = stringPrefix(of: "refresh", in: json) ?? ""
+        }
+        return visual
     }
 
     /// The (possibly unfinished) value of a top-level string field in a JSON prefix.
@@ -94,11 +103,32 @@ enum ShowVisual {
     }
 }
 
+/// Saves a page as an app (the app's MiniAppStore; Chat Lab has none, so no Save button).
+@MainActor
+protocol VisualSaver: AnyObject {
+    func isSaved(_ visual: ChatItem.Visual) -> Bool
+    /// True once it's saved.
+    func save(_ visual: ChatItem.Visual) -> Bool
+}
+
+private struct VisualSaverKey: EnvironmentKey {
+    static let defaultValue: VisualSaver? = nil
+}
+
+extension EnvironmentValues {
+    var visualSaver: VisualSaver? {
+        get { self[VisualSaverKey.self] }
+        set { self[VisualSaverKey.self] = newValue }
+    }
+}
+
 /// A show_visual row: the page in a small preview, tap to open it full size.
 struct ChatVisualRow: View {
     let tool: ChatItem.Tool
     let visual: ChatItem.Visual
     @State private var open = false
+    @Environment(\.visualSaver) private var saver
+    @State private var saved = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -131,6 +161,19 @@ struct ChatVisualRow: View {
                 .allowsHitTesting(false)
                 .onTapGesture { open = true }
                 .accessibilityIdentifier("chat-visual-preview")
+            if let saver, visual.complete {
+                Button {
+                    saved = saver.save(visual)
+                } label: {
+                    Label(saved ? "Saved to My Apps" : "Save as App", systemImage: saved ? "checkmark" : "plus.app")
+                        .font(.subheadline.weight(.medium))
+                        .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(.bordered)
+                .disabled(saved)
+                .onAppear { saved = saver.isSaved(visual) }
+                .accessibilityIdentifier("chat-visual-save")
+            }
         }
         .padding(10)
         .background(Color(.secondarySystemBackground), in: RoundedRectangle(cornerRadius: 12))
@@ -154,15 +197,27 @@ struct ChatVisualRow: View {
 
 /// A WKWebView showing one page from show_visual. While the page is still being written it is
 /// reloaded at most twice a second, so it fills in as it streams.
+///
+/// A saved app (`storage` set) gets an address of its own, `pixie-app://<id>/`, and a data store
+/// kept for it alone, so what it saves in localStorage stays between launches and apart from
+/// other apps.
 struct VisualWebView: UIViewRepresentable {
     let html: String
     var complete = true
+    var storage: UUID? = nil
 
-    func makeCoordinator() -> Coordinator { Coordinator() }
+    static let appScheme = "pixie-app"
+
+    func makeCoordinator() -> Coordinator { Coordinator(storage: storage) }
 
     func makeUIView(context: Context) -> WKWebView {
         let config = WKWebViewConfiguration()
-        config.websiteDataStore = .nonPersistent()
+        if let storage {
+            config.websiteDataStore = WKWebsiteDataStore(forIdentifier: storage)
+            config.setURLSchemeHandler(context.coordinator.pages, forURLScheme: Self.appScheme)
+        } else {
+            config.websiteDataStore = .nonPersistent()
+        }
         config.allowsInlineMediaPlayback = true
         let view = WKWebView(frame: .zero, configuration: config)
         view.navigationDelegate = context.coordinator
@@ -181,6 +236,9 @@ struct VisualWebView: UIViewRepresentable {
     }
 
     final class Coordinator: NSObject, WKNavigationDelegate, WKUIDelegate {
+        let storage: UUID?
+        let pages = AppPages()
+        init(storage: UUID?) { self.storage = storage }
         private var loaded: String?
         private var pending: String?
         private var lastLoad = Date.distantPast
@@ -206,7 +264,12 @@ struct VisualWebView: UIViewRepresentable {
         private func show(_ html: String, in view: WKWebView) {
             loaded = html
             lastLoad = Date()
-            view.loadHTMLString(html, baseURL: nil)
+            if let storage, let url = URL(string: "\(VisualWebView.appScheme)://\(storage.uuidString.lowercased())/") {
+                pages.html = html
+                view.load(URLRequest(url: url))
+            } else {
+                view.loadHTMLString(html, baseURL: nil)
+            }
         }
 
         /// The page is the one we loaded: links open in Safari, and the page can't replace
@@ -214,7 +277,7 @@ struct VisualWebView: UIViewRepresentable {
         func webView(_ webView: WKWebView, decidePolicyFor action: WKNavigationAction,
                      decisionHandler: @escaping @MainActor (WKNavigationActionPolicy) -> Void) {
             let url = action.request.url
-            let isOurPage = url?.scheme == "about" || url?.absoluteString == "about:blank"
+            let isOurPage = url?.scheme == "about" || url?.scheme == VisualWebView.appScheme
             if action.targetFrame?.isMainFrame == false || isOurPage {
                 return decisionHandler(.allow)
             }
@@ -231,6 +294,25 @@ struct VisualWebView: UIViewRepresentable {
             return nil
         }
     }
+}
+
+/// Serves a saved app's page at its own address. Anything else under it is not found.
+final class AppPages: NSObject, WKURLSchemeHandler {
+    var html = ""
+
+    func webView(_ webView: WKWebView, start task: WKURLSchemeTask) {
+        guard let url = task.request.url else { return }
+        let isPage = url.path.isEmpty || url.path == "/" || url.path == "/index.html"
+        let data = Data((isPage ? html : "").utf8)
+        let response = HTTPURLResponse(url: url, statusCode: isPage ? 200 : 404, httpVersion: "HTTP/1.1",
+                                       headerFields: ["Content-Type": "text/html; charset=utf-8",
+                                                      "Content-Length": String(data.count)])!
+        task.didReceive(response)
+        task.didReceive(data)
+        task.didFinish()
+    }
+
+    func webView(_ webView: WKWebView, stop task: WKURLSchemeTask) {}
 }
 
 /// A place from open_map's show mode: Google's embedded map of it, with a link out to Google

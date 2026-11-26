@@ -65,6 +65,8 @@ struct LiveVoiceConfig {
     var location = true
     /// The show_visual tool: an HTML page shown in the chat (see ShowVisual).
     var visuals = true
+    /// The mini_apps tool: saved pages the user keeps as apps (see MiniApps).
+    var apps = true
     /// The browser tool: an in-app browser Pixie can drive (see BrowserTool).
     var browser = true
     /// The send_feedback tool: the user's feedback to the developer (see Feedback).
@@ -96,6 +98,7 @@ struct LiveVoiceConfig {
         if calendar { text += " " + PixieCalendar.delegationInstructions }
         if maps { text += " " + MapsOpener.delegationInstructions }
         if visuals { text += " " + ShowVisual.delegationInstructions }
+        if visuals, apps { text += " " + MiniApps.delegationInstructions }
         if browser { text += " " + BrowserTool.delegationInstructions }
         if feedback { text += " " + Feedback.delegationInstructions }
         if memoryTools { text += " " + Memory.delegationInstructions }
@@ -161,6 +164,7 @@ struct LiveVoiceConfig {
         if calendar { tools += PixieCalendar.tools }
         if maps { tools.append(MapsOpener.tool) }
         if visuals { tools.append(ShowVisual.tool) }
+        if visuals, apps { tools.append(MiniApps.tool) }
         if browser { tools.append(BrowserTool.tool) }
         if feedback { tools.append(Feedback.tool) }
         if memoryTools { tools += Memory.tools }

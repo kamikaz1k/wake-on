@@ -17,6 +17,8 @@ struct HomeView: View {
     /// invite link (screenshot launch argument: -key-setup).
     @State private var openKeySetup = ProcessInfo.processInfo.arguments.contains("-key-setup")
     @State private var showSettings = ProcessInfo.processInfo.arguments.contains("-settings")
+    /// Screenshot launch argument: open straight to My Apps.
+    @State private var openApps = ProcessInfo.processInfo.arguments.contains("-mini-apps")
     /// The idle orb (the start button) and the call screen's orb are one view to SwiftUI, so
     /// starting a chat moves and grows the orb into place. Only the way up is animated: the phone
     /// hung (watchdog kill) right as a call ended and the orb animated back down, 2026-11-24.
@@ -44,6 +46,10 @@ struct HomeView: View {
                         Button("Chat History", systemImage: "clock.arrow.circlepath") { openLogs = true }
                             .accessibilityIdentifier("home-history")
                     }
+                    ToolbarItem(placement: .topBarLeading) {
+                        Button("My Apps", systemImage: "square.grid.2x2") { openApps = true }
+                            .accessibilityIdentifier("home-apps")
+                    }
                     ToolbarItemGroup(placement: .topBarTrailing) {
                         Button("Open Browser", systemImage: "globe") { BrowserSession.shared.show() }
                             .accessibilityIdentifier("home-browser")
@@ -53,6 +59,7 @@ struct HomeView: View {
                 }
             }
             .navigationDestination(isPresented: $openLogs) { ChatLogsView() }
+            .navigationDestination(isPresented: $openApps) { MiniAppsView() }
             .navigationDestination(isPresented: $openSignIns) { BrowserSignInsView() }
             .navigationDestination(isPresented: $openKeySetup) {
                 APIKeyView(voice: voice, prefill: invite.code, onValid: { invite.code = nil; openKeySetup = false })
@@ -61,6 +68,7 @@ struct HomeView: View {
             .onChange(of: voice.phase) { old, new in
                 if old == .idle, new != .idle {
                     openLogs = false
+                    openApps = false
                     openSignIns = false
                     openKeySetup = false
                     showSettings = false

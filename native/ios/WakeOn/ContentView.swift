@@ -9,6 +9,7 @@ struct ContentView: View {
     @State private var forceOnboarding = ProcessInfo.processInfo.arguments.contains("-onboarding")
     @ObservedObject private var browser = BrowserSession.shared
     @ObservedObject private var voice = VoiceSessionController.shared
+    @ObservedObject private var apps = MiniAppStore.shared
     /// Debug screenshots of the visualizer gallery (Advanced) open that tab.
     static let galleryRequested = ProcessInfo.processInfo.arguments.contains("-visualizer-gallery")
     /// Screenshot and test launches open the main screen directly; `-onboarding` forces setup.
@@ -33,6 +34,19 @@ struct ContentView: View {
                 }
             }
         }
+        // A saved app, from My Apps, Pixie, a shortcut or wakeon://app/<id>.
+        .fullScreenCover(item: $apps.opened) { app in MiniAppScreen(app: app) }
+        #if DEBUG
+        // `-open-mini-app <id or name>`: open a saved app at launch (screenshots).
+        .task {
+            let args = ProcessInfo.processInfo.arguments
+            guard let index = args.firstIndex(of: "-open-mini-app"), index + 1 < args.count,
+                  let app = apps.find(args[index + 1]) else { return }
+            try? await Task.sleep(for: .seconds(1))
+            apps.open(app)
+        }
+        #endif
+        .environment(\.visualSaver, MiniAppStore.shared)
         // Pixie's browser, or yours from the Simple page: full screen so its top bar can take
         // the page's colour behind the status bar, as Safari and Chrome do.
         .fullScreenCover(isPresented: $browser.isOpen) {

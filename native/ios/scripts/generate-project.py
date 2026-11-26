@@ -58,8 +58,7 @@ test_product=add('testproduct','PBXFileReference',explicitFileType='wrapper.cfbu
 lab_sources=[file(str(p.relative_to(root)), 'sourcecode.swift') for p in sorted((root/'ChatLab').glob('*.swift'))]
 # The assistant's chat view, compiled into both Wake On (chat logs) and Chat Lab.
 chat_ui=[file(str(p.relative_to(root)), 'sourcecode.swift') for p in sorted((root/'ChatUI').glob('*.swift'))]
-# A made-up sample call in Wake On's capture format; real captures stay off git (captures/).
-# Made-up sample calls: Chat Lab's replays and Pixie's onboarding demo.
+# Made-up sample calls in Wake On's capture format for Chat Lab's replays; real captures stay off git (captures/).
 lab_resources=[file(str(p.relative_to(root)), 'text') for p in sorted((root/'ChatLab/Captures').glob('*.jsonl'))]
 lab_app=add('labproduct','PBXFileReference',explicitFileType='wrapper.application',path='ChatLab.app',sourceTree='BUILT_PRODUCTS_DIR',includeInIndex=0)
 lab_ui_sources=[file(str(p.relative_to(root)), 'sourcecode.swift') for p in sorted((root/'ChatLabUITests').glob('*.swift'))]

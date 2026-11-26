@@ -34,6 +34,10 @@ struct ChatItem: Identifiable, Equatable {
         var html: String
         /// False while the model is still writing it.
         var complete: Bool
+        /// An SF Symbol for it if it's saved as an app.
+        var icon: String = ""
+        /// The request that remakes it with fresh data; empty when it works on its own.
+        var refresh: String = ""
     }
 
     struct RawEvent: Equatable {

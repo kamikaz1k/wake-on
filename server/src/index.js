@@ -40,6 +40,20 @@ const SUMMARY_TRIES = 3;
 const MAX_SUMMARY_LINES = 16;
 const MAX_SUMMARY_LINE = 400;
 
+// Saved apps (the app's MiniAppRefresher): a live app's page remade with fresh data.
+const REFRESH_MODEL = "gpt-6.1-terra";
+// Kept the same as the app's MiniAppRefresher.instructions.
+const REFRESH_INSTRUCTIONS =
+  "You update a small app saved on the user's phone: one self-contained HTML page. You get the " +
+  "request it answers, the current time and the page. Look up fresh data for the request on the " +
+  "web, then reply with the complete updated HTML document only, no commentary or code fences: " +
+  "keep the layout, style, features and any localStorage keys, and change only the data and " +
+  "dates. If you can't find fresh data, return the page unchanged.";
+export const REFRESH_DAILY = 40;
+const MAX_REFRESH_REQUEST = 300;
+const MAX_REFRESH_HTML = 30000;
+const MAX_REFRESH_NOW = 120;
+
 export default {
   async fetch(request, env, ctx) {
     return handle(request, env, fetch, ctx);
@@ -64,6 +78,9 @@ export async function handle(request, env, upstream, ctx = { waitUntil: () => {}
   }
   if (url.pathname === "/v1/memory/summarize" && request.method === "POST") {
     return summarize(request, env, upstream, ctx);
+  }
+  if (url.pathname === "/v1/apps/refresh" && request.method === "POST") {
+    return refreshApp(request, env, upstream, ctx);
   }
   if (url.pathname === "/v1/usage" && request.method === "POST") {
     return reportUsage(request, env, ctx);
@@ -195,6 +212,55 @@ async function summarize(request, env, upstream, ctx) {
   ctx.waitUntil(Promise.all([
     env.USAGE.put(key, String(used + 1), { expirationTtl: 3 * 24 * 3600 }),
     addStats(env, check.name, tokens),
+  ]));
+  return json(200, { text });
+}
+
+async function refreshApp(request, env, upstream, ctx) {
+  const code = (request.headers.get("Authorization") || "").replace(/^Bearer\s+/i, "").trim();
+  if (!code) return error(401, "missing_code", PROBLEMS.invalid_code);
+  const check = await checkCode(code, env);
+  if (check.problem) return error(401, check.problem, PROBLEMS[check.problem]);
+  let body;
+  try {
+    body = await request.json();
+  } catch {
+    return error(400, "bad_json", "Request body isn't JSON.");
+  }
+  const { request: ask, html, now } = body || {};
+  if (typeof ask !== "string" || !ask.trim() || ask.length > MAX_REFRESH_REQUEST ||
+      typeof html !== "string" || !html.includes("<") || html.length > MAX_REFRESH_HTML ||
+      typeof now !== "string" || now.length > MAX_REFRESH_NOW) {
+    return error(400, "not_allowed", `Send a request of at most ${MAX_REFRESH_REQUEST} characters, the page (at most ${MAX_REFRESH_HTML}) and the time.`);
+  }
+  const key = `refreshes:${new Date().toISOString().slice(0, 10)}:${check.name}`;
+  const used = await count(env, key);
+  if (used >= Number(env.REFRESH_DAILY || REFRESH_DAILY)) return error(429, "daily_limit", "Enough refreshes for today.");
+  const response = await upstream(RESPONSES_URL, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${env.OPENAI_API_KEY}`,
+      "Content-Type": "application/json",
+      "OpenAI-Safety-Identifier": (await sha256(check.name)).slice(0, 32),
+    },
+    body: JSON.stringify({
+      model: REFRESH_MODEL, instructions: REFRESH_INSTRUCTIONS,
+      input: `${now}\nRequest: ${ask}\n\nCurrent page:\n${html}`,
+      tools: [{ type: "web_search" }], store: false, max_output_tokens: 16000,
+    }),
+  });
+  if (!response.ok) return error(502, "upstream", `OpenAI answered ${response.status}.`);
+  const reply = await response.json();
+  const text = (reply.output || []).flatMap((item) => item.content || [])
+    .filter((part) => part.type === "output_text").map((part) => part.text).join("").trim();
+  if (!text) return error(502, "upstream", "OpenAI sent no text.");
+  ctx.waitUntil(Promise.all([
+    env.USAGE.put(key, String(used + 1), { expirationTtl: 3 * 24 * 3600 }),
+    addStats(env, check.name, {
+      refreshes: 1,
+      refresh_input_tokens: (reply.usage && reply.usage.input_tokens) || 0,
+      refresh_output_tokens: (reply.usage && reply.usage.output_tokens) || 0,
+    }),
   ]));
   return json(200, { text });
 }

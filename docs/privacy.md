@@ -38,6 +38,18 @@ first time. Only what a question needs (for example that day's events) is sent t
 during the call, and Pixie only adds, changes or deletes items when you ask. Nothing is sent
 to the developer.
 
+## Saved apps
+
+You can save a page Pixie shows (a calculator, a checklist, this week's weather) as an app.
+Saved apps, and anything you enter in them, stay on your iPhone; deleting an app deletes
+its data too. A saved app can load from the web like any page Pixie shows.
+
+Some apps show data that goes out of date, like the weather. When you open one after a
+while, the app sends its page and the request it answers (for example "this week's weather
+in Toronto") to OpenAI to remake it with fresh data. With your own key this goes straight to
+OpenAI; with an invite code it goes through the Pixie server, which passes it on without
+keeping it and counts the refreshes and the tokens they used.
+
 ## "Hey Pixie" listening
 
 If you turn on background listening, the app listens for the phrase "Hey Pixie" using a
@@ -73,7 +85,7 @@ calls per invite per day, deleted after 3 days, to apply daily limits.
 When a call with an invite code ends, the app sends the server how much it used: the voice
 seconds OpenAI billed and the number of tokens Pixie's lookups used. Nothing else: no
 transcript, audio, notes, call time or device details. The server adds these up per invite
-per day (calls, voice seconds, tokens, and memory summaries with their tokens) to see what
+per day (calls, voice seconds, tokens, memory summaries and saved-app refreshes with their tokens) to see what
 Pixie costs to run, and deletes each day's totals after 90 days. Cloudflare may keep
 standard request logs under its own privacy policy.
 
@@ -100,6 +112,7 @@ your iPhone.
 - Notes Pixie saves for you go to the folder you choose (for example an Obsidian vault).
 - A copy of feedback you asked Pixie to send.
 - Alarms and timers you ask Pixie to set: iOS keeps them, and Pixie keeps their labels.
+- Apps you save, and what you enter in them.
 
 None of this is sent to the developer, apart from feedback you ask Pixie to send.
 

@@ -26,6 +26,8 @@ struct WakeShortcuts: AppShortcutsProvider {
                     shortTitle: "Talk to Pixie (fast start)", systemImageName: "bolt.fill")
         AppShortcut(intent: EndTalkIntent(), phrases: ["End the \(.applicationName) call"],
                     shortTitle: "End Pixie call", systemImageName: "phone.down.fill")
+        AppShortcut(intent: OpenMiniAppIntent(), phrases: ["Open \(\.$app) in \(.applicationName)"],
+                    shortTitle: "Open Mini App", systemImageName: "square.grid.2x2")
         AppShortcut(intent: StartRecordingIntent(), phrases: ["Start recording with \(.applicationName)"],
                     shortTitle: "Start recording", systemImageName: "mic.fill")
     }

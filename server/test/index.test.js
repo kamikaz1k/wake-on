@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
-import { handle, sign, checkSession, FEEDBACK_DAILY } from "../src/index.js";
+import { handle, sign, checkSession, FEEDBACK_DAILY, REFRESH_DAILY } from "../src/index.js";
 
 /** In-memory stand-in for a KV namespace. */
 function kv(entries = {}) {
@@ -365,4 +365,51 @@ test("feedback needs a valid code and some words, is cut to 2000 characters, and
   t.usage.map.set(`feedbackcount:${t.day}:alex`, String(FEEDBACK_DAILY));
   const limited = await handle(feedbackRequest({ feedback: "one more" }, t.code), t.env, t.upstream);
   assert.equal(limited.status, 429);
+});
+
+function refreshRequest(body, code) {
+  return new Request("https://worker.example/v1/apps/refresh", {
+    method: "POST",
+    headers: code ? { Authorization: `Bearer ${code}` } : {},
+    body: JSON.stringify(body),
+  });
+}
+
+const page = "<!doctype html><html><body>Old weather</body></html>";
+const refreshBody = { request: "This week's weather in Toronto", html: page, now: "Now: Thursday (America/Toronto)." };
+
+test("a saved app is refreshed with the fixed prompt, web search and model, and counted", async () => {
+  const t = await setup();
+  const sent = [];
+  const pending = [];
+  const response = await handle(refreshRequest(refreshBody, t.code), t.env,
+    summaryUpstream(sent, ["<html>New weather</html>"]), { waitUntil: (p) => pending.push(p) });
+  assert.equal(response.status, 200);
+  assert.deepEqual(await response.json(), { text: "<html>New weather</html>" });
+  const body = JSON.parse(sent[0].init.body);
+  assert.equal(body.model, "gpt-6.1-terra");
+  assert.equal(body.store, false);
+  assert.deepEqual(body.tools, [{ type: "web_search" }]);
+  assert.match(body.instructions, /update a small app saved on the user's phone/);
+  assert.equal(body.input, `Now: Thursday (America/Toronto).\nRequest: This week's weather in Toronto\n\nCurrent page:\n${page}`);
+  assert.ok(!sent[0].init.body.includes(t.code), "the invite code isn't sent to OpenAI");
+  await Promise.all(pending);
+  const day = new Date().toISOString().slice(0, 10);
+  assert.equal(t.usage.map.get(`refreshes:${day}:alex`), "1");
+});
+
+test("refreshes need a valid code, a short request and a page, and stay under the daily limit", async () => {
+  const t = await setup();
+  const sent = [];
+  const send = (body, code = t.code) => handle(refreshRequest(body, code), t.env, summaryUpstream(sent, ["<html></html>"]));
+  assert.equal((await send(refreshBody, null)).status, 401);
+  assert.equal((await send({ ...refreshBody, request: "" })).status, 400);
+  assert.equal((await send({ ...refreshBody, request: "x".repeat(301) })).status, 400);
+  assert.equal((await send({ ...refreshBody, html: "no page" })).status, 400);
+  assert.equal((await send({ ...refreshBody, html: "<" + "x".repeat(30000) })).status, 400);
+  assert.equal(sent.length, 0);
+  const day = new Date().toISOString().slice(0, 10);
+  t.usage.map.set(`refreshes:${day}:alex`, String(REFRESH_DAILY));
+  assert.equal((await send(refreshBody)).status, 429);
+  assert.equal(sent.length, 0);
 });

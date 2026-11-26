@@ -95,7 +95,7 @@ final class VoiceActivityTests: XCTestCase {
         let responses = try XCTUnwrap(delegation["responses"] as? [String: Any])
         let tools = try XCTUnwrap(responses["tools"] as? [[String: Any]])
         XCTAssertEqual(tools.first?["type"] as? String, "web_search")
-        XCTAssertEqual(tools.map { $0["type"] as? String }, ["web_search"] + Array(repeating: "function", count: 15))
+        XCTAssertEqual(tools.map { $0["type"] as? String }, ["web_search"] + Array(repeating: "function", count: 16))
         let transport = try XCTUnwrap(body["transport"] as? [String: String])
         XCTAssertEqual(transport, ["type": "webrtc", "sdp": "v=0"])
         XCTAssertNoThrow(try JSONSerialization.data(withJSONObject: body))

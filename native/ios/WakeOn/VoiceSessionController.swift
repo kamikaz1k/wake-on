@@ -782,6 +782,9 @@ final class VoiceSessionController: ObservableObject {
         }
     }
 
+    /// The last page show_visual put on screen, for mini_apps save.
+    private var lastVisual: ChatItem.Visual?
+
     /// The backend model called one of the app's tools (play_spotify, play_youtube, control_media, open_map, get_location, show_visual).
     private func handleFunctionCall(_ item: [String: Any]) {
         let name = item["name"] as? String ?? ""
@@ -929,12 +932,19 @@ final class VoiceSessionController: ObservableObject {
         } else if name == Memory.zoomTool {
             result = MemoryStore.shared.memory.zoom(arguments["id"] as? String ?? "")
             action = ["kind": "zoom", "id": arguments["id"] as? String ?? ""]
+        } else if name == MiniApps.toolName {
+            result = MiniApps.perform(arguments, lastVisual: lastVisual)
+            if arguments["action"] as? String == "open", ScreenPresence.current == .away { result += ScreenPresence.awayResult }
+            action = ["kind": "mini_apps", "action": arguments["action"] as? String ?? ""]
         } else if name == ShowVisual.toolName {
             let title = arguments["title"] as? String ?? ""
             let html = arguments["html"] as? String ?? ""
             if html.isEmpty {
                 result = "Nothing to show: the html was empty."
             } else {
+                lastVisual = ChatItem.Visual(title: title, html: html, complete: true,
+                                             icon: arguments["icon"] as? String ?? "",
+                                             refresh: arguments["refresh"] as? String ?? "")
                 result = "Shown on the user's screen as \"\(title)\". The call goes on."
                 if ScreenPresence.current == .away { result += ScreenPresence.awayResult }
                 action = ["kind": "visual", "title": title, "bytes": html.utf8.count]

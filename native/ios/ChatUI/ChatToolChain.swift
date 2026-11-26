@@ -145,6 +145,7 @@ enum ChatToolSteps {
         case "alarms": "alarm"
         case "calendar": "calendar"
         case "reminders": "checklist"
+        case "mini_apps": "square.grid.2x2"
         default: "wrench.and.screwdriver"
         }
     }
@@ -194,6 +195,13 @@ enum ChatToolSteps {
             case "complete": done ? "Completed a reminder" : "Completing a reminder"
             default: done ? "Checked your reminders" : "Checking your reminders"
             }
+        case "mini_apps":
+            switch args["action"] as? String ?? "" {
+            case "save": done ? "Saved to My Apps" : "Saving to My Apps"
+            case "open": done ? "Opened an app" : "Opening an app"
+            case "update": done ? "Changed an app" : "Changing an app"
+            default: done ? "Checked your apps" : "Checking your apps"
+            }
         default:
             done ? readable(tool.name).capitalizedFirst : "Running \(readable(tool.name))"
         }
@@ -219,6 +227,7 @@ enum ChatToolSteps {
             case "alarms": "alarms"
             case "calendar": "used your calendar"
             case "reminders": "used your reminders"
+            case "mini_apps": "used your apps"
             default: readable(tool.name)
             }
             if !parts.contains(part) { parts.append(part) }
