@@ -37,6 +37,7 @@ final class SpotifyPlayerTests: XCTestCase {
         let responses = ((body["session"] as? [String: Any])?["delegation"] as? [String: Any])?["responses"] as? [String: Any]
         let names = (responses?["tools"] as? [[String: Any]])?.compactMap { $0["name"] as? String }
         XCTAssertEqual(names, ["play_spotify", "play_youtube", "control_media", "set_volume", "get_location", "open_map", "show_visual", "browser",
+                               "send_feedback",
                                "remember", "recall", "zoom"])
         XCTAssertTrue((responses?["instructions"] as? String)?.contains("play_spotify") == true)
         XCTAssertTrue((responses?["instructions"] as? String)?.contains("control_media") == true)

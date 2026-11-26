@@ -67,6 +67,8 @@ struct LiveVoiceConfig {
     var visuals = true
     /// The browser tool: an in-app browser Pixie can drive (see BrowserTool).
     var browser = true
+    /// The send_feedback tool: the user's feedback to the developer (see Feedback).
+    var feedback = true
     /// The remember and recall tools (see Memory).
     var memoryTools = true
     /// What Pixie remembers, for both models' instructions (`Memory.callText`).
@@ -89,6 +91,7 @@ struct LiveVoiceConfig {
         if maps { text += " " + MapsOpener.delegationInstructions }
         if visuals { text += " " + ShowVisual.delegationInstructions }
         if browser { text += " " + BrowserTool.delegationInstructions }
+        if feedback { text += " " + Feedback.delegationInstructions }
         if memoryTools { text += " " + Memory.delegationInstructions }
         if visuals || maps || browser {
             text += " " + ScreenPresence.backendGuidance
@@ -142,6 +145,7 @@ struct LiveVoiceConfig {
         if maps { tools.append(MapsOpener.tool) }
         if visuals { tools.append(ShowVisual.tool) }
         if browser { tools.append(BrowserTool.tool) }
+        if feedback { tools.append(Feedback.tool) }
         if memoryTools { tools += Memory.tools }
         if !tools.isEmpty {
             responses["tools"] = tools

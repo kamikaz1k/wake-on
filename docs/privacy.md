@@ -1,6 +1,6 @@
 # Pixie privacy policy
 
-Last updated: November 25, 2026
+Last updated: November 26, 2026
 
 Pixie is a voice assistant for iPhone. This page explains what
 the app does with your information. In short: your voice goes to OpenAI only while you're
@@ -71,6 +71,16 @@ standard request logs under its own privacy policy.
 If you use your own OpenAI key, calls go straight to OpenAI under your own account and the
 Pixie server isn't involved. Your key is stored in your iPhone's Keychain.
 
+## Sending feedback
+
+If you ask Pixie to send feedback (for example "tell the developer the map was wrong"), the
+app sends the Pixie server your feedback as Pixie heard it, Pixie's short note on what it was
+about, the app's version, and the name your invite code was made for. The developer reads
+it to fix and improve Pixie. It is kept for a year and then deleted. Nothing is sent unless
+you ask, and no audio or full transcript goes with it. Feedback is only sent from calls with
+an invite code; with your own OpenAI key it stays on your iPhone. A copy is always kept on
+your iPhone.
+
 ## What stays on your iPhone
 
 - Chat history: the transcript of each call, and a record of the call's events, used to
@@ -79,8 +89,9 @@ Pixie server isn't involved. Your key is stored in your iPhone's Keychain.
 - Settings, your invite code or key (in the Keychain), and anything you sign in to in the
   app's browser.
 - Notes Pixie saves for you go to the folder you choose (for example an Obsidian vault).
+- A copy of feedback you asked Pixie to send.
 
-None of this is sent to the developer.
+None of this is sent to the developer, apart from feedback you ask Pixie to send.
 
 ## Other apps and websites
 

@@ -816,6 +816,17 @@ final class VoiceSessionController: ObservableObject {
             }
             return
         }
+        if name == Feedback.toolName {
+            lookingUpSince = uptimeSeconds()
+            let credential = callCredential
+            Task { @MainActor in
+                let result = await Feedback.send(feedback: arguments["feedback"] as? String ?? "",
+                                                 context: arguments["context"] as? String ?? "", credential: credential)
+                self.completeFunctionCall(name: name, callID: callID, arguments: arguments, result: result,
+                                          action: ["kind": "feedback", "sent": result == Feedback.sentText])
+            }
+            return
+        }
         var result = "unknown tool"
         var action: [String: Any] = [:]
         if name == SpotifyPlayer.toolName,

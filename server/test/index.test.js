@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
-import { handle, sign, checkSession } from "../src/index.js";
+import { handle, sign, checkSession, FEEDBACK_DAILY } from "../src/index.js";
 
 /** In-memory stand-in for a KV namespace. */
 function kv(entries = {}) {
@@ -327,4 +327,42 @@ test("the app's delegation model is allowed, and builds still on the older model
     assert.equal(checkSession(body, {}), null, `${model} with the default list`);
     assert.equal(checkSession(body, deployed), null, `${model} with wrangler.toml`);
   }
+});
+
+const feedbackRequest = (body, code) => new Request("https://worker.example/v1/feedback", {
+  method: "POST",
+  headers: code ? { Authorization: `Bearer ${code}` } : {},
+  body: typeof body === "string" ? body : JSON.stringify(body),
+});
+
+test("feedback is kept a year with the person's name, Pixie's note and the build", async () => {
+  const t = await setup();
+  const ttls = {};
+  const put = t.usage.put;
+  t.usage.put = (key, value, options) => { ttls[key] = options && options.expirationTtl; return put(key, value); };
+  const response = await handle(feedbackRequest({ feedback: "The map opened the wrong place", context: "Asked for Xiang Zi HotPot; map opened Markham", app: "202611260320" }, t.code), t.env, t.upstream);
+  assert.equal(response.status, 200);
+  const key = [...t.usage.map.keys()].find((k) => k.startsWith("feedback:"));
+  assert.match(key, /^feedback:\d{4}-\d\d-\d\dT[^:]+:\d\d:[\d.]+Z:alex:[0-9a-f]{8}$/);
+  const entry = JSON.parse(t.usage.map.get(key));
+  assert.equal(entry.name, "alex");
+  assert.equal(entry.feedback, "The map opened the wrong place");
+  assert.equal(entry.context, "Asked for Xiang Zi HotPot; map opened Markham");
+  assert.equal(entry.app, "202611260320");
+  assert.equal(ttls[key], 365 * 24 * 3600);
+  assert.ok(!t.usage.map.get(key).includes(t.code), "the invite code itself isn't stored");
+});
+
+test("feedback needs a valid code and some words, is cut to 2000 characters, and is limited per day", async () => {
+  const t = await setup();
+  assert.equal((await handle(feedbackRequest({ feedback: "hi" }), t.env, t.upstream)).status, 401);
+  assert.equal((await handle(feedbackRequest({ feedback: "hi" }, "alex-2-bad"), t.env, t.upstream)).status, 401);
+  assert.equal((await handle(feedbackRequest({ feedback: "  " }, t.code), t.env, t.upstream)).status, 400);
+  assert.equal((await handle(feedbackRequest("nope", t.code), t.env, t.upstream)).status, 400);
+  await handle(feedbackRequest({ feedback: "x".repeat(5000) }, t.code), t.env, t.upstream);
+  const entry = JSON.parse([...t.usage.map].find(([k]) => k.startsWith("feedback:"))[1]);
+  assert.equal(entry.feedback.length, 2000);
+  t.usage.map.set(`feedbackcount:${t.day}:alex`, String(FEEDBACK_DAILY));
+  const limited = await handle(feedbackRequest({ feedback: "one more" }, t.code), t.env, t.upstream);
+  assert.equal(limited.status, 429);
 });

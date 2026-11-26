@@ -68,6 +68,9 @@ export async function handle(request, env, upstream, ctx = { waitUntil: () => {}
   if (url.pathname === "/v1/usage" && request.method === "POST") {
     return reportUsage(request, env, ctx);
   }
+  if (url.pathname === "/v1/feedback" && request.method === "POST") {
+    return saveFeedback(request, env);
+  }
   if (url.pathname !== "/v1/live/sessions") return error(404, "not_found", "Unknown path.");
   if (request.method !== "POST") return error(405, "method_not_allowed", "Use POST.");
 
@@ -220,6 +223,39 @@ async function reportUsage(request, env, ctx) {
     add[field] = Math.min(value, limit);
   }
   ctx.waitUntil(addStats(env, check.name, add));
+  return json(200, { ok: true });
+}
+
+export const FEEDBACK_DAILY = 20;
+const MAX_FEEDBACK = 2000;
+const FEEDBACK_DAYS = 365;
+
+/** Feedback a person asked Pixie to send: their words, Pixie's note on what happened, and the
+ * app's build. Kept a year for review (`scripts/feedback.mjs`); a few a day per person. */
+async function saveFeedback(request, env) {
+  const code = (request.headers.get("Authorization") || "").replace(/^Bearer\s+/i, "").trim();
+  if (!code) return error(401, "missing_code", PROBLEMS.invalid_code);
+  const check = await checkCode(code, env);
+  if (check.problem) return error(401, check.problem, PROBLEMS[check.problem]);
+  let body;
+  try {
+    body = await request.json();
+  } catch {
+    return error(400, "bad_json", "Request body isn't JSON.");
+  }
+  const text = (field, max) => String((body && body[field]) || "").trim().slice(0, max);
+  const feedback = text("feedback", MAX_FEEDBACK);
+  if (!feedback) return error(400, "not_allowed", "feedback is empty.");
+  const at = new Date();
+  const countKey = `feedbackcount:${at.toISOString().slice(0, 10)}:${check.name}`;
+  const sent = await count(env, countKey);
+  if (sent >= FEEDBACK_DAILY) return error(429, "too_much_feedback", "That's a lot of feedback for one day. Try again tomorrow.");
+  const entry = { at: at.toISOString(), name: check.name, feedback, context: text("context", MAX_FEEDBACK), app: text("app", 200) };
+  const id = crypto.randomUUID().slice(0, 8);
+  await Promise.all([
+    env.USAGE.put(`feedback:${entry.at}:${check.name}:${id}`, JSON.stringify(entry), { expirationTtl: FEEDBACK_DAYS * 24 * 3600 }),
+    env.USAGE.put(countKey, String(sent + 1), { expirationTtl: 2 * 24 * 3600 }),
+  ]);
   return json(200, { ok: true });
 }
 

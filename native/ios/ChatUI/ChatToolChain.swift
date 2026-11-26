@@ -141,6 +141,7 @@ enum ChatToolSteps {
         case "remember", "recall": "brain"
         case "set_volume": "speaker.wave.2"
         case "get_location": "location"
+        case "send_feedback": "envelope"
         default: "wrench.and.screwdriver"
         }
     }
@@ -176,6 +177,7 @@ enum ChatToolSteps {
         case "recall":
             quoted("query").map { done ? "Recalled \($0)" : "Recalling \($0)" } ?? (done ? "Searched memory" : "Searching memory")
         case "get_location": done ? "Checked your location" : "Checking your location"
+        case "send_feedback": done ? "Sent feedback" : "Sending feedback"
         default:
             done ? readable(tool.name).capitalizedFirst : "Running \(readable(tool.name))"
         }
@@ -197,6 +199,7 @@ enum ChatToolSteps {
             case "remember": "remembered"
             case "recall": "searched memory"
             case "get_location": "checked your location"
+            case "send_feedback": "sent feedback"
             default: readable(tool.name)
             }
             if !parts.contains(part) { parts.append(part) }

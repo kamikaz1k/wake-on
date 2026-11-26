@@ -284,6 +284,17 @@
 			<key>sourceTree</key>
 			<string>&lt;group&gt;</string>
 		</dict>
+		<key>10D11E1B9E953A0684D62BCD</key>
+		<dict>
+			<key>isa</key>
+			<string>PBXFileReference</string>
+			<key>lastKnownFileType</key>
+			<string>sourcecode.swift</string>
+			<key>path</key>
+			<string>WakeOn/Feedback.swift</string>
+			<key>sourceTree</key>
+			<string>&lt;group&gt;</string>
+		</dict>
 		<key>10DDFF1AB4A0324DD571FAF7</key>
 		<dict>
 			<key>isa</key>
@@ -723,6 +734,13 @@
 			<string>6F9C5CC3230BD566FB1619CB</string>
 			<key>productName</key>
 			<string>ConversationKit</string>
+		</dict>
+		<key>33C6B754F89A9447E136A1D8</key>
+		<dict>
+			<key>fileRef</key>
+			<string>10D11E1B9E953A0684D62BCD</string>
+			<key>isa</key>
+			<string>PBXBuildFile</string>
 		</dict>
 		<key>34BE19A39DA587EA5BC45054</key>
 		<dict>
@@ -1713,6 +1731,7 @@
 				<string>9974356E209FF4C15ABE4053</string>
 				<string>0406B817A61A374E7DCCF7AD</string>
 				<string>FD0F0DB50B6695E5A313F02A</string>
+				<string>720BBE9628F0191A616442ED</string>
 				<string>604415CC5C8C5E7AD42D4232</string>
 				<string>F5A8AD6DD1708ECCF94AA2E2</string>
 				<string>91D0EFA070F8AC9E81E9E481</string>
@@ -1796,6 +1815,13 @@
 			<string>Tests/ListenerSettingsTests.swift</string>
 			<key>sourceTree</key>
 			<string>&lt;group&gt;</string>
+		</dict>
+		<key>720BBE9628F0191A616442ED</key>
+		<dict>
+			<key>fileRef</key>
+			<string>855A9023C1466D93A6F7653A</string>
+			<key>isa</key>
+			<string>PBXBuildFile</string>
 		</dict>
 		<key>7283441940F9A41A04D7E26F</key>
 		<dict>
@@ -2081,6 +2107,17 @@
 			<string>8347D492EFD6CE0036733567</string>
 			<key>isa</key>
 			<string>PBXBuildFile</string>
+		</dict>
+		<key>855A9023C1466D93A6F7653A</key>
+		<dict>
+			<key>isa</key>
+			<string>PBXFileReference</string>
+			<key>lastKnownFileType</key>
+			<string>sourcecode.swift</string>
+			<key>path</key>
+			<string>Tests/FeedbackTests.swift</string>
+			<key>sourceTree</key>
+			<string>&lt;group&gt;</string>
 		</dict>
 		<key>85E520AA605DF2446B073BBB</key>
 		<dict>
@@ -2858,6 +2895,7 @@
 				<string>141FC4B68CEA3CBAC086E734</string>
 				<string>96BED2CC5F692481EDA9CC0A</string>
 				<string>FA772B0CCD9F955FCDF840AA</string>
+				<string>33C6B754F89A9447E136A1D8</string>
 				<string>71A29599834994135DF78497</string>
 				<string>568BF71766AD031C662F40F2</string>
 				<string>190FC281175A458411477DAD</string>
@@ -3392,6 +3430,7 @@
 				<string>1DC5C0769628AED0F89639D8</string>
 				<string>0B2B63CD30D0D4CC192066A5</string>
 				<string>1E48ED7EB3CFBCF86BD70F04</string>
+				<string>10D11E1B9E953A0684D62BCD</string>
 				<string>E823720E1997284D87C9BE0D</string>
 				<string>E76A9CF85B5C75CD8CF3551D</string>
 				<string>D51D6D61BE2D40D10969555F</string>
@@ -3444,6 +3483,7 @@
 				<string>7EB96735C070336980330FA2</string>
 				<string>4B3D8A9C7EB1EF5788401C2E</string>
 				<string>9F2F0D7B8211BA8CBE1CF982</string>
+				<string>855A9023C1466D93A6F7653A</string>
 				<string>F92C1B086F4CDFB01AAC82C5</string>
 				<string>A52E1E1026008ABCCF27FFB3</string>
 				<string>C3C9A129BAA57EDE6B130330</string>
