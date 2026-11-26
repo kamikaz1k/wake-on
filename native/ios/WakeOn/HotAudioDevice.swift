@@ -669,6 +669,9 @@ final class HotAudioDevice: NSObject, @unchecked Sendable {
             }
             onFirstCapture?()
         }
+        #if DEBUG
+        injectSpeech(into: scratch, count: count)
+        #endif
         if micMuteRemaining > 0 {
             let muted = min(count, micMuteRemaining)
             scratch.update(repeating: 0, count: muted)
@@ -727,6 +730,28 @@ final class HotAudioDevice: NSObject, @unchecked Sendable {
         }
         return status
     }
+
+    #if DEBUG
+    // Debug: speech played into the call's microphone stream, as if the user said it (the
+    // simulator's microphone can't hear the Mac's speakers).
+    private let injectionLock = NSLock()
+    private var injection: [Int16] = []
+    private var injectionPosition = 0
+
+    /// Replaces the microphone with `samples` (Int16 mono at the input rate) from the next frame.
+    func inject(_ samples: [Int16]) {
+        injectionLock.lock(); injection = samples; injectionPosition = 0; injectionLock.unlock()
+        trace("inject_speech frames=\(samples.count) inputRate=\(inputFormat?.sampleRate ?? 0)")
+    }
+
+    private func injectSpeech(into buffer: UnsafeMutablePointer<Int16>, count: Int) {
+        injectionLock.lock(); defer { injectionLock.unlock() }
+        guard injectionPosition < injection.count else { return }
+        let take = min(count, injection.count - injectionPosition)
+        injection.withUnsafeBufferPointer { buffer.update(from: $0.baseAddress! + injectionPosition, count: take) }
+        injectionPosition += take
+    }
+    #endif
 
     private func renderPlayout(isSilence: UnsafeMutablePointer<ObjCBool>, timestamp: UnsafePointer<AudioTimeStamp>,
                                frames: AVAudioFrameCount, output: UnsafeMutablePointer<AudioBufferList>) -> OSStatus {

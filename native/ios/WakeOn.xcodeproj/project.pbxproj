@@ -449,6 +449,17 @@
 			<key>sourceTree</key>
 			<string>&lt;group&gt;</string>
 		</dict>
+		<key>1E02BAA7E6B77347F3DA1DAD</key>
+		<dict>
+			<key>isa</key>
+			<string>PBXFileReference</string>
+			<key>lastKnownFileType</key>
+			<string>sourcecode.swift</string>
+			<key>path</key>
+			<string>WakeOn/CallConnection.swift</string>
+			<key>sourceTree</key>
+			<string>&lt;group&gt;</string>
+		</dict>
 		<key>1E48ED7EB3CFBCF86BD70F04</key>
 		<dict>
 			<key>isa</key>
@@ -588,6 +599,13 @@
 		<dict>
 			<key>fileRef</key>
 			<string>694D8611755A10832F2AF78C</string>
+			<key>isa</key>
+			<string>PBXBuildFile</string>
+		</dict>
+		<key>25EE1D14531A32762AD46A6E</key>
+		<dict>
+			<key>fileRef</key>
+			<string>8D91E92AB0F057AE940A4923</string>
 			<key>isa</key>
 			<string>PBXBuildFile</string>
 		</dict>
@@ -1011,6 +1029,13 @@
 		<dict>
 			<key>fileRef</key>
 			<string>7208E077BFADA885CC025FBD</string>
+			<key>isa</key>
+			<string>PBXBuildFile</string>
+		</dict>
+		<key>45FBC71F82C2FF1ED81B0E8F</key>
+		<dict>
+			<key>fileRef</key>
+			<string>1E02BAA7E6B77347F3DA1DAD</string>
 			<key>isa</key>
 			<string>PBXBuildFile</string>
 		</dict>
@@ -1762,6 +1787,7 @@
 				<string>EE72E66061F34F35D9E2A154</string>
 				<string>C7239C96F03201092DD37AEF</string>
 				<string>5BEA58C43D2321DE0F5E9EB9</string>
+				<string>25EE1D14531A32762AD46A6E</string>
 				<string>5655D4377A320893D7964C00</string>
 				<string>2E25DF7EB50C6B90D3C76346</string>
 				<string>364477DAA4A0A3FDA02EC409</string>
@@ -2419,6 +2445,17 @@
 			<key>sourceTree</key>
 			<string>&lt;group&gt;</string>
 		</dict>
+		<key>8D91E92AB0F057AE940A4923</key>
+		<dict>
+			<key>isa</key>
+			<string>PBXFileReference</string>
+			<key>lastKnownFileType</key>
+			<string>sourcecode.swift</string>
+			<key>path</key>
+			<string>Tests/CallConnectionTests.swift</string>
+			<key>sourceTree</key>
+			<string>&lt;group&gt;</string>
+		</dict>
 		<key>8E822F5F5DE4A920CD1B1B85</key>
 		<dict>
 			<key>fileRef</key>
@@ -2986,6 +3023,7 @@
 				<string>54E6F8E04DB6AA195B183226</string>
 				<string>B7C7B0B8007AB88240FB9BDC</string>
 				<string>73EBC91632FFC7BE6836AC90</string>
+				<string>45FBC71F82C2FF1ED81B0E8F</string>
 				<string>8B4F35E544C3FC6DABF208A7</string>
 				<string>B99C26864023D73F5AD560E0</string>
 				<string>B54125122EED1782DCF9B206</string>
@@ -3532,6 +3570,7 @@
 				<string>53FAE4E46E6EFCF5C9195C9E</string>
 				<string>EBD4A87932217008E364E314</string>
 				<string>1E722BEC8B659EE2E8F6A27B</string>
+				<string>1E02BAA7E6B77347F3DA1DAD</string>
 				<string>FA3366121A5DEA92723FCBB5</string>
 				<string>CC176C17FF9F49D4A917C518</string>
 				<string>C81A61E9307DAAB1D29A09A0</string>
@@ -3590,6 +3629,7 @@
 				<string>694224480C1EF786AF578D9C</string>
 				<string>7EF309AA5D3F301D7AAC7483</string>
 				<string>4025FAD5BADBA37E3C524972</string>
+				<string>8D91E92AB0F057AE940A4923</string>
 				<string>93421563D67A7CA1779FC6D5</string>
 				<string>BEE981B64F5E0E5875912826</string>
 				<string>182587B069862EA9650992A3</string>

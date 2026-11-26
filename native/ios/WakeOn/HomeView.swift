@@ -137,6 +137,11 @@ struct HomeView: View {
                 // Nothing to call with yet: the main button sets that up instead.
                 bigButton("Add Invite Code or Key", id: "simple-add-key") { openKeySetup = true }
             case .idle:
+                if voice.droppedChat != nil {
+                    Button("Reconnect", systemImage: "arrow.clockwise") { voice.reconnect() }
+                        .buttonStyle(.borderedProminent)
+                        .accessibilityIdentifier("simple-reconnect")
+                }
                 orbButton
                 Text("Tap the orb, or press the Action Button.\nSay “bye” to hang up.")
                     .multilineTextAlignment(.center)
@@ -321,6 +326,8 @@ struct LiveCallScreen: View {
                 .background(Color.black.opacity(panelShown ? 1 : 0), in: RoundedRectangle(cornerRadius: 20))
                 .padding(.horizontal)
                 .onAppear { withAnimation(.easeOut(duration: 0.4)) { panelShown = true } }
+            ConnectionBanner(state: voice.connection)
+                .animation(.easeInOut(duration: 0.25), value: voice.connection)
             ChatTranscriptView(items: transcript.items, call: transcript.call, showsHeader: false)
                 .accessibilityIdentifier("live-chat")
             ChatLengthWarning(tokens: voice.threadTokens)
@@ -357,5 +364,25 @@ struct LiveCallScreen: View {
         }
         .padding(.horizontal).padding(.vertical, 10)
         .background(.bar)
+    }
+}
+
+/// Shown on the call screen while the connection is weak or lost. While lost, the app keeps
+/// what the user says and sends it once the link is back, so they can keep talking.
+struct ConnectionBanner: View {
+    let state: CallConnection.State
+
+    var body: some View {
+        if state != .good {
+            Label(state == .lost ? "Connection lost. Keep talking, Pixie will catch up." : "Weak connection",
+                  systemImage: state == .lost ? "wifi.exclamationmark" : "wifi")
+                .font(.footnote.weight(.semibold))
+                .foregroundStyle(state == .lost ? .orange : .secondary)
+                .padding(.horizontal, 12).padding(.vertical, 6)
+                .background(.thinMaterial, in: Capsule())
+                .padding(.top, 8)
+                .transition(.opacity.combined(with: .move(edge: .top)))
+                .accessibilityIdentifier("connection-banner")
+        }
     }
 }

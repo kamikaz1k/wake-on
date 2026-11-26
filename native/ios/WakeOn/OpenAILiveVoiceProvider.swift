@@ -195,6 +195,7 @@ struct LiveVoiceStats {
     var remoteDuration: Double?
     var packetsReceived = 0
     var packetsSent = 0
+    var packetsLost = 0
     var roundTripMs: Double?
     /// Mean time received audio waits in the jitter buffer before playout.
     var jitterBufferMs: Double?
@@ -299,7 +300,9 @@ final class OpenAILiveVoiceProvider: NSObject {
         rtc.sdpSemantics = .unifiedPlan
         rtc.bundlePolicy = .maxBundle
         rtc.rtcpMuxPolicy = .require
-        rtc.continualGatheringPolicy = .gatherOnce
+        // Keep gathering so the call can move to a new network (Wi-Fi to cellular) mid-call.
+        // Setup still sends the offer once candidates go quiet, so this doesn't slow it.
+        rtc.continualGatheringPolicy = .gatherContinually
         let none = RTCMediaConstraints(mandatoryConstraints: nil, optionalConstraints: nil)
         guard let peer = Self.factory.peerConnection(with: rtc, constraints: none, delegate: self) else {
             throw VoiceError.message("WebRTC could not create a peer connection.")
@@ -661,6 +664,7 @@ final class OpenAILiveVoiceProvider: NSObject {
                 stats.remoteEnergy = number("totalAudioEnergy")
                 stats.remoteDuration = number("totalSamplesDuration")
                 stats.packetsReceived = Int(number("packetsReceived") ?? 0)
+                stats.packetsLost = Int(number("packetsLost") ?? 0)
                 stats.concealedSamples = Int(number("concealedSamples") ?? 0)
                 stats.totalSamplesReceived = Int(number("totalSamplesReceived") ?? 0)
                 if let delay = number("jitterBufferDelay"), let count = number("jitterBufferEmittedCount"), count > 0 {
@@ -749,8 +753,12 @@ extension OpenAILiveVoiceProvider: RTCPeerConnectionDelegate, RTCDataChannelDele
         switch newState {
         case .checking: report("ice_checking")
         case .connected, .completed: report("ice_connected")
-        case .failed, .disconnected, .closed:
-            report("ice_\(newState == .failed ? "failed" : newState == .closed ? "closed" : "disconnected")")
+        case .disconnected:
+            // Often a blip (a weak signal, a switch between Wi-Fi and cellular): the call holds
+            // the user's audio and waits for ICE to reconnect, giving up after a while.
+            report("ice_disconnected")
+        case .failed, .closed:
+            report("ice_\(newState == .failed ? "failed" : "closed")")
             Task { @MainActor [weak self] in self?.close(reason: "network") }
         default: break
         }

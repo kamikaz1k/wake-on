@@ -135,7 +135,84 @@ final class VoiceSessionController: ObservableObject {
     /// Browser steps waiting on a page; the lookup isn't over while one runs.
     private var browserStepsRunning = 0
 
-    private init() {}
+    private init() {
+        pathWatch = NetworkPath.shared.$isUp.removeDuplicates().dropFirst().sink { [weak self] up in
+            self?.networkPathChanged(up: up)
+        }
+    }
+
+    // MARK: - Connection trouble
+
+    /// The call's connection: good, weak, or lost (holding what the user says until it's back).
+    @Published private(set) var connection: CallConnection.State = .good
+    private var link = CallConnection()
+    private var pathWatch: AnyCancellable?
+    /// A call that ended because the connection went away. Reconnect carries on its chat.
+    @Published private(set) var droppedChat: ChatLog?
+    /// When the call dropped, while an automatic reconnect may still be tried (once per drop).
+    private var autoReconnectFrom: Double?
+    /// A dropped call reconnects by itself only this soon after it dropped, on screen.
+    static let autoReconnectWindow = 60.0
+    static let lostStatus = "Reconnecting…"
+
+    private func networkPathChanged(up: Bool) {
+        log("network_path up=\(up) interface=\(NetworkPath.shared.interface) phase=\(phase)")
+        if phase == .live {
+            changeLink { $0.path(up: up, at: uptimeSeconds()) }
+        } else if up {
+            reconnectIfReady()
+        }
+    }
+
+    /// Applies a change to the connection and acts on a new state: holds the microphone's
+    /// audio while the link is lost and sends it, faster than real time, once it is back.
+    private func changeLink(_ change: (inout CallConnection) -> Void) {
+        let before = link.state
+        let lostSince = link.lostSince
+        change(&link)
+        let after = link.state
+        guard after != before else { return }
+        connection = after
+        let now = uptimeSeconds()
+        let hot = OpenAILiveVoiceProvider.useHotAudio
+        if after == .lost {
+            if hot && sessionStarted { HotAudioDevice.shared.released = false }
+            if status != Self.lostStatus { statusBeforeLost = status }
+            status = Self.lostStatus
+            log("network_lost ice=\(link.iceDown ? "down" : "up") path=\(link.pathDown ? "down" : "up") "
+                + "interface=\(NetworkPath.shared.interface)")
+            record("network_lost")
+        } else if before == .lost {
+            if hot && sessionStarted { HotAudioDevice.shared.released = true }
+            if status == Self.lostStatus { status = statusBeforeLost ?? "Listening" }
+            // A drop isn't the user going quiet: restart the idle clock.
+            lastActivity = now
+            lastLobbyActive = now
+            let heldMs = lostSince.map { (now - $0) * 1000 } ?? 0
+            log(String(format: "network_back heldMs=%.0f interface=%@", heldMs, NetworkPath.shared.interface))
+            record("network_back", fields: ["heldMs": heldMs])
+        } else {
+            log("network_\(after == .weak ? "weak" : "good")")
+        }
+    }
+    private var statusBeforeLost: String?
+
+    /// Starts a call that carries on the dropped chat (the Reconnect button).
+    func reconnect() {
+        guard phase == .idle, let chat = droppedChat else { return }
+        autoReconnectFrom = nil
+        resume(chat, trigger: "reconnect")
+    }
+
+    /// Reconnects a dropped call by itself once the network is back, if it dropped moments ago
+    /// and the app is on screen.
+    private func reconnectIfReady() {
+        guard phase == .idle, droppedChat != nil, let from = autoReconnectFrom,
+              uptimeSeconds() - from < Self.autoReconnectWindow, NetworkPath.shared.isUp,
+              UIApplication.shared.applicationState == .active else { return }
+        log("reconnect auto")
+        reconnect()
+    }
 
     // MARK: - Control
 
@@ -319,6 +396,10 @@ final class VoiceSessionController: ObservableObject {
         checkInSpoken = false
         browserStepsRunning = 0
         lookingUpSince = nil
+        link = CallConnection()
+        connection = .good
+        droppedChat = nil
+        autoReconnectFrom = nil
         record("start_entered", at: origin + 1)
         if OpenAILiveVoiceProvider.useHotAudio {
             record("listening_shown")
@@ -615,6 +696,29 @@ final class VoiceSessionController: ObservableObject {
                 self?.stop(reason: "end_after")
             }
         }
+        // --drop-network-at N [--drop-for S]: pretend ICE disconnects N s into the call for S s
+        // (default 5), to test holding the user's audio and catching up without a real outage.
+        if callTrigger == "launch_argument", let index = args.firstIndex(of: "--drop-network-at"), index + 1 < args.count, let at = Double(args[index + 1]) {
+            let length = args.firstIndex(of: "--drop-for").flatMap { $0 + 1 < args.count ? Double(args[$0 + 1]) : nil } ?? 5
+            Task { [weak self] in
+                try? await Task.sleep(for: .seconds(at))
+                self?.handle(.milestone("ice_disconnected", DispatchTime.now().uptimeNanoseconds, ["simulated": true]))
+                try? await Task.sleep(for: .seconds(length))
+                self?.handle(.milestone("ice_connected", DispatchTime.now().uptimeNanoseconds, ["simulated": true]))
+            }
+        }
+        // --say-file <wav> --say-at N: play a 16-bit mono WAV into the microphone N s in.
+        // Both test hooks apply to the launch call only, not a reconnect.
+        if callTrigger == "launch_argument", let index = args.firstIndex(of: "--say-file"), index + 1 < args.count,
+           let wav = FileManager.default.contents(atPath: args[index + 1]),
+           let data = wav.range(of: Data("data".utf8)) {
+            let at = args.firstIndex(of: "--say-at").flatMap { $0 + 1 < args.count ? Double(args[$0 + 1]) : nil } ?? 6
+            let samples = Data(wav[(data.upperBound + 4)...]).withUnsafeBytes { Array($0.bindMemory(to: Int16.self)) }
+            Task {
+                try? await Task.sleep(for: .seconds(at))
+                HotAudioDevice.shared.inject(samples)
+            }
+        }
         #endif
         observeInterruptions()
         do {
@@ -632,6 +736,10 @@ final class VoiceSessionController: ObservableObject {
         case let .milestone(name, time, fields):
             record(name, at: time, fields: fields)
             capture?.app("milestone", ["name": name, "fields": fields], at: time)
+            if name == "ice_disconnected" || name == "ice_connected" {
+                let up = name == "ice_connected"
+                changeLink { $0.ice(up: up, at: uptimeSeconds(time)) }
+            }
             if name == "first_audio_packet_received" {
                 firstAudio = true
                 finishSetupIfReady()
@@ -648,7 +756,8 @@ final class VoiceSessionController: ObservableObject {
         case let .stats(stats):
             handleStats(stats)
         case let .ended(reason):
-            finishCall(reason: reason)
+            // The data channel closing while the link is down is the network going, not OpenAI.
+            finishCall(reason: connection == .lost && reason == "data_channel_closed" ? "network" : reason)
         }
     }
 
@@ -675,7 +784,8 @@ final class VoiceSessionController: ObservableObject {
                 } else {
                     HotAudioDevice.shared.enableVoiceProcessing()
                 }
-                HotAudioDevice.shared.released = true
+                // Lost already (rare): the audio stays held until the link is back.
+                HotAudioDevice.shared.released = connection != .lost
             }
             markListening()
             finishSetupIfReady()
@@ -1111,6 +1221,15 @@ final class VoiceSessionController: ObservableObject {
             if let rtt = stats.roundTripMs, rtt != roundTripMs { roundTripMs = rtt }
             if let jitter = stats.jitterBufferMs { jitterBufferMs = (jitter * 10).rounded() / 10 }
         }
+        if phase == .live {
+            changeLink { $0.stats(at: stats.time, received: stats.packetsReceived, lost: stats.packetsLost,
+                                  roundTripMs: stats.roundTripMs) }
+            if link.expired(at: stats.time) {
+                log("network_gave_up afterS=\(Int(CallConnection.lostLimit))")
+                stop(reason: "network")
+                return
+            }
+        }
         checkInactivity(at: stats.time)
         let events = tracker.ingest(time: stats.time,
                                     microphoneEnergy: muted ? nil : stats.microphoneEnergy,
@@ -1259,6 +1378,8 @@ final class VoiceSessionController: ObservableObject {
             }
             return
         }
+        // While the connection is lost, nobody can hear anybody: that isn't idle.
+        if connection == .lost { return }
         // Mic sound doesn't count: it can be noise, echo or a side conversation, which GPT-Live
         // doesn't transcribe. Only the user's transcribed words, Pixie talking, or a lookup do.
         if tracker.assistant.active || lookingUp || lastActivity == nil {
@@ -1406,6 +1527,13 @@ final class VoiceSessionController: ObservableObject {
         MemoryJob.afterCall(addedNotes: notesAdded > 0)
         // In the browser, pausing or going quiet ends the call (no tokens while you read) but
         // keeps the chat to resume. A call with nothing said keeps the one it resumed.
+        let dropped = (stopReason ?? reason) == "network"
+        if dropped {
+            // Lost the connection: keep the chat so the call can carry on once it's back.
+            droppedChat = kept ? chatLog : resuming
+            autoReconnectFrom = droppedChat == nil ? nil : uptimeSeconds()
+            log("call_dropped chat=\(droppedChat?.id.uuidString ?? "none")")
+        }
         if Self.pausesThread(reason: stopReason ?? reason, browserOpen: BrowserSession.shared.isOpen) {
             pausedThread = kept ? chatLog : resuming
             log("thread paused id=\(pausedThread?.id.uuidString ?? "none") resumes=\(resuming?.id.uuidString ?? "none")")
@@ -1444,7 +1572,15 @@ final class VoiceSessionController: ObservableObject {
             HotAudioDevice.shared.backgroundStart = false
             HotAudioDevice.shared.chimeOnFirstCapture = false
         }
-        if error == nil { status = "Call ended" }
+        connection = .good
+        if dropped {
+            status = "Call dropped"
+            if error == nil { error = NetworkPath.shared.isUp ? "Lost the connection to Pixie." : "No internet connection." }
+            Task { [weak self] in
+                try? await Task.sleep(for: .seconds(1.5))
+                self?.reconnectIfReady()
+            }
+        } else if error == nil { status = "Call ended" }
         #if DEBUG
         let noPrepare = ProcessInfo.processInfo.arguments.contains("--no-prepare")
         #else
@@ -1588,6 +1724,9 @@ final class VoiceSessionController: ObservableObject {
         log("failed \(message)")
         // A resume that couldn't connect stays paused, so Resume can try again.
         if let resuming, BrowserSession.shared.isOpen { pausedThread = resuming }
+        if let resuming, callTrigger == "reconnect" { droppedChat = resuming }
+        // Without a network the underlying error (a URL or ICE failure) only confuses.
+        let message = NetworkPath.shared.isUp ? message : "No internet connection."
         error = localListening ? message + " Anything you said was not sent." : message
         status = "Not connected"
         timeline = pendingTimeline
