@@ -98,8 +98,9 @@ final class NetworkPath: ObservableObject {
                 : path.usesInterfaceType(.wiredEthernet) ? "wired" : up ? "other" : "none"
             Task { @MainActor in
                 guard let self else { return }
-                if self.isUp != up { self.isUp = up }
+                // Interface first: watchers of isUp read it when isUp changes.
                 if self.interface != kind { self.interface = kind }
+                if self.isUp != up { self.isUp = up }
             }
         }
         monitor.start(queue: DispatchQueue(label: "pixie.network-path"))
