@@ -43,15 +43,64 @@ final class ContactsTests: XCTestCase {
 }
 
 final class ThinkingSoundTests: XCTestCase {
-    func testPlaysOnlyWhilePixieIsQuietDuringALookup() {
-        XCTAssertTrue(ThinkingSound.shouldPlay(live: true, lookingUpFor: 3, pixieQuietFor: 1.5, connectionLost: false, muted: false))
+    func testPlaysOnlyWhenToolsRunLongAndPixieIsQuiet() {
+        func play(waiting: Double?, step: Double = 1, quiet: Double = 1.5, live: Bool = true, lost: Bool = false, muted: Bool = false) -> Bool {
+            ThinkingSound.shouldPlay(live: live, waitingFor: waiting, sinceLastStep: step, pixieQuietFor: quiet,
+                                     connectionLost: lost, muted: muted)
+        }
+        XCTAssertTrue(play(waiting: 3.2))
+        // Quick lookups stay silent.
+        XCTAssertFalse(play(waiting: 2.5))
         // Pixie's "one moment" first, then the sound.
-        XCTAssertFalse(ThinkingSound.shouldPlay(live: true, lookingUpFor: 3, pixieQuietFor: 0.5, connectionLost: false, muted: false))
-        XCTAssertFalse(ThinkingSound.shouldPlay(live: true, lookingUpFor: nil, pixieQuietFor: 5, connectionLost: false, muted: false))
-        XCTAssertFalse(ThinkingSound.shouldPlay(live: true, lookingUpFor: 31, pixieQuietFor: 5, connectionLost: false, muted: false))
-        XCTAssertFalse(ThinkingSound.shouldPlay(live: true, lookingUpFor: 3, pixieQuietFor: 5, connectionLost: true, muted: false))
-        XCTAssertFalse(ThinkingSound.shouldPlay(live: true, lookingUpFor: 3, pixieQuietFor: 5, connectionLost: false, muted: true))
-        XCTAssertFalse(ThinkingSound.shouldPlay(live: false, lookingUpFor: 3, pixieQuietFor: 5, connectionLost: false, muted: false))
+        XCTAssertFalse(play(waiting: 4, quiet: 0.5))
+        XCTAssertFalse(play(waiting: nil))
+        XCTAssertFalse(play(waiting: 40, step: 31))
+        XCTAssertTrue(play(waiting: 40, step: 5))
+        XCTAssertFalse(play(waiting: 4, lost: true))
+        XCTAssertFalse(play(waiting: 4, muted: true))
+        XCTAssertFalse(play(waiting: 4, live: false))
+    }
+
+    func testStoppingFadesOutInsteadOfCutting() {
+        let loop = [Int16](repeating: 10_000, count: 48_000)
+        var mixer = ThinkingSound.Mixer()
+        var buffer = [Int16](repeating: 0, count: 480)
+        loop.withUnsafeBufferPointer { l in
+            _ = mixer.mix(l.baseAddress!, length: l.count, into: &buffer, count: 480, thinking: true, pixieLoud: false)
+        }
+        XCTAssertEqual(buffer.last, 10_000)
+        // Cleared: 150 ms of fade (7,200 samples at 48 kHz), getting quieter, never a jump.
+        var faded: [Int16] = []
+        for _ in 0..<20 {
+            var chunk = [Int16](repeating: 0, count: 480)
+            loop.withUnsafeBufferPointer { l in
+                _ = mixer.mix(l.baseAddress!, length: l.count, into: &chunk, count: 480, thinking: false, pixieLoud: false)
+            }
+            faded += chunk
+        }
+        XCTAssertLessThan(abs(Int(faded[0]) - 10_000), 10)
+        XCTAssertTrue(zip(faded, faded.dropFirst()).allSatisfy { $1 <= $0 && $0 - $1 < 10 })
+        XCTAssertEqual(faded[7_300], 0)
+        XCTAssertEqual(mixer.position, -1)
+    }
+
+    func testPixiesVoiceFadesItAndKeepsItFadedBetweenWords() {
+        let loop = [Int16](repeating: 10_000, count: 48_000)
+        var mixer = ThinkingSound.Mixer()
+        func mix(loud: Bool) -> [Int16] {
+            var chunk = [Int16](repeating: 0, count: 480)
+            loop.withUnsafeBufferPointer { l in
+                _ = mixer.mix(l.baseAddress!, length: l.count, into: &chunk, count: 480, thinking: true, pixieLoud: loud)
+            }
+            return chunk
+        }
+        _ = mix(loud: false)
+        var out: [Int16] = []
+        for _ in 0..<16 { out += mix(loud: true) }
+        XCTAssertGreaterThan(out[0], 9_900)
+        XCTAssertEqual(out.last, 0)
+        // A 100 ms gap between words: still silent.
+        for _ in 0..<10 { XCTAssertEqual(mix(loud: false).max(), 0) }
     }
 
     func testLoopsAreQuietAndEndInSilence() {

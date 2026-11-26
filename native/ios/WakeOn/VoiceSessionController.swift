@@ -1439,15 +1439,17 @@ final class VoiceSessionController: ObservableObject {
     private var lookupDoneAt: Double?
     private func updateThinkingSound(at time: Double) {
         if let since = lookingUpSince {
-            waitingSince = since
+            // From the first tool step: each later step restarts lookingUpSince.
+            if waitingSince == nil { waitingSince = since }
             lookupDoneAt = nil
         } else if waitingSince != nil {
             if lookupDoneAt == nil { lookupDoneAt = time }
             if let done = lookupDoneAt,
                (lastLobbyActive ?? 0) > done || time - done > ThinkingSound.answerWait { waitingSince = nil }
         }
+        let lastStep = lookingUpSince ?? lookupDoneAt ?? time
         let on = ThinkingSound.enabled && sessionStarted && ThinkingSound.shouldPlay(
-            live: phase == .live, lookingUpFor: waitingSince.map { time - $0 },
+            live: phase == .live, waitingFor: waitingSince.map { time - $0 }, sinceLastStep: time - lastStep,
             pixieQuietFor: lastLobbyActive.map { time - $0 } ?? 0, connectionLost: connection == .lost, muted: muted)
         setThinkingSound(on)
     }

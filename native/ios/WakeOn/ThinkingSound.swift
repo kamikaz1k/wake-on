@@ -7,10 +7,14 @@ enum ThinkingSound {
     static let enabledKey = "thinkingSound.enabled"
     static var enabled: Bool { UserDefaults.standard.object(forKey: enabledKey) as? Bool ?? true }
 
-    /// Starts after Pixie has been quiet this long during a lookup (its "one moment" first).
+    /// Starts only once tools have been running this long: quick lookups stay silent.
+    static let lookupBefore = 3.0
+    /// ...and Pixie has been quiet this long (its "one moment" first).
     static let quietBefore = 1.2
-    /// A lookup older than this isn't waited on any more (as for the idle check).
+    /// A lookup step older than this isn't waited on any more (as for the idle check).
     static let lookupLimit = 30.0
+    /// Stopping fades out over this long rather than cutting off.
+    static let fadeSeconds = 0.15
     /// After a lookup, the sound waits this long at most for Pixie to start answering.
     static let answerWait = 6.0
 
@@ -26,10 +30,51 @@ enum ThinkingSound {
     static let style = Style.breath
 
     /// Whether a call should be playing it now.
-    static func shouldPlay(live: Bool, lookingUpFor: Double?, pixieQuietFor: Double, connectionLost: Bool,
-                           muted: Bool) -> Bool {
-        guard live, !connectionLost, !muted, let lookingUpFor, lookingUpFor < lookupLimit else { return false }
+    /// `waitingFor`: since the tools started (nil when nothing is running or being answered);
+    /// `sinceLastStep`: since the latest tool step started.
+    static func shouldPlay(live: Bool, waitingFor: Double?, sinceLastStep: Double, pixieQuietFor: Double,
+                           connectionLost: Bool, muted: Bool) -> Bool {
+        guard live, !connectionLost, !muted, let waitingFor, waitingFor >= lookupBefore,
+              sinceLastStep < lookupLimit else { return false }
         return pixieQuietFor >= quietBefore
+    }
+
+    /// Plays the loop into a buffer, fading in and out at the gain's ramp. Owned by the render
+    /// thread; pure, so the fade can be tested.
+    struct Mixer {
+        /// -1 while silent.
+        private(set) var position = -1
+        private(set) var gain = 0.0
+        /// Gain change per sample (a full fade takes `fadeSeconds`).
+        var step = 1 / (fadeSeconds * 48_000)
+        /// After Pixie's voice, stay faded this many samples, so the gaps between its words don't
+        /// bring the sound back (0.5 s).
+        var holdLength = 24_000
+        private var hold = 0
+
+        /// Adds the sound to `samples`. `thinking`: it should play; `pixieLoud`: Pixie's voice is
+        /// in this buffer. Returns true while anything was added.
+        mutating func mix(_ loop: UnsafePointer<Int16>, length: Int, into samples: UnsafeMutablePointer<Int16>,
+                          count: Int, thinking: Bool, pixieLoud: Bool) -> Bool {
+            if pixieLoud { hold = holdLength } else { hold = max(0, hold - count) }
+            let playing = thinking && hold == 0
+            if position < 0 {
+                guard playing, length > 0 else { return false }
+                // The loop starts silent, so it can start at full gain.
+                position = 0
+                gain = 1
+            }
+            let target = playing ? 1.0 : 0.0
+            for index in 0..<count {
+                if gain < target { gain = min(target, gain + step) } else if gain > target { gain = max(target, gain - step) }
+                if gain <= 0, !playing { position = -1; return true }
+                if position >= length { position = 0 }
+                let mixed = Int32(samples[index]) + Int32((Double(loop[position]) * gain).rounded())
+                samples[index] = Int16(max(-32768, min(32767, mixed)))
+                position += 1
+            }
+            return true
+        }
     }
 
     /// One loop of the sound, Int16 mono. The loop starts with its notes and ends with the rest,

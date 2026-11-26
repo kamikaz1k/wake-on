@@ -357,41 +357,28 @@ final class HotAudioDevice: NSObject, @unchecked Sendable {
     // MARK: Thinking sound
 
     /// Play the thinking sound while Pixie works (set from the main thread, read on the render
-    /// thread). It stops at the end of a loop once cleared, and at once when Pixie speaks.
+    /// thread). It fades out quickly once cleared, or when Pixie speaks.
     var thinking = false
     /// Room for a loop of up to 2.5 s at 96 kHz; written only while it isn't playing.
     private let thinkingLoop = UnsafeMutablePointer<Int16>.allocate(capacity: 240_000)
     private var thinkingLength = 0
-    private var thinkingPosition = -1 // render thread; -1 = not playing
+    private var thinkingMixer = ThinkingSound.Mixer() // render thread
 
     private func makeThinkingLoop(sampleRate: Double) {
-        guard thinkingPosition < 0 else { return }
+        guard thinkingMixer.position < 0 else { return }
         let loop = ThinkingSound.loop(sampleRate: sampleRate).prefix(240_000)
         loop.withUnsafeBufferPointer { thinkingLoop.update(from: $0.baseAddress!, count: $0.count) }
         thinkingLength = loop.count
+        thinkingMixer.step = 1 / (ThinkingSound.fadeSeconds * sampleRate)
+        thinkingMixer.holdLength = Int(sampleRate / 2)
     }
 
-    /// Render thread: mixes the thinking sound into `output` after WebRTC's audio.
-    /// `pixieLoud`: Pixie's voice is in this buffer, so the sound gives way at once.
+    /// Render thread: mixes the thinking sound into `output` after WebRTC's audio. It fades out
+    /// once cleared, or when Pixie's voice is in this buffer (`pixieLoud`).
     private func mixThinking(into output: UnsafeMutablePointer<AudioBufferList>, frames: Int, pixieLoud: Bool) -> Bool {
-        if pixieLoud { thinkingPosition = -1; return false }
-        if thinkingPosition < 0 {
-            guard thinking, thinkingLength > 0 else { return false }
-            thinkingPosition = 0
-        }
         guard let data = UnsafeMutableAudioBufferListPointer(output).first?.mData else { return false }
-        let samples = data.assumingMemoryBound(to: Int16.self)
-        for index in 0..<frames {
-            if thinkingPosition >= thinkingLength {
-                // End of a loop: go round again only while still thinking.
-                guard thinking else { thinkingPosition = -1; break }
-                thinkingPosition = 0
-            }
-            let mixed = Int32(samples[index]) + Int32(thinkingLoop[thinkingPosition])
-            samples[index] = Int16(max(-32768, min(32767, mixed)))
-            thinkingPosition += 1
-        }
-        return true
+        return thinkingMixer.mix(thinkingLoop, length: thinkingLength, into: data.assumingMemoryBound(to: Int16.self),
+                                 count: frames, thinking: thinking, pixieLoud: pixieLoud)
     }
 
     /// Render thread: the loudest sample in `output`, 0...1.
