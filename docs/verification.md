@@ -13,6 +13,7 @@ When a check is redone, add a new row rather than editing the old one.
 
 | Date | SHA | Check | How | Where | Result | Files |
 | --- | --- | --- | --- | --- | --- | --- |
+| 2026-11-25 | f4c4568 | Pixie uses your real location in a call: "what's the weather like" and a restaurant search | phone, by you; log read by Claude (`voice-console.log`) | iPhone 17 Pro | Pass. Action Button call: `get_location` → `location found`, drawing titled "Thornhill weather" in the new widget style. Later call: "find me the location of Xiangqi Hotpot" → `get_location`, `location found`, `open_map` to Xiang Zi HotPot, 3989 Highway 7, Markham. Permission had already been granted, so onboarding skipped its location step | `native/ios/WakeOn/CurrentLocation.swift`, `native/ios/WakeOn/VoiceSessionController.swift` |
 | 2026-11-25 | f4c4568 | Build with the onboarding location step installs on the phone | `deploy-phone.py` | iPhone 17 Pro | Installed. Not opened yet; the step itself is untried on the phone | `native/ios/WakeOn/Onboarding.swift`, `native/ios/WakeOn/CurrentLocation.swift` |
 | 2026-11-25 | 6353af7 | Onboarding offers location after the microphone, optional | App suite (177, incl. OnboardingTests step order); sim screenshot of the step (`-onboarding-step 3`) | sim (iPhone 17, iOS 26) | Pass. Page renders with Allow Location / Not Now; screenshot partly covered by the sim's microphone prompt. Not checked: tapping Allow Location to see iOS's prompt and moving on, on the sim or phone | `native/ios/WakeOn/Onboarding.swift`, `native/ios/WakeOn/CurrentLocation.swift`, `native/ios/WakeOn/AIConsent.swift` |
 | 2026-11-25 | a01c763 | TestFlight build 202611260320 (get_location, new drawing brief) reaches the internal group | `testflight.sh`; App Store Connect API (`buildBetaDetail`) | App Store Connect | Processed VALID; internal state IN_BETA_TESTING, auto-notify on; "Family & Friends" has access to all builds. External: ready for submission, not submitted. Not installed from TestFlight | `native/ios/WakeOn/CurrentLocation.swift`, `native/ios/ChatUI/ChatVisual.swift` |
@@ -115,7 +116,7 @@ When a check is redone, add a new row rather than editing the old one.
 
 | Since | What | Why not |
 | --- | --- | --- |
-| 2026-11-25 | Location on the phone: the permission prompt mid-call, a real fix and its area name, and a background "Hey Pixie" call without permission | Built and unit-tested only |
+| 2026-11-25 | Location on the phone: the iOS permission prompt (from onboarding or mid-call) and a background "Hey Pixie" call without permission | Permission was already granted on the phone; real fixes work (see the Thornhill row) |
 | 2026-11-24 | CPU and energy of the always-animating orb on the home screen, in an optimized (Release) build | Follow-up for later. Only measured on the simulator in Debug (16–18% CPU), which overstates it; possible cuts: no spectrum work when not in a call, 30 fps at rest, no per-frame buffer copies |
 | 2026-11-24 | Ending a call on the phone with the orb start button doesn't hang | Phone hang not reproduced on the simulator; fix inferred from the crash report |
 | 2026-11-22 | Memory summaries on the phone: the overnight BGProcessingTask firing, the after-call run past 40 lines | The background task can't be forced from the CLI; in the simulation the after-call run was never needed |
