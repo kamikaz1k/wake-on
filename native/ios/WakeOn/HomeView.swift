@@ -138,20 +138,25 @@ struct HomeView: View {
                 // Nothing to call with yet: the main button sets that up instead.
                 bigButton("Add Invite Code or Key", id: "simple-add-key") { openKeySetup = true }
             case .idle:
-                if let note = voice.voiceNote {
+                if !network.isUp { NetworkStatusBadge() }
+                if let note = voice.voiceNote, note.recording {
+                    // While it records, the voice note takes the orb's place.
                     VoiceNoteCard(note: note, online: network.isUp,
                                   resume: { voice.resumeVoiceNote() }, discard: { voice.discardVoiceNote() })
-                } else if !network.isUp {
-                    NetworkStatusBadge()
+                } else {
+                    if let note = voice.voiceNote {
+                        VoiceNoteCard(note: note, online: network.isUp,
+                                      resume: { voice.resumeVoiceNote() }, discard: { voice.discardVoiceNote() })
+                    }
+                    orbButton
+                        .disabled(!network.isUp)
+                        .grayscale(network.isUp ? 0 : 1)
+                        .opacity(network.isUp ? 1 : 0.5)
+                    Text(network.isUp ? "Tap the orb, or press the Action Button.\nSay “bye” to hang up."
+                                      : "Pixie needs an internet connection.")
+                        .multilineTextAlignment(.center)
+                        .font(.footnote).foregroundStyle(.secondary)
                 }
-                orbButton
-                    .disabled(!network.isUp)
-                    .grayscale(network.isUp ? 0 : 1)
-                    .opacity(network.isUp ? 1 : 0.5)
-                Text(network.isUp ? "Tap the orb, or press the Action Button.\nSay “bye” to hang up."
-                                  : "Pixie needs an internet connection.")
-                    .multilineTextAlignment(.center)
-                    .font(.footnote).foregroundStyle(.secondary)
             case .connecting, .live, .ending:
                 // iOS 17 has no live chat view: plain call controls.
                 HStack {
@@ -418,8 +423,6 @@ struct VoiceNoteCard: View {
         VStack(alignment: .leading, spacing: 10) {
             if online {
                 Label("Back online", systemImage: "wifi").font(.subheadline.weight(.semibold))
-            } else {
-                NetworkStatusBadge()
             }
             TimelineView(.periodic(from: .now, by: 1)) { context in
                 Label(detail(at: context.date), systemImage: note.recording ? "record.circle" : "waveform")
