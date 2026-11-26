@@ -199,6 +199,16 @@ final class VoiceSessionController: ObservableObject {
     }
     private var statusBeforeLost: String?
 
+    #if DEBUG
+    /// Screenshots: a voice note waiting on Home (`--voice-note recording|full`).
+    func debugShowVoiceNote(recording: Bool) {
+        voiceNote = VoiceNote(chat: nil, since: Date().addingTimeInterval(recording ? -34 : -90), recording: recording)
+    }
+
+    /// Screenshots: the in-call connection banner (`--weak-network-at N`).
+    func debugShowConnection(_ state: CallConnection.State) { connection = state }
+    #endif
+
     /// Carries on the dropped chat, sending the voice note first (faster than real time).
     func resumeVoiceNote() {
         guard phase == .idle, let note = voiceNote else { return }
@@ -758,6 +768,13 @@ final class VoiceSessionController: ObservableObject {
                     try? await Task.sleep(for: .seconds(at))
                     HotAudioDevice.shared.inject(samples)
                 }
+            }
+        }
+        if callTrigger == "launch_argument", let index = args.firstIndex(of: "--weak-network-at"), index + 1 < args.count,
+           let at = Double(args[index + 1]) {
+            Task { [weak self] in
+                try? await Task.sleep(for: .seconds(at))
+                self?.debugShowConnection(.weak)
             }
         }
         // --resume-note-at N: press Resume with Voice Note N s after the launch call starts.

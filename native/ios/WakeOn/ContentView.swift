@@ -45,6 +45,12 @@ struct ContentView: View {
             try? await Task.sleep(for: .seconds(1))
             apps.open(app)
         }
+        // `--voice-note recording|full`: a voice note waiting on Home (screenshots).
+        .task {
+            let args = ProcessInfo.processInfo.arguments
+            guard let index = args.firstIndex(of: "--voice-note"), index + 1 < args.count else { return }
+            VoiceSessionController.shared.debugShowVoiceNote(recording: args[index + 1] == "recording")
+        }
         #endif
         .environment(\.visualSaver, MiniAppStore.shared)
         // Pixie's browser, or yours from the Simple page: full screen so its top bar can take

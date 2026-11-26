@@ -91,6 +91,10 @@ final class NetworkPath: ObservableObject {
     private let monitor = NWPathMonitor()
 
     private init() {
+        #if DEBUG
+        // --offline: pretend the phone has no network (screenshots of the offline states).
+        if ProcessInfo.processInfo.arguments.contains("--offline") { isUp = false; interface = "none"; return }
+        #endif
         monitor.pathUpdateHandler = { [weak self] path in
             let up = path.status == .satisfied
             let kind = path.usesInterfaceType(.wifi) ? "wifi"
