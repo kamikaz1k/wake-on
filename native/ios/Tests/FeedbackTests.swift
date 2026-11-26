@@ -35,6 +35,16 @@ final class FeedbackTests: XCTestCase {
         XCTAssertEqual(result, Feedback.keptText)
     }
 
+    /// A server that's down, slow or erroring must never crash the call: the tool says so and
+    /// the copy on the iPhone is kept.
+    func testAFailedSendIsReportedNotFatal() async {
+        let code = "test-invite-code"
+        let down = URL(string: "http://127.0.0.1:9")!
+        let result = await Feedback.send(feedback: "It kept cutting out", context: "", credential: code, server: down,
+                                         warnings: ["Weak call connection", "Network: wifi"])
+        XCTAssertEqual(result, Feedback.failedText)
+    }
+
     private func responses(_ config: LiveVoiceConfig) throws -> [String: Any] {
         let session = try XCTUnwrap(config.requestBody(sdp: "v=0")["session"] as? [String: Any])
         return try XCTUnwrap((session["delegation"] as? [String: Any])?["responses"] as? [String: Any])

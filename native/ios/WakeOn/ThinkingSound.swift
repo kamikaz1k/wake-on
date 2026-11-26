@@ -1,7 +1,7 @@
 import Foundation
 
 /// The soft sound a call plays while Pixie is quiet and working on something (a lookup, a page,
-/// the calendar): two rounded, quiet notes, a rest, and again, so a pause doesn't sound like a
+/// the calendar): a warm, quiet swell that breathes in and out, so a pause doesn't sound like a
 /// dropped call. Mixed into the call's output by `HotAudioDevice`, so echo cancellation knows it.
 enum ThinkingSound {
     static let enabledKey = "thinkingSound.enabled"
@@ -23,7 +23,7 @@ enum ThinkingSound {
         case breath
     }
 
-    static let style = Style.pulse
+    static let style = Style.breath
 
     /// Whether a call should be playing it now.
     static func shouldPlay(live: Bool, lookingUpFor: Double?, pixieQuietFor: Double, connectionLost: Bool,

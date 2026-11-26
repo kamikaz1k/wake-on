@@ -318,7 +318,7 @@ async function saveFeedback(request, env) {
   const sent = await count(env, countKey);
   if (sent >= FEEDBACK_DAILY) return error(429, "too_much_feedback", "That's a lot of feedback for one day. Try again tomorrow.");
   // What the app was warning about when it was sent ("Weak connection", "Voice note waiting").
-  const warnings = (Array.isArray(body.warnings) ? body.warnings : []).slice(0, MAX_WARNINGS)
+  const warnings = (Array.isArray(body?.warnings) ? body.warnings : []).slice(0, MAX_WARNINGS)
     .map((w) => String(w).trim().slice(0, 200)).filter(Boolean);
   const entry = { at: at.toISOString(), name: check.name, feedback, context: text("context", MAX_FEEDBACK), app: text("app", 200), warnings };
   const id = crypto.randomUUID().slice(0, 8);

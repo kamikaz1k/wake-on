@@ -59,6 +59,7 @@ enum Feedback {
         guard !(body["feedback"] as? String ?? "").isEmpty else { return emptyText }
         keep(body)
         guard let credential, LobbyServer.isInviteCode(credential), let server,
+              JSONSerialization.isValidJSONObject(body),
               let data = try? JSONSerialization.data(withJSONObject: body) else { return keptText }
         var request = URLRequest(url: server.appendingPathComponent("v1/feedback"), timeoutInterval: 15)
         request.httpMethod = "POST"
@@ -73,7 +74,8 @@ enum Feedback {
     private static func keep(_ body: [String: Any]) {
         var entry = body
         entry["at"] = ISO8601DateFormatter().string(from: Date())
-        guard let docs = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first,
+        guard JSONSerialization.isValidJSONObject(entry),
+              let docs = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first,
               var line = try? JSONSerialization.data(withJSONObject: entry, options: [.sortedKeys]) else { return }
         line.append(0x0A)
         let url = docs.appendingPathComponent("feedback.jsonl")
