@@ -13,6 +13,7 @@ When a check is redone, add a new row rather than editing the old one.
 
 | Date | SHA | Check | How | Where | Result | Files |
 | --- | --- | --- | --- | --- | --- | --- |
+| 2026-11-26 | e6bfe05 | A feedback send that fails (server down) returns "couldn't send" instead of crashing; server ignores bad warnings | unit test FeedbackTests.testAFailedSendIsReportedNotFatal (219 pass); server `npm test` (22) | sim, node | Pass. Breath sound and Settings toggle installed on the phone, not yet heard there | `native/ios/WakeOn/Feedback.swift`, `server/src/index.js`, `native/ios/WakeOn/ThinkingSound.swift` |
 | 2026-11-26 | 49c4c7a | Thinking sound plays while Pixie looks something up and stops when its answer starts | `--talk search` call, voice log | sim | thinking_sound on after "One moment.", off at the answer's first audio (backend done 7.2 s, sound held until Pixie spoke). Audibility, level and echo on the speaker not heard: the sim's sound wasn't recorded | `native/ios/WakeOn/ThinkingSound.swift`, `native/ios/WakeOn/HotAudioDevice.swift`, `native/ios/WakeOn/VoiceSessionController.swift` |
 | 2026-11-26 | 49c4c7a | "Call Kate Bell" searches contacts and asks which number | `--talk-prompt "Can you call Kate Bell for me?"`, contacts granted with simctl, voice log | sim | contacts search matches=1; Pixie: "I found Kate Bell's mobile and main numbers. Which would you like me to call?" No number read aloud. The call step (tel:, iOS confirm) not tried: the sim has no Phone app | `native/ios/WakeOn/Contacts.swift`, `native/ios/WakeOn/VoiceSessionController.swift` |
 | 2026-11-26 | 49c4c7a | Contacts, thinking sound, app warnings in feedback, long-chat warning gone | unit tests (218: ContactsTests, ThinkingSoundTests, AppWarningsTests); server `npm test` | sim, node | All pass | `native/ios/WakeOn/Contacts.swift`, `native/ios/WakeOn/ThinkingSound.swift`, `native/ios/WakeOn/Feedback.swift`, `native/ios/WakeOn/ChatTokens.swift`, `server/src/index.js` |
@@ -137,7 +138,7 @@ When a check is redone, add a new row rather than editing the old one.
 | --- | --- | --- |
 | 2026-11-26 | Thinking sound on the phone: level, echo (does it trip Pixie's turn detection?), background wake calls | Needs a real call on the speaker |
 | 2026-11-26 | Calling a contact: hang-up, iOS's call confirmation, the background notification | Sim has no Phone app |
-| 2026-11-26 | Feedback warnings reaching the server | Server not deployed (needs your yes) |
+| 2026-11-26 | Feedback warnings reaching the server | Server deployed (e6bfe05); no feedback sent from the phone since |
 | 2026-11-26 | Voice note on the phone: airplane mode past 20 s, the "No internet connection" badge and disabled orb, Resume with Voice Note once back (Pixie hears what you said offline), Discard, the 60 s limit | Installed (a782737), not tried |
 | 2026-11-26 | Network on the phone: Wi-Fi→cellular handover mid-call, and whether the "Weak connection" banner shows on a bad signal (the log saw `network_weak` once) | Not tried yet |
 | 2026-11-26 | Saved apps on the phone: tapping Save as App, the Open Mini App shortcut on the Home Screen, `wakeon://app/<id>`, and refresh with an invite code | Installed, not tried on the phone (the server endpoint is live) |
