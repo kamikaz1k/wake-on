@@ -18,4 +18,13 @@ final class OnboardingTests: XCTestCase {
         XCTAssertGreaterThanOrEqual(calls.count, 3, "The onboarding demo replays the sample calls")
         XCTAssertTrue(calls.allSatisfy { !CaptureReplay(lines: $0.lines, rawEvents: false).steps.isEmpty })
     }
+
+    /// Location is offered right after the microphone and before the first call, whose weather
+    /// question uses it.
+    func testLocationStepFollowsMicrophone() {
+        typealias Step = OnboardingView.Step
+        XCTAssertEqual(Step.location.rawValue, Step.permission.rawValue + 1)
+        XCTAssertEqual(Step.firstCall.rawValue, Step.location.rawValue + 1)
+        XCTAssertTrue(Onboarding.prompts.first?.text.contains("where I am") ?? false)
+    }
 }

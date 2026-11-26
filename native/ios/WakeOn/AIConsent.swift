@@ -39,7 +39,7 @@ struct AIConsentPage: View {
                         .accessibilityHidden(true)
                     Text("Talking to \(Agent.name) uses OpenAI")
                         .font(.title2.bold())
-                    Text("During a call, Pixie sends your voice to OpenAI so \(Agent.name) can understand and answer you, along with anything you ask \(Agent.name) to look at, like a web page in Pixie’s browser.")
+                    Text("During a call, Pixie sends your voice to OpenAI so \(Agent.name) can understand and answer you, along with anything you ask \(Agent.name) to look at, like a web page in Pixie’s browser, and your area when a question depends on where you are.")
                     Text("This happens only while a call is on. “\(Agent.wakePhrase)” listening runs on your iPhone and sends nothing until a call starts. Your chat history stays on your iPhone.")
                     Text("OpenAI handles this data under its API policies. You can turn this off any time in Settings › Privacy.")
                         .foregroundStyle(.secondary)

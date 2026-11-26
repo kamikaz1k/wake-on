@@ -73,6 +73,9 @@ enum CurrentLocation {
     @MainActor static func locate() async -> String {
         await Locator.shared.locate()
     }
+
+    /// iOS hasn't asked the user yet (onboarding offers it then).
+    @MainActor static var undecided: Bool { Locator.shared.status == .notDetermined }
 }
 
 /// One CLLocationManager for the app: permission, one-shot fixes and the area's name.
@@ -89,11 +92,19 @@ final class Locator: NSObject, CLLocationManagerDelegate {
         manager.desiredAccuracy = kCLLocationAccuracyHundredMeters
     }
 
+    var status: CLAuthorizationStatus { manager.authorizationStatus }
+
+    /// Shows iOS's "Allow While Using App" prompt if it hasn't been answered, and waits for the answer.
+    func requestPermission() async {
+        guard manager.authorizationStatus == .notDetermined, permission == nil else { return }
+        await withCheckedContinuation { permission = $0; manager.requestWhenInUseAuthorization() }
+    }
+
     func locate() async -> String {
         if manager.authorizationStatus == .notDetermined {
             // iOS only shows the permission prompt to an app on screen.
             guard UIApplication.shared.applicationState == .active else { return CurrentLocation.backgroundText }
-            await withCheckedContinuation { permission = $0; manager.requestWhenInUseAuthorization() }
+            await requestPermission()
         }
         switch manager.authorizationStatus {
         case .authorizedWhenInUse, .authorizedAlways: break

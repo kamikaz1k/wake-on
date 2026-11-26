@@ -1,7 +1,7 @@
 import AVFoundation
 import SwiftUI
 
-/// First-run setup: access (invite code or key), permission, a first call, the Action Button,
+/// First-run setup: access (invite code or key), permission, location (optional), a first call, the Action Button,
 /// "Hey Pixie" listening and a demo of recorded calls. Every step after Welcome can be skipped;
 /// steps that can't work yet (no code, no permission, no Action Button) are passed over.
 enum Onboarding {
@@ -64,7 +64,7 @@ final class InviteLink: ObservableObject {
 }
 
 struct OnboardingView: View {
-    enum Step: Int, CaseIterable { case welcome, access, permission, firstCall, actionButton, heyLobby, demo, done }
+    enum Step: Int, CaseIterable { case welcome, access, permission, location, firstCall, actionButton, heyLobby, demo, done }
 
     @ObservedObject var wake: WakeController
     @ObservedObject var voice: VoiceSessionController = .shared
@@ -170,6 +170,21 @@ struct OnboardingView: View {
                     Task { @MainActor in advance() }
                 }
             }, decline: { AIConsent.set(false); advance() })
+        case .location:
+            OnboardingPage(icon: "location.circle.fill", title: "Answers for where you are",
+                           text: "Allow location so \(Agent.name) can answer questions like “what's the weather?” or “coffee near me” without asking where you are.") {
+                VStack(alignment: .leading, spacing: 12) {
+                    OnboardingRow(icon: "magnifyingglass", text: "Looked up only when a question needs it. Pixie never tracks you.")
+                    OnboardingRow(icon: "map", text: "Your area and rough position go to OpenAI with that question.")
+                    OnboardingRow(icon: "gearshape", text: "Optional. Change it any time in Settings › Pixie › Location.")
+                }
+            } actions: {
+                primary("Allow Location", id: "onboarding-location") {
+                    Task { await Locator.shared.requestPermission(); advance() }
+                }
+                Button("Not Now") { advance() }
+                    .accessibilityIdentifier("onboarding-location-skip")
+            }
         case .firstCall:
             OnboardingPage(icon: stepCallDone ? "checkmark.circle.fill" : "phone.bubble.fill",
                            title: stepCallDone ? "That's a call" : "Your first call",
@@ -392,6 +407,7 @@ struct OnboardingView: View {
         switch step {
         case .access: return voice.keySource == "missing" || invite.code != nil
         case .permission: return voice.keySource != "missing" && !AIConsent.given
+        case .location: return canCall && CurrentLocation.undecided
         case .firstCall, .heyLobby: return canCall
         case .actionButton: return canCall && Onboarding.hasActionButton
         case .welcome, .demo, .done: return true
