@@ -146,7 +146,8 @@ struct HomeView: View {
                 }
                 orbButton
                     .disabled(!network.isUp)
-                    .opacity(network.isUp ? 1 : 0.35)
+                    .grayscale(network.isUp ? 0 : 1)
+                    .opacity(network.isUp ? 1 : 0.5)
                 Text(network.isUp ? "Tap the orb, or press the Action Button.\nSay “bye” to hang up."
                                   : "Pixie needs an internet connection.")
                     .multilineTextAlignment(.center)
@@ -396,10 +397,11 @@ struct ConnectionBanner: View {
 struct NetworkStatusBadge: View {
     var body: some View {
         Label("No internet connection", systemImage: "wifi.slash")
-            .font(.footnote.weight(.semibold))
+            .font(.headline)
             .foregroundStyle(.orange)
-            .padding(.horizontal, 12).padding(.vertical, 6)
-            .background(.thinMaterial, in: Capsule())
+            .padding(.horizontal, 18).padding(.vertical, 10)
+            .background(.orange.opacity(0.15), in: Capsule())
+            .frame(maxWidth: .infinity)
             .accessibilityIdentifier("network-status")
     }
 }
