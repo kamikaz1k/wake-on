@@ -222,8 +222,12 @@ struct VisualWebView: UIViewRepresentable {
         let view = WKWebView(frame: .zero, configuration: config)
         view.navigationDelegate = context.coordinator
         view.uiDelegate = context.coordinator
-        view.isOpaque = false
-        view.backgroundColor = .clear
+        // In the chat the page sits on its card. A saved app fills the screen, so WebKit paints
+        // the page's own background under it and behind the home indicator.
+        if storage == nil {
+            view.isOpaque = false
+            view.backgroundColor = .clear
+        }
         #if DEBUG
         view.isInspectable = true
         #endif
@@ -286,6 +290,18 @@ struct VisualWebView: UIViewRepresentable {
             }
             decisionHandler(.cancel)
         }
+
+        #if DEBUG
+        /// `-visual-js <script>`: runs in each page once it loads, to drive a page's controls in
+        /// screenshot tests (the simulator here can't tap).
+        func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
+            let args = ProcessInfo.processInfo.arguments
+            guard let index = args.firstIndex(of: "-visual-js"), index + 1 < args.count else { return }
+            webView.evaluateJavaScript(args[index + 1]) { _, error in
+                if let error { print("visual_js_error \(error)") }
+            }
+        }
+        #endif
 
         /// window.open and target=_blank links open in Safari.
         func webView(_ webView: WKWebView, createWebViewWith configuration: WKWebViewConfiguration,
