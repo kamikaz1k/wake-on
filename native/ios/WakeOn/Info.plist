@@ -41,12 +41,16 @@
 	<true/>
 	<key>NSAlarmKitUsageDescription</key>
 	<string>Pixie sets the alarms and timers you ask for, so they ring even when your iPhone is locked or silenced.</string>
+	<key>NSCalendarsFullAccessUsageDescription</key>
+	<string>Pixie reads and adds events in your calendars when you ask, like “what’s on tomorrow?” or “add lunch with Sam on Friday”.</string>
 	<key>NSCameraUsageDescription</key>
 	<string>Pixie doesn’t use your camera: calls with Pixie are voice only. A website you open in Pixie’s browser could ask for it, and iOS asks you first.</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string>When you ask about something near you, like the weather or places nearby, Pixie looks up your location once and uses it to answer.</string>
 	<key>NSMicrophoneUsageDescription</key>
 	<string>Listen locally for Hey Pixie, keep a short audio buffer for the wake handoff, and talk with the voice assistant.</string>
+	<key>NSRemindersFullAccessUsageDescription</key>
+	<string>Pixie reads and adds your reminders when you ask, like “remind me to call Mom at 5” or “add milk to my groceries”.</string>
 	<key>NSSupportsLiveActivities</key>
 	<true/>
 	<key>UIApplicationSceneManifest</key>

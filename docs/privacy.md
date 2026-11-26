@@ -29,6 +29,15 @@ coordinates rounded to about 100 m go to OpenAI in that call so Pixie can answer
 doesn't track your location or keep it anywhere. You can turn it off in the iPhone's
 Settings › Pixie › Location.
 
+## Your calendar and reminders
+
+When you ask about your schedule or reminders ("what's on tomorrow?", "remind me to call Mom
+at 5"), Pixie reads or adds them in Apple's Calendar and Reminders on your iPhone, which
+include any Google, Outlook or iCloud calendars you've added there. iOS asks for access the
+first time. Only what a question needs (for example that day's events) is sent to OpenAI
+during the call, and Pixie only adds, changes or deletes items when you ask. Nothing is sent
+to the developer.
+
 ## "Hey Pixie" listening
 
 If you turn on background listening, the app listens for the phrase "Hey Pixie" using a

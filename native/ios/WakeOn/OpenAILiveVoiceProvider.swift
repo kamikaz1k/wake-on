@@ -69,6 +69,8 @@ struct LiveVoiceConfig {
     var browser = true
     /// The send_feedback tool: the user's feedback to the developer (see Feedback).
     var feedback = true
+    /// The calendar and reminders tools: Apple Calendar and Reminders (see PixieCalendar).
+    var calendar = true
     /// The alarms tool: alarms and timers with AlarmKit, iOS 26 and later (see Alarms).
     var alarms: Bool = { if #available(iOS 26.0, *) { true } else { false } }()
     /// The remember and recall tools (see Memory).
@@ -91,6 +93,7 @@ struct LiveVoiceConfig {
         if notes { text += " " + ObsidianNotes.delegationInstructions }
         if location { text += " " + CurrentLocation.delegationInstructions }
         if alarms { text += " " + Alarms.delegationInstructions }
+        if calendar { text += " " + PixieCalendar.delegationInstructions }
         if maps { text += " " + MapsOpener.delegationInstructions }
         if visuals { text += " " + ShowVisual.delegationInstructions }
         if browser { text += " " + BrowserTool.delegationInstructions }
@@ -155,6 +158,7 @@ struct LiveVoiceConfig {
         if notes { tools.append(ObsidianNotes.tool) }
         if location { tools.append(CurrentLocation.tool) }
         if alarms { tools.append(Alarms.tool) }
+        if calendar { tools += PixieCalendar.tools }
         if maps { tools.append(MapsOpener.tool) }
         if visuals { tools.append(ShowVisual.tool) }
         if browser { tools.append(BrowserTool.tool) }

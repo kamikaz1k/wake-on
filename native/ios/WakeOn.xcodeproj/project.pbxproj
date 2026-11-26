@@ -1756,6 +1756,7 @@
 				<string>A851883D2D56FA2D0CDAB29D</string>
 				<string>6FF4B903D4CD08CBDD46391C</string>
 				<string>EE72E66061F34F35D9E2A154</string>
+				<string>C7239C96F03201092DD37AEF</string>
 				<string>5BEA58C43D2321DE0F5E9EB9</string>
 				<string>5655D4377A320893D7964C00</string>
 				<string>2E25DF7EB50C6B90D3C76346</string>
@@ -2102,6 +2103,17 @@
 			<string>824423B4466B91132C7B051F</string>
 			<key>isa</key>
 			<string>PBXBuildFile</string>
+		</dict>
+		<key>7EF309AA5D3F301D7AAC7483</key>
+		<dict>
+			<key>isa</key>
+			<string>PBXFileReference</string>
+			<key>lastKnownFileType</key>
+			<string>sourcecode.swift</string>
+			<key>path</key>
+			<string>Tests/CalendarTests.swift</string>
+			<key>sourceTree</key>
+			<string>&lt;group&gt;</string>
 		</dict>
 		<key>806F9AE8D65B03101146ECDA</key>
 		<dict>
@@ -2892,6 +2904,13 @@
 			<key>sourceTree</key>
 			<string>BUILT_PRODUCTS_DIR</string>
 		</dict>
+		<key>B7C7B0B8007AB88240FB9BDC</key>
+		<dict>
+			<key>fileRef</key>
+			<string>EBD4A87932217008E364E314</string>
+			<key>isa</key>
+			<string>PBXBuildFile</string>
+		</dict>
 		<key>B81F7C4987416DEB2976F4B6</key>
 		<dict>
 			<key>isa</key>
@@ -2952,6 +2971,7 @@
 				<string>206BA2F968C3FC3C92318888</string>
 				<string>C170634DA1A6B0CED1531197</string>
 				<string>54E6F8E04DB6AA195B183226</string>
+				<string>B7C7B0B8007AB88240FB9BDC</string>
 				<string>73EBC91632FFC7BE6836AC90</string>
 				<string>8B4F35E544C3FC6DABF208A7</string>
 				<string>B99C26864023D73F5AD560E0</string>
@@ -3169,6 +3189,13 @@
 			<string>ChatLab/LabPlayer.swift</string>
 			<key>sourceTree</key>
 			<string>&lt;group&gt;</string>
+		</dict>
+		<key>C7239C96F03201092DD37AEF</key>
+		<dict>
+			<key>fileRef</key>
+			<string>7EF309AA5D3F301D7AAC7483</string>
+			<key>isa</key>
+			<string>PBXBuildFile</string>
 		</dict>
 		<key>C81A61E9307DAAB1D29A09A0</key>
 		<dict>
@@ -3489,6 +3516,7 @@
 				<string>BAA884D912E3425D1C2D1458</string>
 				<string>FFC08981B78C2D2A377CF391</string>
 				<string>53FAE4E46E6EFCF5C9195C9E</string>
+				<string>EBD4A87932217008E364E314</string>
 				<string>1E722BEC8B659EE2E8F6A27B</string>
 				<string>FA3366121A5DEA92723FCBB5</string>
 				<string>CC176C17FF9F49D4A917C518</string>
@@ -3545,6 +3573,7 @@
 				<string>8CEFD2EE710915B5D2E5CD71</string>
 				<string>93D033FE52F13A9BF972894C</string>
 				<string>694224480C1EF786AF578D9C</string>
+				<string>7EF309AA5D3F301D7AAC7483</string>
 				<string>4025FAD5BADBA37E3C524972</string>
 				<string>93421563D67A7CA1779FC6D5</string>
 				<string>BEE981B64F5E0E5875912826</string>
@@ -4083,6 +4112,17 @@
 			<string>919AD98241FE3E02313AEA0F</string>
 			<key>isa</key>
 			<string>PBXBuildFile</string>
+		</dict>
+		<key>EBD4A87932217008E364E314</key>
+		<dict>
+			<key>isa</key>
+			<string>PBXFileReference</string>
+			<key>lastKnownFileType</key>
+			<string>sourcecode.swift</string>
+			<key>path</key>
+			<string>WakeOn/Calendar.swift</string>
+			<key>sourceTree</key>
+			<string>&lt;group&gt;</string>
 		</dict>
 		<key>EE72E66061F34F35D9E2A154</key>
 		<dict>

@@ -816,6 +816,15 @@ final class VoiceSessionController: ObservableObject {
             }
             return
         }
+        if name == PixieCalendar.calendarTool || name == PixieCalendar.remindersTool {
+            lookingUpSince = uptimeSeconds()
+            Task { @MainActor in
+                let result = await PixieCalendar.perform(name, arguments)
+                self.completeFunctionCall(name: name, callID: callID, arguments: arguments, result: result,
+                                          action: ["kind": name, "action": arguments["action"] as? String ?? ""])
+            }
+            return
+        }
         if name == Alarms.toolName {
             lookingUpSince = uptimeSeconds()
             Task { @MainActor in

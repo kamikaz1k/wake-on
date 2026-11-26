@@ -143,6 +143,8 @@ enum ChatToolSteps {
         case "get_location": "location"
         case "send_feedback": "envelope"
         case "alarms": "alarm"
+        case "calendar": "calendar"
+        case "reminders": "checklist"
         default: "wrench.and.screwdriver"
         }
     }
@@ -180,6 +182,18 @@ enum ChatToolSteps {
         case "get_location": done ? "Checked your location" : "Checking your location"
         case "send_feedback": done ? "Sent feedback" : "Sending feedback"
         case "alarms": alarms(args, done: done)
+        case "calendar":
+            switch args["action"] as? String ?? "" {
+            case "add": quoted("title").map { done ? "Added \($0) to your calendar" : "Adding \($0) to your calendar" } ?? (done ? "Added an event" : "Adding an event")
+            case "delete": done ? "Deleted an event" : "Deleting an event"
+            default: done ? "Checked your calendar" : "Checking your calendar"
+            }
+        case "reminders":
+            switch args["action"] as? String ?? "" {
+            case "add": quoted("title").map { done ? "Added reminder \($0)" : "Adding reminder \($0)" } ?? (done ? "Added a reminder" : "Adding a reminder")
+            case "complete": done ? "Completed a reminder" : "Completing a reminder"
+            default: done ? "Checked your reminders" : "Checking your reminders"
+            }
         default:
             done ? readable(tool.name).capitalizedFirst : "Running \(readable(tool.name))"
         }
@@ -203,6 +217,8 @@ enum ChatToolSteps {
             case "get_location": "checked your location"
             case "send_feedback": "sent feedback"
             case "alarms": "alarms"
+            case "calendar": "used your calendar"
+            case "reminders": "used your reminders"
             default: readable(tool.name)
             }
             if !parts.contains(part) { parts.append(part) }
