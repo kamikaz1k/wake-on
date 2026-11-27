@@ -480,7 +480,7 @@ struct BrowserSheet: View {
     }
 
     /// Like Chrome's and Safari's: the bar takes the page's colour and runs up behind the status
-    /// bar. Close, the address in the middle, and a menu; tapping the address widens it for typing.
+    /// bar. Close, the address in the middle, share and a menu; tapping the address widens it for typing.
     private var topBar: some View {
         HStack(spacing: 12) {
             if !editing {
@@ -496,6 +496,17 @@ struct BrowserSheet: View {
                 Button("Cancel") { editing = false }
                     .transition(.move(edge: .trailing).combined(with: .opacity))
             } else {
+                // Share the page (copy its address, send it), as Chrome and Safari do.
+                if let url = browser.url {
+                    ShareLink(item: url, subject: Text(browser.title)) {
+                        Label("Share", systemImage: "square.and.arrow.up")
+                            .labelStyle(.iconOnly)
+                            .font(.body.weight(.medium))
+                            .frame(width: 32, height: 36)
+                    }
+                    .accessibilityIdentifier("browser-share")
+                    .transition(.move(edge: .trailing).combined(with: .opacity))
+                }
                 menu
                     .transition(.move(edge: .trailing).combined(with: .opacity))
             }
@@ -521,6 +532,7 @@ struct BrowserSheet: View {
                 .disabled(!browser.canGoForward)
             Button("Reload", systemImage: "arrow.clockwise") { browser.webView.reload() }
             if let url = browser.url {
+                Button("Copy Link", systemImage: "doc.on.doc") { UIPasteboard.general.url = url }
                 Link(destination: url) { Label("Open in Safari", systemImage: "safari") }
             }
         } label: {
