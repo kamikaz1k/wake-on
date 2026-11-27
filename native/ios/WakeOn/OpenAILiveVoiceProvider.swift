@@ -589,7 +589,7 @@ final class OpenAILiveVoiceProvider: NSObject {
     private func makeRequest(sdp: String, apiKey: String) throws -> URLRequest {
         var request = URLRequest(url: try LobbyServer.endpoint(for: apiKey, openAI: config.endpoint))
         request.httpMethod = "POST"
-        request.setValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")
+        LobbyServer.authorize(&request, credential: apiKey)
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         // The voice is read now, not when the call was prepared, so a change applies at once.
         var current = config

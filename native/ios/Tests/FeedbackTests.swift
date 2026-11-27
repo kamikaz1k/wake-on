@@ -63,4 +63,32 @@ final class FeedbackTests: XCTestCase {
         XCTAssertFalse(AppBuild.text(info: plain).contains("4696310"))
         XCTAssertEqual(Feedback.build, AppBuild.text)
     }
+
+    /// Every request to the server says which build sent it, so we know who is on what.
+    func testServerRequestsCarryTheBuildAndOpenAIRequestsDont() throws {
+        let info: [String: Any] = ["CFBundleShortVersionString": "0.1.0", "CFBundleVersion": "202611271426",
+                                   "PixieCommit": "fae64eb"]
+        let header = AppBuild.header(info: info)
+        XCTAssertTrue(header.hasPrefix("0.1.0 (202611271426) fae64eb"))
+        XCTAssertTrue(header.allSatisfy(\.isASCII), header)
+
+        var server = URLRequest(url: URL(string: "https://example.com/v1/usage")!)
+        LobbyServer.authorize(&server, credential: "alex-2-abcdefghijkl", build: header)
+        XCTAssertEqual(server.value(forHTTPHeaderField: "Authorization"), "Bearer alex-2-abcdefghijkl")
+        XCTAssertEqual(server.value(forHTTPHeaderField: LobbyServer.buildHeader), header)
+
+        var openAI = URLRequest(url: URL(string: "https://api.openai.com/v1/models")!)
+        LobbyServer.authorize(&openAI, credential: "sk-test", build: header)
+        XCTAssertEqual(openAI.value(forHTTPHeaderField: "Authorization"), "Bearer sk-test")
+        XCTAssertNil(openAI.value(forHTTPHeaderField: LobbyServer.buildHeader))
+
+        // No request signs itself by hand, so none can skip the header.
+        let app = URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent()
+            .appendingPathComponent("WakeOn")
+        for file in try FileManager.default.contentsOfDirectory(atPath: app.path) where file.hasSuffix(".swift")
+            && file != "LobbyServer.swift" {
+            let source = try String(contentsOf: app.appendingPathComponent(file), encoding: .utf8)
+            XCTAssertFalse(source.contains("forHTTPHeaderField: \"Authorization\""), file)
+        }
+    }
 }

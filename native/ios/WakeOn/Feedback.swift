@@ -59,7 +59,7 @@ enum Feedback {
               let data = try? JSONSerialization.data(withJSONObject: body) else { return keptText }
         var request = URLRequest(url: server.appendingPathComponent("v1/feedback"), timeoutInterval: 15)
         request.httpMethod = "POST"
-        request.setValue("Bearer \(credential)", forHTTPHeaderField: "Authorization")
+        LobbyServer.authorize(&request, credential: credential)
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.httpBody = data
         let status = ((try? await URLSession.shared.data(for: request))?.1 as? HTTPURLResponse)?.statusCode ?? 0
@@ -178,4 +178,17 @@ enum AppBuild {
     }
 
     static var text: String { text(info: Bundle.main.infoDictionary ?? [:]) }
+
+    /// The build for the X-Pixie-Build header, so the server knows who is on which build:
+    /// "0.1.0 (202611271426) fae64eb". ASCII only (headers are), so no "·".
+    static func header(info: [String: Any]) -> String {
+        var text = version(info: info)
+        if let commit = info["PixieCommit"] as? String, !commit.isEmpty { text += " \(commit)" }
+        #if DEBUG
+        text += " debug"
+        #endif
+        return text
+    }
+
+    static var header: String { header(info: Bundle.main.infoDictionary ?? [:]) }
 }

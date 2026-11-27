@@ -48,6 +48,15 @@ enum LobbyServer {
         return midnight.formatted(format)
     }
 
+    static let buildHeader = "X-Pixie-Build"
+
+    /// Signs a request with the saved credential. Requests to the server also say which app
+    /// build sent them (`AppBuild.header`), kept in that person's daily stats.
+    static func authorize(_ request: inout URLRequest, credential: String, build: String = AppBuild.header) {
+        request.setValue("Bearer \(credential)", forHTTPHeaderField: "Authorization")
+        if isInviteCode(credential) { request.setValue(build, forHTTPHeaderField: buildHeader) }
+    }
+
     /// Where to set up a call with this credential: OpenAI for a key, the server for a code.
     static func endpoint(for credential: String, openAI: URL, server: URL? = url) throws -> URL {
         guard isInviteCode(credential) else { return openAI }

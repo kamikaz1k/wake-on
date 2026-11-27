@@ -316,6 +316,26 @@ test("usage reports need a valid code and numbers, and are capped", async () => 
   assert.equal(stats.input_tokens, 5_000_000);
 });
 
+test("each person's stats keep the app build they last used, from calls and usage reports", async () => {
+  const t = await setup();
+  const pending = [];
+  const ctx = { waitUntil: (p) => pending.push(p) };
+  const withBuild = (request, build) => { request.headers.set("X-Pixie-Build", build); return request; };
+  await handle(withBuild(call(goodBody(), t.code), "0.1.0 (202611271412) 9ae86fe"), t.env, t.upstream, ctx);
+  await Promise.all(pending);
+  assert.equal(JSON.parse(t.usage.map.get(`stats:${t.day}:alex`)).build, "0.1.0 (202611271412) 9ae86fe");
+  const report = { seconds: 60, input_tokens: 0, cached_tokens: 0, output_tokens: 0 };
+  await handle(withBuild(usageRequest(report, t.code), "0.1.0 (202611271426) fae64eb\u0007"), t.env, t.upstream, ctx);
+  await Promise.all(pending);
+  const stats = JSON.parse(t.usage.map.get(`stats:${t.day}:alex`));
+  assert.equal(stats.build, "0.1.0 (202611271426) fae64eb");
+  assert.equal(stats.calls, 1);
+  // Builds from before the header keep the last known build instead of wiping it.
+  await handle(usageRequest(report, t.code), t.env, t.upstream, ctx);
+  await Promise.all(pending);
+  assert.equal(JSON.parse(t.usage.map.get(`stats:${t.day}:alex`)).build, "0.1.0 (202611271426) fae64eb");
+});
+
 test("the app's delegation model is allowed, and builds still on the older model keep working", () => {
   const swift = readFileSync(new URL("../../native/ios/WakeOn/OpenAILiveVoiceProvider.swift", import.meta.url), "utf8");
   const appModel = swift.match(/var delegationModel = "([^"]+)"/)[1];

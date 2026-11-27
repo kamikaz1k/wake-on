@@ -44,11 +44,11 @@ enum CredentialCheck {
             guard let server else { return .rejected("This build can't use invite codes. Use an OpenAI key.") }
             var request = URLRequest(url: server.appendingPathComponent("v1/check"), timeoutInterval: 8)
             request.httpMethod = "POST"
-            request.setValue("Bearer \(credential)", forHTTPHeaderField: "Authorization")
+            LobbyServer.authorize(&request, credential: credential)
             return await run(request, send: send, interpret: inviteOutcome)
         }
         var request = URLRequest(url: openAIModels, timeoutInterval: 8)
-        request.setValue("Bearer \(credential)", forHTTPHeaderField: "Authorization")
+        LobbyServer.authorize(&request, credential: credential)
         return await run(request, send: send, interpret: keyOutcome)
     }
 

@@ -268,7 +268,7 @@ enum MiniAppRefresher {
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         request.timeoutInterval = 120
-        request.setValue("Bearer \(credential)", forHTTPHeaderField: "Authorization")
+        LobbyServer.authorize(&request, credential: credential)
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.httpBody = try JSONSerialization.data(withJSONObject: body)
         let (data, response) = try await URLSession.shared.data(for: request)

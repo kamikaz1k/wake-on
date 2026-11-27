@@ -12,7 +12,8 @@
 //                        listed key work; remove a key and its codes stop working
 //   REVOKED              secret, comma-separated names whose codes are turned off
 //   USAGE                KV namespace: daily counters, and per-person daily totals
-//                        (`stats:<day>:<name>`, kept 90 days; scripts/usage.mjs prints them)
+//                        (`stats:<day>:<name>`, kept 90 days, with the app build from the
+//                        X-Pixie-Build header; scripts/usage.mjs prints them)
 //   DAILY_CALLS          calls per code per UTC day (default 40)
 //   GLOBAL_DAILY_CALLS   calls per UTC day across everyone (default 300)
 //   ALLOWED_MODELS       comma-separated voice models (default gpt-live-1.1,gpt-live-1)
@@ -145,7 +146,7 @@ export async function handle(request, env, upstream, ctx = { waitUntil: () => {}
     ctx.waitUntil(Promise.all([
       env.USAGE.put(codeKey, String(codeCount + 1), ttl),
       env.USAGE.put(allKey, String(allCount + 1), ttl),
-      addStats(env, name, { calls: 1 }),
+      addStats(env, name, { calls: 1 }, { build: appBuild(request) }),
     ]));
   }
   const headers = new Headers({ "Content-Type": response.headers.get("Content-Type") || "application/json" });
@@ -211,7 +212,7 @@ async function summarize(request, env, upstream, ctx) {
   }
   ctx.waitUntil(Promise.all([
     env.USAGE.put(key, String(used + 1), { expirationTtl: 3 * 24 * 3600 }),
-    addStats(env, check.name, tokens),
+    addStats(env, check.name, tokens, { build: appBuild(request) }),
   ]));
   return json(200, { text });
 }
@@ -260,7 +261,7 @@ async function refreshApp(request, env, upstream, ctx) {
       refreshes: 1,
       refresh_input_tokens: (reply.usage && reply.usage.input_tokens) || 0,
       refresh_output_tokens: (reply.usage && reply.usage.output_tokens) || 0,
-    }),
+    }, { build: appBuild(request) }),
   ]));
   return json(200, { text });
 }
@@ -288,7 +289,7 @@ async function reportUsage(request, env, ctx) {
     if (!Number.isFinite(value) || value < 0) return error(400, "not_allowed", `${field} must be a number of at least 0.`);
     add[field] = Math.min(value, limit);
   }
-  ctx.waitUntil(addStats(env, check.name, add));
+  ctx.waitUntil(addStats(env, check.name, add, { build: appBuild(request) }));
   return json(200, { ok: true });
 }
 
@@ -329,9 +330,16 @@ async function saveFeedback(request, env) {
   return json(200, { ok: true });
 }
 
-/** Adds to a person's totals for today. Two writes at the same moment can lose one; fine for
- * a rough count. */
-export async function addStats(env, name, add, day = new Date().toISOString().slice(0, 10)) {
+/** The app's build from its X-Pixie-Build header ("0.1.0 (202611271426) fae64eb"), or "" from
+ * builds made before it was sent. Printable ASCII only, so a stored value can't be odd. */
+export function appBuild(request) {
+  return (request.headers.get("X-Pixie-Build") || "").replace(/[^\x20-\x7e]/g, "").trim().slice(0, 80);
+}
+
+/** Adds to a person's totals for today, and keeps the app build they last used (so
+ * scripts/usage.mjs shows who is on which build). Two writes at the same moment can lose one;
+ * fine for a rough count. */
+export async function addStats(env, name, add, { build = "", day = new Date().toISOString().slice(0, 10) } = {}) {
   const key = `stats:${day}:${name}`;
   let stats = {};
   try {
@@ -342,6 +350,7 @@ export async function addStats(env, name, add, day = new Date().toISOString().sl
   for (const [field, value] of Object.entries(add)) {
     stats[field] = Math.round(((stats[field] || 0) + value) * 10) / 10;
   }
+  if (build) stats.build = build;
   await env.USAGE.put(key, JSON.stringify(stats), { expirationTtl: 90 * 24 * 3600 });
 }
 

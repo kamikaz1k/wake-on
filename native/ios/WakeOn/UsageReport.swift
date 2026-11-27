@@ -36,7 +36,7 @@ enum UsageReport {
               let data = try? JSONSerialization.data(withJSONObject: body(seconds: seconds, tokens: tokens)) else { return }
         var request = URLRequest(url: server.appendingPathComponent("v1/usage"), timeoutInterval: 20)
         request.httpMethod = "POST"
-        request.setValue("Bearer \(credential)", forHTTPHeaderField: "Authorization")
+        LobbyServer.authorize(&request, credential: credential)
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.httpBody = data
         Task.detached {
