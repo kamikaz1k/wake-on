@@ -55,6 +55,8 @@
 	<string>Pixie reads and adds your reminders when you ask, like “remind me to call Mom at 5” or “add milk to my groceries”.</string>
 	<key>NSSupportsLiveActivities</key>
 	<true/>
+	<key>PixieCommit</key>
+	<string>$(PIXIE_COMMIT)</string>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>

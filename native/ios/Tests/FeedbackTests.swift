@@ -49,4 +49,18 @@ final class FeedbackTests: XCTestCase {
         let session = try XCTUnwrap(config.requestBody(sdp: "v=0")["session"] as? [String: Any])
         return try XCTUnwrap((session["delegation"] as? [String: Any])?["responses"] as? [String: Any])
     }
+
+    /// Settings and feedback name the build, with its commit when the build script set one.
+    func testAppBuildNamesVersionNumberAndCommit() {
+        let info: [String: Any] = ["CFBundleShortVersionString": "0.1.0", "CFBundleVersion": "202611261831",
+                                   "PixieCommit": "4696310"]
+        XCTAssertTrue(AppBuild.text(info: info).hasPrefix("0.1.0 (202611261831) · 4696310"))
+        // Built from Xcode: the setting is empty, so no commit and no stray separator.
+        var plain = info
+        plain["PixieCommit"] = ""
+        XCTAssertFalse(AppBuild.text(info: plain).contains("·  "))
+        XCTAssertTrue(AppBuild.text(info: plain).hasPrefix("0.1.0 (202611261831)"))
+        XCTAssertFalse(AppBuild.text(info: plain).contains("4696310"))
+        XCTAssertEqual(Feedback.build, AppBuild.text)
+    }
 }

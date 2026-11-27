@@ -90,13 +90,23 @@ def asc_flags() -> list[str]:
             "-authenticationKeyIssuerID", values["ASC_ISSUER_ID"]]
 
 
+def commit() -> str:
+    """The commit for Settings and feedback, "-dirty" when native/ios has uncommitted changes."""
+    head = subprocess.run(["git", "rev-parse", "--short", "HEAD"], capture_output=True, text=True, cwd=PROJECT.parent).stdout.strip()
+    dirty = subprocess.run(["git", "diff", "--quiet", "HEAD", "--", "."], cwd=PROJECT.parent).returncode != 0
+    return head + ("-dirty" if dirty else "")
+
+
 def build() -> tuple[bool, str]:
     flags = asc_flags()
+    # A build number from the time, like TestFlight's, so Settings tells phone builds apart.
+    number = time.strftime("%Y%m%d%H%M", time.gmtime())
     log("building" + (" (App Store Connect key)" if flags else ""))
     result = subprocess.run(
         ["xcodebuild", "-project", str(PROJECT), "-scheme", "WakeOn", "-configuration", "Debug",
          "-destination", "generic/platform=iOS", "-derivedDataPath", str(DERIVED),
-         "-allowProvisioningUpdates", *flags, f"DEVELOPMENT_TEAM={TEAM}", "build"],
+         "-allowProvisioningUpdates", *flags, f"DEVELOPMENT_TEAM={TEAM}",
+         f"CURRENT_PROJECT_VERSION={number}", f"PIXIE_COMMIT={commit()}", "build"],
         capture_output=True, text=True, env=ENV)
     output = result.stdout + result.stderr
     errors = sorted({l.strip() for l in output.splitlines() if "error:" in l})

@@ -16,13 +16,15 @@ ASC_KEY_PATH=$(eval echo "$(sed -n 's/^ASC_KEY_PATH=//p' "$env_file" | tr -d '"'
 auth="-authenticationKeyPath $ASC_KEY_PATH -authenticationKeyID $ASC_KEY_ID -authenticationKeyIssuerID $ASC_ISSUER_ID"
 
 build=$(date -u +%Y%m%d%H%M)
+# The commit, shown in Settings and sent with feedback ("-dirty": native/ios had changes).
+commit=$(git rev-parse --short HEAD)$(git diff --quiet HEAD -- . || echo -dirty)
 out=build-testflight
 rm -rf "$out"
 echo "Archiving build $build…"
 # shellcheck disable=SC2086
 xcodebuild -project WakeOn.xcodeproj -scheme WakeOn -configuration Release \
   -destination 'generic/platform=iOS' -archivePath "$out/WakeOn.xcarchive" \
-  -allowProvisioningUpdates $auth CURRENT_PROJECT_VERSION="$build" archive -quiet
+  -allowProvisioningUpdates $auth CURRENT_PROJECT_VERSION="$build" PIXIE_COMMIT="$commit" archive -quiet
 
 app="$out/WakeOn.xcarchive/Products/Applications/WakeOn.app"
 if strings "$app/WakeOn" | grep -qi MediaRemote; then

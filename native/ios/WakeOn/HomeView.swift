@@ -216,12 +216,14 @@ struct SettingsView: View {
     @AppStorage(Onboarding.doneKey) private var onboardingDone = true
     @Environment(\.dismiss) private var dismiss
     @State private var showDeveloper = false
+    @State private var copiedBuild = false
     @ObservedObject private var memory: MemoryStore = .shared
     /// "-memory" opens Settings › Memory, for screenshots.
     @State private var openMemory = ProcessInfo.processInfo.arguments.contains("-memory")
 
     var body: some View {
         NavigationStack {
+            ScrollViewReader { reader in
             List {
                 Section {
                     APIKeyLink(voice: voice)
@@ -314,6 +316,43 @@ struct SettingsView: View {
                         .accessibilityIdentifier("settings-developer")
                     #endif
                 }
+
+                // Which build this is, to quote with feedback ("which version were you on?").
+                Section {
+                    Button {
+                        UIPasteboard.general.string = AppBuild.text
+                        withAnimation(.snappy) { copiedBuild = true }
+                        Task {
+                            try? await Task.sleep(for: .seconds(1.5))
+                            withAnimation(.snappy) { copiedBuild = false }
+                        }
+                    } label: {
+                        LabeledContent("Version") {
+                            HStack(spacing: 6) {
+                                Text(AppBuild.text).monospacedDigit().multilineTextAlignment(.trailing)
+                                Image(systemName: copiedBuild ? "checkmark" : "doc.on.doc")
+                                    .contentTransition(.symbolEffect(.replace))
+                                    .foregroundStyle(Color.accentColor)
+                            }
+                        }
+                    }
+                    .tint(.primary)
+                    .accessibilityIdentifier("settings-build")
+                    .id("settings-build")
+                    .accessibilityValue(copiedBuild ? "Copied" : AppBuild.text)
+                    .accessibilityHint("Copies the version")
+                } footer: {
+                    Text(copiedBuild ? "Copied." : "Tap to copy it, to include when you report a problem.")
+                }
+            }
+            #if DEBUG
+            // "-settings-bottom": open scrolled to the Version row (screenshots).
+            .task {
+                guard ProcessInfo.processInfo.arguments.contains("-settings-bottom") else { return }
+                try? await Task.sleep(for: .seconds(0.5))
+                reader.scrollTo("settings-build", anchor: .bottom)
+            }
+            #endif
             }
             .navigationTitle("Settings")
             .navigationBarTitleDisplayMode(.inline)
