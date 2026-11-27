@@ -37,6 +37,7 @@ enum Onboarding {
         Starter(text: "Turn the volume down", icon: "speaker.wave.2", tools: ["set_volume"]),
         Starter(text: "Find a coffee shop near me", icon: "map", tools: ["open_map", "get_location"]),
         Starter(text: "What's in the news today?", icon: "newspaper", tools: ["web_search"]),
+        Starter(text: "Send me a link to a good pancake recipe", icon: "link", tools: ["show_markdown"]),
         Starter(text: "Open the BBC website", icon: "globe", tools: ["browser"]),
         Starter(text: "Remember that I'm allergic to peanuts", icon: "brain", tools: ["remember"]),
         Starter(text: "What do you remember about me?", icon: "brain", tools: ["recall"]),

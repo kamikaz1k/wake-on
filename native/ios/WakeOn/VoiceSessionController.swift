@@ -1127,6 +1127,16 @@ final class VoiceSessionController: ObservableObject {
             result = MiniApps.perform(arguments, lastVisual: lastVisual)
             if arguments["action"] as? String == "open", ScreenPresence.current == .away { result += ScreenPresence.awayResult }
             action = ["kind": "mini_apps", "action": arguments["action"] as? String ?? ""]
+        } else if name == ShowMarkdown.toolName {
+            let title = arguments["title"] as? String ?? ""
+            let markdown = arguments["markdown"] as? String ?? ""
+            if markdown.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                result = "Nothing to show: the markdown was empty."
+            } else {
+                result = "Shown on the user's screen\(title.isEmpty ? "" : " as \"\(title)\""). The call goes on."
+                if ScreenPresence.current == .away { result += ScreenPresence.awayResult }
+                action = ["kind": "markdown", "title": title, "bytes": markdown.utf8.count]
+            }
         } else if name == ShowVisual.toolName {
             let title = arguments["title"] as? String ?? ""
             let html = arguments["html"] as? String ?? ""

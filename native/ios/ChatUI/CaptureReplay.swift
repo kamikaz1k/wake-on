@@ -153,10 +153,12 @@ struct CaptureReplay {
                 let embed = action["embed_url"] as? String, let web = action["web_url"] as? String {
                 ChatItem.Place(title: action["title"] as? String ?? "", embedURL: embed, webURL: web)
             } else { nil }
+            let page = action["kind"] as? String == "browser" ? BrowserPage.from(output: e["output"] as? String ?? "") : nil
             updateTool(callID) {
                 $0.result = e["output"] as? String
                 $0.state = .done
                 if let place { $0.place = place }
+                if let page { $0.page = page }
             }
         case "app.call_ended":
             finishMessage()
@@ -268,7 +270,10 @@ struct CaptureReplay {
                 updateTool(itemID) { $0.arguments = queries.joined(separator: "\n"); $0.state = .done }
             case "function_call":
                 let raw = item["arguments"] as? String ?? ""
-                if item["name"] as? String == ShowVisual.toolName {
+                if item["name"] as? String == ShowMarkdown.toolName {
+                    let markdown = ShowMarkdown.markdown(fromArguments: raw)
+                    updateTool(itemID) { $0.markdown = markdown; $0.arguments = markdown?.title ?? raw; $0.state = .running }
+                } else if item["name"] as? String == ShowVisual.toolName {
                     // The page is shown by the row; the HTML would swamp the arguments.
                     let visual = ShowVisual.visual(fromArguments: raw, complete: true)
                     updateTool(itemID) { $0.visual = visual; $0.arguments = visual?.title ?? raw; $0.state = .running }

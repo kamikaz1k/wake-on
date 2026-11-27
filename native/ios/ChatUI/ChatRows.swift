@@ -155,6 +155,7 @@ struct ChatNonMessageRow: View {
         case let .tool(tool):
             if let visual = tool.visual { ChatVisualRow(tool: tool, visual: visual) }
             else if let place = tool.place { ChatPlaceRow(place: place) }
+            else if let markdown = tool.markdown { ChatMarkdownRow(markdown: markdown) }
             else { ChatToolRow(tool: tool) }
         case let .marker(text, style): ChatMarkerRow(text: text, style: style)
         case let .event(event): ChatEventRow(event: event)

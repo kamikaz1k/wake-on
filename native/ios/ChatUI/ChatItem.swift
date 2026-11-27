@@ -21,6 +21,15 @@ struct ChatItem: Identifiable, Equatable {
         var visual: Visual?
         /// A place from open_map's show mode, shown as an embedded map.
         var place: Place?
+        /// Text from show_markdown, shown as a card.
+        var markdown: Markdown?
+        /// The page the browser was on after this step, to open again.
+        var page: Source?
+    }
+
+    struct Markdown: Equatable {
+        var title: String
+        var text: String
     }
 
     struct Place: Equatable {

@@ -53,6 +53,8 @@ struct ContentView: View {
         }
         #endif
         .environment(\.visualSaver, MiniAppStore.shared)
+        // Pages from chat (a browser step, a link Pixie showed) open in Pixie's browser.
+        .environment(\.chatOpenPage) { BrowserSession.shared.show($0.absoluteString) }
         // Pixie's browser, or yours from the Simple page: full screen so its top bar can take
         // the page's colour behind the status bar, as Safari and Chrome do.
         .fullScreenCover(isPresented: $browser.isOpen) {

@@ -148,6 +148,9 @@ private struct ChatToolStep: View {
                     .foregroundStyle(.tertiary)
                     .textSelection(.enabled)
                 }
+                if let page = tool.page, let url = URL(string: page.url) {
+                    ChatPageLink(title: page.title, url: url)
+                }
                 if !tool.sources.isEmpty {
                     ScrollView(.horizontal, showsIndicators: false) {
                         HStack(spacing: 6) {
@@ -186,6 +189,7 @@ enum ChatToolSteps {
         case "set_volume": "speaker.wave.2"
         case "get_location": "location"
         case "send_feedback": "envelope"
+        case "show_markdown": "doc.text"
         case "alarms": "alarm"
         case "calendar": "calendar"
         case "reminders": "checklist"
@@ -216,7 +220,9 @@ enum ChatToolSteps {
         case "control_media", "media_control":
             ((args["action"] as? String) ?? firstLine).isEmpty ? (done ? "Controlled playback" : "Controlling playback")
                 : (done ? "Sent \((args["action"] as? String) ?? firstLine)" : "Sending \((args["action"] as? String) ?? firstLine)")
-        case "browser": browser(args["action"] as? String ?? "", args["text"] as? String ?? "", done: done)
+        case "browser":
+            if done, args["action"] as? String == "open", let page = tool.page, !page.title.isEmpty { "Opened \(page.title)" }
+            else { browser(args["action"] as? String ?? "", args["text"] as? String ?? "", done: done) }
         case "save_note":
             (args["title"] as? String).flatMap { $0.isEmpty ? nil : $0 }
                 .map { done ? "Added to \($0)" : "Adding to \($0)" } ?? (done ? "Saved a note" : "Saving a note")
@@ -262,7 +268,9 @@ enum ChatToolSteps {
             case "play_youtube", "open_in_youtube": "opened YouTube"
             case "open_map", "open_in_google_maps": "opened Maps"
             case "control_media", "media_control": "controlled playback"
-            case "browser": "used the browser"
+            case "browser":
+                // The page it ended on, so the folded chain says where it went.
+                tools.last { $0.name == "browser" && $0.page != nil }?.page.map { "opened \($0.title)" } ?? "used the browser"
             case "save_note": "saved a note"
             case "remember": "remembered"
             case "recall": "searched memory"

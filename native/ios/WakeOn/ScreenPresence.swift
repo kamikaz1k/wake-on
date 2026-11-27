@@ -38,7 +38,7 @@ enum ScreenPresence: String {
     var thinking: String {
         switch self {
         case .inView:
-            "The user can now see Pixie's screen, where charts, tables and maps appear. Delegate questions that a chart, list or map would answer well, and keep the spoken answer short when something is on screen."
+            "The user can now see Pixie's screen, where charts, tables, maps, links and text appear. Delegate questions that a chart, list or map would answer well, and keep the spoken answer short when something is on screen."
         case .away:
             "The user can't see the screen right now (the phone is locked or Pixie is in the background). Answer fully in speech; anything shown waits in the app for later."
         }

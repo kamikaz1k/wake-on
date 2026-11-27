@@ -25,6 +25,9 @@ struct LiveVoiceConfig {
     the call ends. \
     Delegate requests to see, show, chart, draw or visualize something: it appears on the user's \
     screen and the call goes on. \
+    Delegate requests for a link, an address, a number or any text to read or copy too: it is shown \
+    on the user's screen. Never say you can't send a link or text, and never say something is on \
+    the screen unless the lookup said it was shown. \
     You cannot play, pause or open anything yourself: only a delegated request does it, so always \
     delegate those requests, and never say you started, played or paused something otherwise. \
     While it is being looked up, say at most three words such as "One moment", then stop and wait, \
@@ -63,7 +66,8 @@ struct LiveVoiceConfig {
     var maps = true
     /// The get_location tool: where the user is, after iOS's permission (see CurrentLocation).
     var location = true
-    /// The show_visual tool: an HTML page shown in the chat (see ShowVisual).
+    /// The show_visual and show_markdown tools: an HTML page or text shown in the chat (see
+    /// ShowVisual, ShowMarkdown).
     var visuals = true
     /// The mini_apps tool: saved pages the user keeps as apps (see MiniApps).
     var apps = true
@@ -100,7 +104,7 @@ struct LiveVoiceConfig {
         if calendar { text += " " + PixieCalendar.delegationInstructions }
         if contacts { text += " " + PixieContacts.delegationInstructions }
         if maps { text += " " + MapsOpener.delegationInstructions }
-        if visuals { text += " " + ShowVisual.delegationInstructions }
+        if visuals { text += " " + ShowVisual.delegationInstructions + " " + ShowMarkdown.delegationInstructions }
         if visuals, apps { text += " " + MiniApps.delegationInstructions }
         if browser { text += " " + BrowserTool.delegationInstructions }
         if feedback { text += " " + Feedback.delegationInstructions }
@@ -167,7 +171,7 @@ struct LiveVoiceConfig {
         if calendar { tools += PixieCalendar.tools }
         if contacts { tools.append(PixieContacts.tool) }
         if maps { tools.append(MapsOpener.tool) }
-        if visuals { tools.append(ShowVisual.tool) }
+        if visuals { tools += [ShowVisual.tool, ShowMarkdown.tool] }
         if visuals, apps { tools.append(MiniApps.tool) }
         if browser { tools.append(BrowserTool.tool) }
         if feedback { tools.append(Feedback.tool) }

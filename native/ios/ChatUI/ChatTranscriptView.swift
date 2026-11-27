@@ -295,7 +295,7 @@ enum ChatToolGrouping {
     }
 
     static func isChainable(_ item: ChatItem) -> ChatItem.Tool? {
-        guard case let .tool(tool) = item.kind, tool.visual == nil, tool.place == nil else { return nil }
+        guard case let .tool(tool) = item.kind, tool.visual == nil, tool.place == nil, tool.markdown == nil else { return nil }
         return tool
     }
 
