@@ -70,4 +70,18 @@ final class ChatToolChainTests: XCTestCase {
         let many = tools + [tool("browser", .done), tool("open_map", .done)]
         XCTAssertEqual(ChatToolSteps.summary(many), "Searched the web, opened Spotify and 2 more")
     }
+
+    /// The chain opens and closes inside `withAnimation`, so the rows after it and the
+    /// transcript's scroll move with it. A scoped `.animation(_:value:)` animated only the
+    /// chain: everything around it jumped to its final place in one frame (2026-11-26, 47 pt).
+    func testChainHeightChangesAnimateTheWholeLayout() throws {
+        let source = try String(contentsOf: URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent().deletingLastPathComponent()
+            .appendingPathComponent("ChatUI/ChatToolChain.swift"), encoding: .utf8)
+        let chain = try XCTUnwrap(source.components(separatedBy: "private struct ChatToolStep").first)
+        // A call, not the comments that name it (".animation(_:value:)").
+        XCTAssertNil(chain.range(of: #"\.animation\((?!_:)"#, options: .regularExpression),
+                     "Use animate { } (withAnimation), not .animation(_:value:)")
+        XCTAssertTrue(chain.contains("withAnimation(Self.motion"))
+    }
 }

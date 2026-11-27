@@ -9,30 +9,50 @@ struct ChatToolChain: View {
     /// The turn has moved on: collapse to the summary.
     let finished: Bool
     @State private var expanded = false
+    /// Follows `finished` one update later, inside an animation: see `onChange(of: finished)`.
+    @State private var collapsed: Bool
     @State private var stepsHeight: CGFloat = 0
     @State private var summaryHeight: CGFloat = 0
+    @Environment(\.chatAnimatedResize) private var announceResize
 
-    private var showsSteps: Bool { !finished || expanded }
+    static let motion = Animation.snappy(duration: 0.3)
+
+    init(tools: [ChatItem.Tool], finished: Bool) {
+        self.tools = tools
+        self.finished = finished
+        _collapsed = State(initialValue: finished)
+    }
+
+    private var showsSteps: Bool { !collapsed || expanded }
 
     var body: some View {
         // Both rows are always laid out, each in a frame clipped between two concrete heights:
         // the summary grows from 0 as the steps shrink, so they never overlap or fade (see the
         // animation-engineering skill, principles 1 and 4). Inserting the summary instead
         // pushed the shrinking steps under it for a couple of frames.
+        //
+        // Every height change runs inside `withAnimation` (`animate`), never a scoped
+        // `.animation(_:value:)`: the scoped one animated only this view, so the rows around it
+        // and the transcript's scroll jumped to their final places in one frame while the
+        // chain was still opening (principle 8, FLIP).
         VStack(alignment: .leading, spacing: 0) {
-            Button { expanded.toggle() } label: { summary.padding(.bottom, showsSteps ? 6 : 0) }
+            Button { toggle() } label: { summary.padding(.bottom, showsSteps ? 6 : 0) }
                 .buttonStyle(.plain)
                 .fixedSize(horizontal: false, vertical: true)
                 .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { summaryHeight = $0 }
-                .frame(height: finished ? summaryHeight : 0, alignment: .top)
+                .frame(height: collapsed ? summaryHeight : 0, alignment: .top)
                 .clipped()
-                .disabled(!finished)
-                .accessibilityHidden(!finished)
+                .disabled(!collapsed)
+                .accessibilityHidden(!collapsed)
                 .accessibilityHint(expanded ? "Hides the steps" : "Shows the steps")
                 .accessibilityIdentifier("tool-chain-summary")
             steps
                 .fixedSize(horizontal: false, vertical: true)
-                .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { stepsHeight = $0 }
+                .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { height in
+                    // A new step, or a step's details: grow with everything around the chain.
+                    // The first measurement just appears (the chain itself was just inserted).
+                    if showsSteps, stepsHeight > 0 { animate { stepsHeight = height } } else { stepsHeight = height }
+                }
                 .frame(height: showsSteps ? stepsHeight : 0, alignment: .top)
                 .clipped()
                 .accessibilityHidden(!showsSteps)
@@ -40,8 +60,32 @@ struct ChatToolChain: View {
         .font(.footnote)
         .foregroundStyle(.secondary)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .animation(.snappy(duration: 0.3), value: showsSteps)
-        .animation(.snappy(duration: 0.3), value: stepsHeight)
+        .onChange(of: finished) { _, now in
+            // The row that finished the chain (Pixie's reply) is inserted in this update. Let it
+            // lay out below the open steps first, then collapse: it rises with the steps
+            // instead of starting at its final place over them.
+            Task { @MainActor in animate { collapsed = now } }
+        }
+        #if DEBUG
+        // `-tool-chain-toggle`: tap every finished chain's summary every 2 s (animation checks).
+        .task {
+            guard ProcessInfo.processInfo.arguments.contains("-tool-chain-toggle") else { return }
+            while !Task.isCancelled {
+                try? await Task.sleep(for: .seconds(2))
+                if finished { print("ACTION \(CACurrentMediaTime()) tool-chain toggle"); toggle() }
+            }
+        }
+        #endif
+    }
+
+    private func toggle() {
+        animate { expanded.toggle() }
+    }
+
+    /// One animated transaction for this chain, the rows after it and the transcript's scroll.
+    private func animate(_ change: () -> Void) {
+        announceResize(Self.motion)
+        withAnimation(Self.motion, change)
     }
 
     private var summary: some View {

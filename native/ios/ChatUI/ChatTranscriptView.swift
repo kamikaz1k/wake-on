@@ -54,6 +54,9 @@ struct ChatTranscriptView: View {
     @State private var visibleTurns: [String] = []
     @State private var showOutline = false
     @State private var announced: Set<String> = []
+    /// A row is animating its height (`chatAnimatedResize`): follow the bottom edge with the
+    /// same animation until then, instead of jumping there.
+    @State private var resize: (animation: Animation, until: Date)?
 
     private var turns: [ChatTurn] {
         var result: [ChatTurn] = []
@@ -94,6 +97,7 @@ struct ChatTranscriptView: View {
             }
             .scrollTargetLayout()
             .padding(padding)
+            .environment(\.chatAnimatedResize) { animation in resize = (animation, .now + 0.4) }
         }
         .scrollPosition($position)
         .opacity(ready || items.isEmpty ? 1 : 0)
@@ -105,7 +109,13 @@ struct ChatTranscriptView: View {
         } action: { old, new in
             metrics = new
             // Follow the live edge while the reader is following (A2).
-            if following, !dragging, new.contentHeight != old.contentHeight { position.scrollTo(edge: .bottom) }
+            if following, !dragging, new.contentHeight != old.contentHeight {
+                if let resize, resize.until > .now {
+                    withAnimation(resize.animation) { position.scrollTo(edge: .bottom) }
+                } else {
+                    position.scrollTo(edge: .bottom)
+                }
+            }
         }
         .onScrollPhaseChange { _, phase in
             switch phase {
@@ -519,4 +529,10 @@ struct ChatCallHeader: View {
         .font(.caption)
         .padding(.horizontal).padding(.vertical, 4)
     }
+}
+
+extension EnvironmentValues {
+    /// Called by a row just before it animates its own height, with the animation it uses, so
+    /// the transcript can move its scroll position in step (the tool chain opening, closing).
+    @Entry var chatAnimatedResize: (Animation) -> Void = { _ in }
 }
