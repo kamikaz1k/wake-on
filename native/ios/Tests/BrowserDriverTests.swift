@@ -124,8 +124,13 @@ final class BrowserDriverTests: XCTestCase {
         XCTAssertTrue(noButton.contains("No link or button says"), noButton)
 
         _ = await browser.perform(action: "scroll", text: "top")
-        try await Task.sleep(for: .seconds(1))
-        let top = try await browser.webView.evaluateJavaScript("window.scrollY") as? Double ?? -1
+        // Smooth scrolling over 6000 pt can take a little over a second.
+        var top = -1.0
+        for _ in 0..<30 {
+            try await Task.sleep(for: .milliseconds(100))
+            top = try await browser.webView.evaluateJavaScript("window.scrollY") as? Double ?? -1
+            if top == 0 { break }
+        }
         XCTAssertEqual(top, 0)
 
         // The page can't see or replace the app's helpers: they live in another JS world.
@@ -170,5 +175,21 @@ final class BrowserDriverTests: XCTestCase {
         XCTAssertEqual(Int((b * 255).rounded()), 0x56)
         await browser.loadForTesting(html: "<body style='background:#000'><p>plain</p></body>")
         XCTAssertNotNil(browser.pageColor, "no theme colour: the page's own background")
+    }
+
+    /// A link that opens a new page loses the click's answer; it still worked. Reporting "no
+    /// link" sent Pixie to a guessed address, away from the right page.
+    func testClickThatOpensANewPageCountsAsDone() {
+        let google = URL(string: "https://www.google.com/search?q=McElroy")
+        let wiki = URL(string: "https://en.wikipedia.org/wiki/Ken_McElroy")
+        XCTAssertEqual(BrowserSession.clickLead("McElroy", result: nil, before: google, after: wiki),
+                       "Clicked \"McElroy\": it opened a new page.")
+        XCTAssertEqual(BrowserSession.clickLead("McElroy", result: ["ok": true, "label": "Ken McElroy"], before: google, after: wiki),
+                       "Clicked \"Ken McElroy\".")
+        XCTAssertEqual(BrowserSession.clickLead("Checkout", result: ["ok": false], before: google, after: google),
+                       "No link or button says \"Checkout\".")
+        XCTAssertEqual(BrowserSession.clickLead("Checkout", result: nil, before: google, after: google),
+                       "No link or button says \"Checkout\".")
+        XCTAssertTrue(BrowserTool.delegationInstructions.contains("open the address directly"))
     }
 }
