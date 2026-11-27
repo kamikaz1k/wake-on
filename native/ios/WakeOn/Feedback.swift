@@ -152,8 +152,24 @@ enum AppWarnings {
 /// The commit comes from `PIXIE_COMMIT`, set by testflight.sh and deploy-phone.py (with
 /// "-dirty" when native/ios had uncommitted changes); builds from Xcode leave it out.
 enum AppBuild {
+    /// "0.1.0 (202611261831)".
+    static var version: String { version(info: Bundle.main.infoDictionary ?? [:]) }
+    /// "4696310", "4696310 · debug", or "Xcode build" when no script set it.
+    static var commit: String {
+        let commit = Bundle.main.infoDictionary?["PixieCommit"] as? String ?? ""
+        var text = commit.isEmpty ? "Xcode build" : commit
+        #if DEBUG
+        text += " · debug"
+        #endif
+        return text
+    }
+
+    static func version(info: [String: Any]) -> String {
+        "\(info["CFBundleShortVersionString"] as? String ?? "?") (\(info["CFBundleVersion"] as? String ?? "?"))"
+    }
+
     static func text(info: [String: Any]) -> String {
-        var text = "\(info["CFBundleShortVersionString"] as? String ?? "?") (\(info["CFBundleVersion"] as? String ?? "?"))"
+        var text = version(info: info)
         if let commit = info["PixieCommit"] as? String, !commit.isEmpty { text += " · \(commit)" }
         #if DEBUG
         text += " · debug"

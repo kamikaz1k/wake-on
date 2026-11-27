@@ -319,30 +319,12 @@ struct SettingsView: View {
 
                 // Which build this is, to quote with feedback ("which version were you on?").
                 Section {
-                    Button {
-                        UIPasteboard.general.string = AppBuild.text
-                        withAnimation(.snappy) { copiedBuild = true }
-                        Task {
-                            try? await Task.sleep(for: .seconds(1.5))
-                            withAnimation(.snappy) { copiedBuild = false }
-                        }
-                    } label: {
-                        LabeledContent("Version") {
-                            HStack(spacing: 6) {
-                                Text(AppBuild.text).monospacedDigit().multilineTextAlignment(.trailing)
-                                Image(systemName: copiedBuild ? "checkmark" : "doc.on.doc")
-                                    .contentTransition(.symbolEffect(.replace))
-                                    .foregroundStyle(Color.accentColor)
-                            }
-                        }
-                    }
-                    .tint(.primary)
-                    .accessibilityIdentifier("settings-build")
-                    .id("settings-build")
-                    .accessibilityValue(copiedBuild ? "Copied" : AppBuild.text)
-                    .accessibilityHint("Copies the version")
+                    buildRow("Version", AppBuild.version)
+                        .accessibilityIdentifier("settings-build")
+                        .id("settings-build")
+                    buildRow("Commit", AppBuild.commit)
                 } footer: {
-                    Text(copiedBuild ? "Copied." : "Tap to copy it, to include when you report a problem.")
+                    Text(copiedBuild ? "Copied." : "Tap to copy, to include when you report a problem.")
                 }
             }
             #if DEBUG
@@ -362,6 +344,22 @@ struct SettingsView: View {
             .sheet(isPresented: $showDeveloper) { AdvancedView(controller: wake) }
             .navigationDestination(isPresented: $openMemory) { MemoryView() }
         }
+    }
+
+    /// One line of the build (Version, Commit); either copies the whole build, as feedback sends it.
+    private func buildRow(_ title: String, _ value: String) -> some View {
+        Button {
+            UIPasteboard.general.string = AppBuild.text
+            withAnimation(.snappy) { copiedBuild = true }
+            Task {
+                try? await Task.sleep(for: .seconds(1.5))
+                withAnimation(.snappy) { copiedBuild = false }
+            }
+        } label: {
+            LabeledContent(title, value: value).monospacedDigit()
+        }
+        .tint(.primary)
+        .accessibilityHint("Copies the version and commit")
     }
 }
 
