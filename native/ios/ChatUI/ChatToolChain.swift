@@ -239,19 +239,32 @@ enum ChatToolSteps {
         }
         let text: String = switch tool.name {
         case "web_search":
-            quoted("query").map { done ? "Searched \($0)" : "Searching \($0)" } ?? (done ? "Searched the web" : "Searching the web")
+            (quoted("query") ?? searchQuery(tool.arguments).map { "“\($0)”" })
+                .map { done ? "Searched \($0)" : "Searching \($0)" } ?? (done ? "Searched the web" : "Searching the web")
         case "play_spotify":
-            (args["title"] as? String).map { done ? "Picked \($0)" : "Finding \($0)" } ?? (done ? "Picked a song" : "Finding a song")
+            if (args["spotify_url"] as? String)?.isEmpty == true, let query = quoted("query") {
+                done ? "Searching Spotify for \(query)" : "Finding \(query)"
+            } else {
+                (args["title"] as? String).map { done ? "Found \($0)" : "Finding \($0)" } ?? (done ? "Found a song" : "Finding a song")
+            }
         case "play_youtube":
             (args["title"] as? String).map { done ? "Picked \($0)" : "Finding \($0)" } ?? (done ? "Picked a video" : "Finding a video")
-        case "open_in_spotify": done ? "Opened \(firstLine) in Spotify" : "Opening Spotify"
+        case "open_in_spotify":
+            if let search = spotifySearch(tool.arguments) {
+                done ? "Opened a Spotify search for “\(search)”" : "Opening a Spotify search"
+            } else {
+                done ? "Playing \(firstLine) in Spotify" : "Opening Spotify"
+            }
         case "open_in_youtube": done ? "Opened \(firstLine) in YouTube" : "Opening YouTube"
         case "open_map":
             (args["place"] as? String).map { done ? "Found \($0)" : "Finding \($0)" } ?? (done ? "Found the place" : "Finding the place")
         case "open_in_google_maps": done ? "Opened \(firstLine) in Google Maps" : "Opening Google Maps"
-        case "control_media", "media_control":
-            ((args["action"] as? String) ?? firstLine).isEmpty ? (done ? "Controlled playback" : "Controlling playback")
-                : (done ? "Sent \((args["action"] as? String) ?? firstLine)" : "Sending \((args["action"] as? String) ?? firstLine)")
+        case "control_media":
+            // Sent once the call ends, so this step is still to come.
+            playback((args["action"] as? String) ?? firstLine).doing
+        case "media_control":
+            // What was actually sent after the call, and by whom (Spotify or the system).
+            playback(firstLine).done + (tool.result?.hasPrefix("Spotify") == true && tool.state != .failed ? " in Spotify" : "")
         case "browser":
             if done, args["action"] as? String == "open", let page = tool.page, !page.title.isEmpty { "Opened \(page.title)" }
             else { browser(args["action"] as? String ?? "", args["text"] as? String ?? "", done: done) }
@@ -296,10 +309,18 @@ enum ChatToolSteps {
         for tool in tools {
             let part: String = switch tool.name {
             case "web_search": "searched the web"
-            case "play_spotify", "open_in_spotify": "opened Spotify"
+            // One phrase for finding and opening, so a play reads once: a search, or a song opened.
+            case "play_spotify":
+                (arguments(tool.arguments)["spotify_url"] as? String)?.isEmpty == true ? "searched Spotify" : "opened Spotify"
+            case "open_in_spotify": spotifySearch(tool.arguments) == nil ? "opened Spotify" : "searched Spotify"
             case "play_youtube", "open_in_youtube": "opened YouTube"
             case "open_map", "open_in_google_maps": "opened Maps"
-            case "control_media", "media_control": "controlled playback"
+            case "control_media":
+                // Asked for in the call; it's sent once the call ends.
+                playback(arguments(tool.arguments)["action"] as? String ?? "").doing.lowercased()
+            case "media_control":
+                playback(tool.arguments.split(separator: "\n").first.map(String.init) ?? "").summary
+                    + (tool.result?.hasPrefix("Spotify") == true && tool.state != .failed ? " in Spotify" : "")
             case "browser":
                 // The page it ended on, so the folded chain says where it went.
                 tools.last { $0.name == "browser" && $0.page != nil }?.page.map { "opened \($0.title)" } ?? "used the browser"
@@ -343,6 +364,31 @@ enum ChatToolSteps {
         case "close": done ? "Closed the browser" : "Closing the browser"
         default: done ? "Used the browser" : "Using the browser"
         }
+    }
+
+    /// Words for a playback command: pause, play, next, previous.
+    static func playback(_ command: String) -> (doing: String, done: String, summary: String) {
+        switch command {
+        case "pause": ("Pausing the music", "Paused the music", "paused the music")
+        case "play": ("Resuming the music", "Resumed the music", "resumed the music")
+        case "next": ("Skipping to the next track", "Skipped to the next track", "skipped a track")
+        case "previous": ("Going back a track", "Went back a track", "went back a track")
+        default: ("Controlling playback", "Controlled playback", "controlled playback")
+        }
+    }
+
+    /// The first search query as a person would type it: no site: filters or quotes.
+    static func searchQuery(_ text: String) -> String? {
+        guard let first = text.split(separator: "\n").first, !text.hasPrefix("{") else { return nil }
+        let words = first.split(separator: " ").filter { !$0.lowercased().hasPrefix("site:") }
+            .map { $0.replacingOccurrences(of: "\"", with: "") }.filter { !$0.isEmpty }
+        return words.isEmpty ? nil : words.joined(separator: " ")
+    }
+
+    /// The search words of a `spotify:search:` link in an open_in_spotify step.
+    static func spotifySearch(_ text: String) -> String? {
+        guard let link = text.split(separator: "\n").first(where: { $0.hasPrefix("spotify:search:") }) else { return nil }
+        return String(link.dropFirst("spotify:search:".count)).removingPercentEncoding
     }
 
     private static func arguments(_ text: String) -> [String: Any] {

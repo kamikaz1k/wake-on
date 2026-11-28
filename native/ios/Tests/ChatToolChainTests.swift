@@ -60,7 +60,7 @@ final class ChatToolChainTests: XCTestCase {
         XCTAssertEqual(ChatToolSteps.label(tool("web_search", .done, args: #"{"query":"weather"}"#)), "Searched “weather”")
         XCTAssertEqual(ChatToolSteps.label(tool("browser", .running, args: #"{"action":"find","text":"deck"}"#)), "Finding “deck”")
         XCTAssertEqual(ChatToolSteps.label(tool("open_in_spotify", .done, args: "Come Sail Away\nspotify:x")),
-                       "Opened Come Sail Away in Spotify")
+                       "Playing Come Sail Away in Spotify")
         XCTAssertEqual(ChatToolSteps.label(tool("play_youtube", .failed, args: #"{"title":"Rick"}"#)), "Picked Rick (failed)")
     }
 

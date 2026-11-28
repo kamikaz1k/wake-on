@@ -111,6 +111,7 @@ final class SpotifyAccount: ObservableObject {
     }
 
     private func finish(problem: String?) {
+        if let problem { VoiceSessionController.appLog("spotify connect_failed \(problem)") }
         self.problem = problem
         busy = false
     }
@@ -335,6 +336,7 @@ enum SpotifyTokens {
 struct SpotifySection: View {
     @ObservedObject private var account: SpotifyAccount = .shared
     @State private var confirmDisconnect = false
+    @State private var signInTip = false
 
     var body: some View {
         Section {
@@ -344,7 +346,7 @@ struct SpotifySection: View {
                     .accessibilityIdentifier("settings-spotify-disconnect")
             } else {
                 Button {
-                    account.connect()
+                    signInTip = true
                 } label: {
                     HStack {
                         Text("Connect Spotify")
@@ -359,6 +361,13 @@ struct SpotifySection: View {
             }
         } header: { Text("Music") } footer: {
             Text("With Spotify connected, \(Agent.name) can pause, resume and skip it, on any device that's playing. Needs Spotify Premium. While this is in testing, only accounts the developer has added can connect.")
+        }
+        // Spotify's page offers Facebook and Google, which refuse to sign in inside apps.
+        .alert("Sign in with email", isPresented: $signInTip) {
+            Button("Continue") { account.connect() }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("On Spotify's page, choose Continue with email (Spotify emails you a code) or Continue with Apple. Facebook and Google sign-in don't work here.")
         }
         .confirmationDialog("Disconnect Spotify?", isPresented: $confirmDisconnect, titleVisibility: .visible) {
             Button("Disconnect", role: .destructive) { account.disconnect() }

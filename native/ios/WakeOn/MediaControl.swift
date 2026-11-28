@@ -69,8 +69,9 @@ enum MediaControl {
 
     /// For the voice model (added to its instructions when the tool is offered).
     static let voiceInstructions = """
-    Also delegate requests to pause, stop, resume or skip whatever is playing; the call ends \
-    after that too.
+    Also delegate requests to pause, stop, resume or skip whatever is playing ("next track", \
+    "skip this", "go back") right away; the call ends after that too. Never just say "Sure" \
+    without delegating them.
     """
 
     static let delegationInstructions = """

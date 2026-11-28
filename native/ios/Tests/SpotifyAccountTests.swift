@@ -62,3 +62,39 @@ final class SpotifyAccountTests: XCTestCase {
         XCTAssertEqual(config.mediaControl, MediaControl.available)
     }
 }
+
+/// Playback steps in the chat read like what happened (2026-11-28: "Picked … by ABBA" for a
+/// search, "Sent next" twice, "ended to next the music").
+final class PlaybackStepsTests: XCTestCase {
+    private func tool(_ name: String, _ arguments: String, _ result: String? = nil, _ state: ChatItem.ToolState = .done) -> ChatItem.Tool {
+        ChatItem.Tool(name: name, arguments: arguments, result: result, state: state)
+    }
+
+    func testSpotifySearchIsNotCalledAPick() {
+        let search = tool("play_spotify", #"{"title":"Holly Jolly Christmas by ABBA","spotify_url":"","query":"ABBA Holly Jolly Christmas"}"#)
+        XCTAssertEqual(ChatToolSteps.label(search), "Searching Spotify for “ABBA Holly Jolly Christmas”")
+        let found = tool("play_spotify", #"{"title":"Holly Jolly Christmas by Michael Bublé","spotify_url":"https://open.spotify.com/track/3eT","query":"x"}"#)
+        XCTAssertEqual(ChatToolSteps.label(found), "Found Holly Jolly Christmas by Michael Bublé")
+        XCTAssertEqual(ChatToolSteps.label(tool("open_in_spotify", "Holly Jolly Christmas by ABBA\nspotify:search:ABBA%20Holly%20Jolly%20Christmas")),
+                       "Opened a Spotify search for “ABBA Holly Jolly Christmas”")
+        XCTAssertEqual(ChatToolSteps.label(tool("open_in_spotify", "Holly Jolly Christmas by Michael Bublé\nspotify:track:3eT")),
+                       "Playing Holly Jolly Christmas by Michael Bublé in Spotify")
+    }
+
+    func testSearchQueriesDropSiteFilters() {
+        XCTAssertEqual(ChatToolSteps.label(tool("web_search", "site:open.spotify.com/track \"A Holly Jolly Christmas\" Burl Ives\nother")),
+                       "Searched “A Holly Jolly Christmas Burl Ives”")
+    }
+
+    func testPlaybackCommandsInWords() {
+        XCTAssertEqual(ChatToolSteps.label(tool("control_media", #"{"action":"next"}"#)), "Skipping to the next track")
+        XCTAssertEqual(ChatToolSteps.label(tool("media_control", "next", "Spotify did it")), "Skipped to the next track in Spotify")
+        XCTAssertEqual(ChatToolSteps.label(tool("media_control", "pause", "Sent to whatever is playing")), "Paused the music")
+        XCTAssertEqual(ChatToolSteps.label(tool("media_control", "play", "Spotify had nothing playing on any device", .failed)),
+                       "Resumed the music (failed)")
+        XCTAssertEqual(ChatToolSteps.summary([tool("control_media", #"{"action":"next"}"#)]), "Skipping to the next track")
+        XCTAssertEqual(ChatToolSteps.summary([tool("media_control", "next", "Spotify did it")]), "Skipped a track in Spotify")
+        XCTAssertEqual(ChatToolSteps.summary([tool("web_search", "q"), tool("play_spotify", #"{"title":"t","spotify_url":"","query":"q"}"#)]),
+                       "Searched the web, searched Spotify")
+    }
+}

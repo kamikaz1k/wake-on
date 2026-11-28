@@ -226,8 +226,20 @@ struct CaptureReplay {
             lastScreen = state
         case "app.media_command":
             let command = e["command"] as? String ?? ""
+            // "via": "spotify" (Spotify's Web API), "spotify <why>" (it couldn't), "media_remote".
+            let via = e["via"] as? String ?? "media_remote"
+            let failed = via.hasPrefix("spotify ")
+            let result = switch via {
+            case "spotify": "Spotify did it"
+            case "spotify noActiveDevice": "Spotify had nothing playing on any device"
+            case "spotify premiumRequired": "Spotify needs Premium for this"
+            case "spotify notAllowed": "Spotify hasn't allowed this account yet"
+            case "spotify signedOut": "Spotify is disconnected"
+            case let other where other.hasPrefix("spotify "): "Spotify didn't respond (\(other.dropFirst(8)))"
+            default: "Sent to whatever is playing"
+            }
             addTool("media-\(line.t)", .init(name: "media_control", arguments: command,
-                                             result: "Sent \(command) to whatever is playing", state: .done))
+                                             result: result, state: failed ? .failed : .done))
         default:
             break
         }
@@ -396,7 +408,15 @@ struct CaptureReplay {
         let why: String
         if e["spotify_pending"] as? Bool == true { why = "ended to play on Spotify" }
         else if e["map_pending"] as? Bool == true { why = "ended to open Google Maps" }
-        else if let media = e["media_pending"] as? String { why = "ended to \(media) the music" }
+        else if let media = e["media_pending"] as? String {
+            why = switch media {
+            case "pause": "ended to pause the music"
+            case "play": "ended to resume the music"
+            case "next": "ended to skip the track"
+            case "previous": "ended to go back a track"
+            default: "ended to control playback"
+            }
+        }
         else {
             why = switch e["reason"] as? String ?? "" {
             case "close_requested": "ended after goodbye"

@@ -37,7 +37,12 @@ enum SpotifyPlayer {
     static let delegationInstructions = """
     When the user asks to play music, search the web for the matching open.spotify.com link (a \
     track unless they ask for an album, playlist or artist), then call play_spotify with it. If \
-    no link turns up, call it with an empty spotify_url and a good query.
+    you can't find that exact recording (the artist never recorded it, several well-known \
+    versions exist, or the description is vague), don't open a Spotify search: call \
+    show_markdown titled "Which one?" with up to 4 real options, one per line as \
+    "[Title](open.spotify.com link) by Artist", say them briefly and ask which to play. When the \
+    user picks one, call play_spotify with its link. Only when nothing at all turns up, call \
+    play_spotify with an empty spotify_url and a good query.
     """
 
     struct Request: Equatable {

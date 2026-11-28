@@ -86,7 +86,8 @@ final class FeedbackTests: XCTestCase {
         let app = URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent()
             .appendingPathComponent("WakeOn")
         for file in try FileManager.default.contentsOfDirectory(atPath: app.path) where file.hasSuffix(".swift")
-            && file != "LobbyServer.swift" {
+            // Spotify's Web API takes Spotify's own token; Pixie's build header isn't for it.
+            && file != "LobbyServer.swift" && file != "SpotifyAccount.swift" {
             let source = try String(contentsOf: app.appendingPathComponent(file), encoding: .utf8)
             XCTAssertFalse(source.contains("forHTTPHeaderField: \"Authorization\""), file)
         }
