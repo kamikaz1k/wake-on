@@ -42,6 +42,14 @@ enum MediaControl {
         ] as [String: Any],
     ]
 
+    /// For both models when the tool isn't offered (TestFlight builds), so Pixie says so plainly
+    /// instead of trying play_spotify or claiming it paused something.
+    static let unavailableInstructions = """
+    You can't pause, stop, resume or skip music, podcasts or videos playing in other apps: iOS \
+    doesn't allow it in this version of Pixie. If asked, say so in one sentence and suggest \
+    Control Center or the playing app's own controls.
+    """
+
     /// For the voice model (added to its instructions when the tool is offered).
     static let voiceInstructions = """
     Also delegate requests to pause, stop, resume or skip whatever is playing; the call ends \

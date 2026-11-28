@@ -53,6 +53,9 @@ final class SpotifyPlayerTests: XCTestCase {
         XCTAssertFalse(names.contains("control_media"))
         XCTAssertFalse((responses?["instructions"] as? String ?? "").contains("control_media"))
         XCTAssertFalse((session["instructions"] as? String ?? "").contains("skip whatever is playing"))
+        // Both models are told it can't be done, so Pixie says so instead of trying.
+        XCTAssertTrue((session["instructions"] as? String ?? "").contains(MediaControl.unavailableInstructions))
+        XCTAssertTrue((responses?["instructions"] as? String ?? "").contains(MediaControl.unavailableInstructions))
         XCTAssertTrue(try XCTUnwrap(LiveVoiceConfig().requestBody(sdp: "v=0")["session"] as? [String: Any])["instructions"]
             .map { ($0 as? String ?? "").contains("skip whatever is playing") } ?? false, "Debug builds keep it")
     }

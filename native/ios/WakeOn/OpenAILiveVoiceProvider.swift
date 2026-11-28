@@ -96,7 +96,7 @@ struct LiveVoiceConfig {
         var text = delegationInstructions
         if spotify { text += " " + SpotifyPlayer.delegationInstructions }
         if youtube { text += " " + YouTubePlayer.delegationInstructions }
-        if mediaControl { text += " " + MediaControl.delegationInstructions }
+        text += " " + (mediaControl ? MediaControl.delegationInstructions : MediaControl.unavailableInstructions)
         if volume { text += " " + VolumeControl.delegationInstructions }
         if notes { text += " " + ObsidianNotes.delegationInstructions }
         if location { text += " " + CurrentLocation.delegationInstructions }
@@ -182,7 +182,7 @@ struct LiveVoiceConfig {
         }
         if let effort = delegationReasoningEffort { responses["reasoning"] = ["effort": effort] }
         var voiceInstructions = instructions
-        if mediaControl { voiceInstructions += " " + MediaControl.voiceInstructions }
+        voiceInstructions += " " + (mediaControl ? MediaControl.voiceInstructions : MediaControl.unavailableInstructions)
         if browser { voiceInstructions += " " + BrowserTool.voiceInstructions }
         if memoryTools { voiceInstructions += " " + Memory.voiceInstructions }
         if let memory { voiceInstructions += "\n\n" + memory }
