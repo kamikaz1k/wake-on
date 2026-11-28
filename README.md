@@ -45,7 +45,8 @@ Measured on an iPhone 17 Pro over Wi-Fi (round trip ≈ 54 ms):
 The app's own share of the network path is about 3–5 ms; the rest is iOS handing off the
 press and OpenAI setting up the session. Method, raw traces and every experiment:
 [iOS voice latency](docs/ios-voice-latency.md). What has been checked, and where:
-[verification log](docs/verification.md).
+[verification log](docs/verification.md). What iOS doesn't allow and what we do instead:
+[known iOS restrictions](docs/ios-restrictions.md).
 
 ### Chat Lab: picking the call's chat view
 
