@@ -83,5 +83,10 @@ final class ChatToolChainTests: XCTestCase {
         XCTAssertNil(chain.range(of: #"\.animation\((?!_:)"#, options: .regularExpression),
                      "Use animate { } (withAnimation), not .animation(_:value:)")
         XCTAssertTrue(chain.contains("withAnimation(Self.motion"))
+        // Spacing that depends on open/closed belongs in the animated frame heights. Padding
+        // inside a measured row is measured one update late, outside the animation: the rows
+        // below jumped 6 pt in the first frame of every toggle (2026-11-27).
+        XCTAssertNil(chain.range(of: #"\.padding\([^)]*\?"#, options: .regularExpression),
+                     "No state-dependent padding in the chain: add it to the frame height")
     }
 }

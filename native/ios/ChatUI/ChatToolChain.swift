@@ -16,6 +16,8 @@ struct ChatToolChain: View {
     @Environment(\.chatAnimatedResize) private var announceResize
 
     static let motion = Animation.snappy(duration: 0.3)
+    /// Between the summary and the open steps.
+    static let gap: CGFloat = 6
 
     init(tools: [ChatItem.Tool], finished: Bool) {
         self.tools = tools
@@ -36,11 +38,14 @@ struct ChatToolChain: View {
         // and the transcript's scroll jumped to their final places in one frame while the
         // chain was still opening (principle 8, FLIP).
         VStack(alignment: .leading, spacing: 0) {
-            Button { toggle() } label: { summary.padding(.bottom, showsSteps ? 6 : 0) }
+            // The gap under the summary is part of its animated frame, not padding inside the
+            // measured row: as padding, the 6 pt was measured one update late, outside the
+            // animation, and the rows below jumped 6 pt in the first frame of every toggle.
+            Button { toggle() } label: { summary }
                 .buttonStyle(.plain)
                 .fixedSize(horizontal: false, vertical: true)
                 .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { summaryHeight = $0 }
-                .frame(height: collapsed ? summaryHeight : 0, alignment: .top)
+                .frame(height: collapsed ? summaryHeight + (expanded ? Self.gap : 0) : 0, alignment: .top)
                 .clipped()
                 .disabled(!collapsed)
                 .accessibilityHidden(!collapsed)
