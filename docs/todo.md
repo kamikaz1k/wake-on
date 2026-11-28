@@ -18,6 +18,8 @@ Ideas and follow-ups not started yet. Things built but not yet checked on the ph
 
 ## Follow-ups
 
+- Memory missed a short list a tester asked Pixie to keep; a later memory search found nothing,
+  so it was probably never saved (feedback 2026-11-26, [triage](feedback.md)).
 - Home orb CPU and energy in a Release build (measured only in Debug on the simulator, 16-18%).
 - Builds must use Xcode 27 / the iOS 27 SDK from April 2027 (App Store Connect warning).
 - External TestFlight review: the Nov 22 build has waited since Nov 22; newer builds aren't submitted.
