@@ -100,6 +100,10 @@ struct ChatTranscriptView: View {
             .environment(\.chatAnimatedResize) { animation in resize = (animation, .now + 0.4) }
         }
         .scrollPosition($position)
+        // While following, keep the bottom edge put when the content's size changes, in the
+        // same layout pass: following only after the new height was seen (an update later)
+        // let the bottom rows sag (~0.18 s late as a step was added, 2026-11-27).
+        .defaultScrollAnchor(following && !dragging ? .bottom : nil, for: .sizeChanges)
         .opacity(ready || items.isEmpty ? 1 : 0)
         .onScrollGeometryChange(for: Metrics.self) { geometry in
             Metrics(contentHeight: geometry.contentSize.height,

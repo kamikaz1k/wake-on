@@ -44,4 +44,11 @@ final class WholeLayoutAnimationTests: XCTestCase {
         let bare = onboarding.components(separatedBy: "heySub = ").count - 1
         XCTAssertEqual(bare, 3, "Only the declaration, the reset and setHeySub assign heySub directly")
     }
+
+    /// Live call, following the bottom: the chain growing at the bottom sagged the last rows
+    /// (+4.7 pt) before the follow-scroll started ~6 frames late.
+    func testTranscriptKeepsTheBottomPutWhenContentResizes() throws {
+        let transcript = try source("ChatUI/ChatTranscriptView.swift")
+        XCTAssertTrue(transcript.contains(".defaultScrollAnchor(following && !dragging ? .bottom : nil, for: .sizeChanges)"))
+    }
 }
