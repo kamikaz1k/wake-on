@@ -1877,6 +1877,7 @@
 				<string>06EC84C75A1861F3AB6AD29C</string>
 				<string>FAE36BAEF99FF63E87FE6598</string>
 				<string>BFB091B916136ED087BF7095</string>
+				<string>BBB800F3CAE31637D108A0E1</string>
 				<string>7EF1F34084C4FEA92F209E15</string>
 			</array>
 			<key>isa</key>
@@ -3090,6 +3091,17 @@
 			<key>isa</key>
 			<string>PBXBuildFile</string>
 		</dict>
+		<key>BA92FCC9BDD3B50DB04A077C</key>
+		<dict>
+			<key>isa</key>
+			<string>PBXFileReference</string>
+			<key>lastKnownFileType</key>
+			<string>sourcecode.swift</string>
+			<key>path</key>
+			<string>Tests/WholeLayoutAnimationTests.swift</string>
+			<key>sourceTree</key>
+			<string>&lt;group&gt;</string>
+		</dict>
 		<key>BAA884D912E3425D1C2D1458</key>
 		<dict>
 			<key>isa</key>
@@ -3105,6 +3117,13 @@
 		<dict>
 			<key>fileRef</key>
 			<string>5E7527EF3697BE979EBDDF02</string>
+			<key>isa</key>
+			<string>PBXBuildFile</string>
+		</dict>
+		<key>BBB800F3CAE31637D108A0E1</key>
+		<dict>
+			<key>fileRef</key>
+			<string>BA92FCC9BDD3B50DB04A077C</string>
 			<key>isa</key>
 			<string>PBXBuildFile</string>
 		</dict>
@@ -3769,6 +3788,7 @@
 				<string>579F4EE51E22157FC1503151</string>
 				<string>E131C259A818D1A0E21BDDCC</string>
 				<string>4D21998E0F87301D09500B4B</string>
+				<string>BA92FCC9BDD3B50DB04A077C</string>
 				<string>824423B4466B91132C7B051F</string>
 				<string>8F74F34C7B6E3E70FA09817C</string>
 				<string>62CCEF872899BA435086821E</string>

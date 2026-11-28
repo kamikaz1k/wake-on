@@ -161,6 +161,17 @@ struct OnboardingView: View {
             }
         }
         .onChange(of: invite.code) { _, code in if code != nil, step == .welcome { step = .access } }
+        #if DEBUG
+        // -onboarding-hey-cycle: the "Hey Pixie" sub-steps advance every 2 s (animation checks).
+        .task {
+            guard ProcessInfo.processInfo.arguments.contains("-onboarding-hey-cycle") else { return }
+            while !Task.isCancelled {
+                try? await Task.sleep(for: .seconds(2))
+                print("ACTION \(Date().timeIntervalSince1970) hey-sub \((heySub + 1) % 4)")
+                setHeySub((heySub + 1) % 4)
+            }
+        }
+        #endif
     }
 
     /// Debug screenshots: `-onboarding-step 3` opens that step.
@@ -321,7 +332,7 @@ struct OnboardingView: View {
                                 Button("Play the Chime", systemImage: "speaker.wave.2") { playChime(); chimePlayed = true }
                                     .buttonStyle(.bordered)
                                     .accessibilityIdentifier("onboarding-play-chime")
-                                Button("Got It") { heySub = 2 }
+                                Button("Got It") { setHeySub(2) }
                                     .buttonStyle(.borderedProminent)
                                     .disabled(!chimePlayed)
                                     .accessibilityIdentifier("onboarding-got-it")
@@ -356,11 +367,11 @@ struct OnboardingView: View {
             }
             .onAppear(perform: startPractice)
             .onChange(of: wake.detections) {
-                if step == .heyLobby, heySub == 0 { heySub = 1 }
+                if step == .heyLobby, heySub == 0 { setHeySub(1) }
             }
             .onChange(of: voice.phase) { old, new in
                 // The end-to-end call finished.
-                if step == .heyLobby, heySub == 3, old != .idle, new == .idle, voice.lastTrigger == "wake_word" { heySub = 4 }
+                if step == .heyLobby, heySub == 3, old != .idle, new == .idle, voice.lastTrigger == "wake_word" { setHeySub(4) }
             }
         case .demo:
             OnboardingPage(icon: "sparkles", title: "Things to try",
@@ -391,6 +402,13 @@ struct OnboardingView: View {
 
     private let callDoneNote = "That's a call. Start one any time from the main screen."
 
+    /// Each sub-step change animates the whole page: the steps after it and the page's height
+    /// move with it. Animated per sub-step instead, the later steps jumped 40-170 pt in one
+    /// frame (2026-11-27).
+    private func setHeySub(_ value: Int) {
+        withAnimation(.snappy) { heySub = value }
+    }
+
     private func subState(_ index: Int) -> SubstepState {
         heySub > index ? .done : heySub == index ? .current : .upcoming
     }
@@ -417,7 +435,7 @@ struct OnboardingView: View {
         listeningEnabled = true
         wake.stop()
         wake.start()
-        heySub = 3
+        setHeySub(3)
     }
 
     private func playChime() {
@@ -525,7 +543,6 @@ struct OnboardingSubstep<Content: View>: View {
                 }
             }
         }
-        .animation(.snappy, value: state)
     }
 }
 

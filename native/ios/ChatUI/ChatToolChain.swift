@@ -8,7 +8,7 @@ struct ChatToolChain: View {
     let tools: [ChatItem.Tool]
     /// The turn has moved on: collapse to the summary.
     let finished: Bool
-    @State private var expanded = false
+    @State private var expanded = Self.debugStepDetails
     /// Follows `finished` one update later, inside an animation: see `onChange(of: finished)`.
     @State private var collapsed: Bool
     @State private var stepsHeight: CGFloat = 0
@@ -16,6 +16,14 @@ struct ChatToolChain: View {
     @Environment(\.chatAnimatedResize) private var announceResize
 
     static let motion = Animation.snappy(duration: 0.3)
+    /// `-tool-step-details`: chains start open and their first step's details toggle every 2 s.
+    static let debugStepDetails: Bool = {
+        #if DEBUG
+        ProcessInfo.processInfo.arguments.contains("-tool-step-details")
+        #else
+        false
+        #endif
+    }()
     /// Between the summary and the open steps.
     static let gap: CGFloat = 6
 
@@ -110,7 +118,7 @@ struct ChatToolChain: View {
     private var steps: some View {
         VStack(alignment: .leading, spacing: 0) {
             ForEach(Array(tools.enumerated()), id: \.offset) { index, tool in
-                ChatToolStep(tool: tool, isLast: index == tools.count - 1)
+                ChatToolStep(tool: tool, isLast: index == tools.count - 1, isFirst: index == 0)
             }
         }
     }
@@ -120,7 +128,9 @@ struct ChatToolChain: View {
 private struct ChatToolStep: View {
     let tool: ChatItem.Tool
     let isLast: Bool
+    var isFirst = false
     @State private var details = false
+    @Environment(\.chatAnimatedResize) private var announceResize
 
     private var active: Bool { tool.state == .requested || tool.state == .running }
 
@@ -136,7 +146,7 @@ private struct ChatToolStep: View {
                 }
             }
             VStack(alignment: .leading, spacing: 4) {
-                Button { details.toggle() } label: {
+                Button { toggleDetails() } label: {
                     Text(ChatToolSteps.label(tool))
                         .multilineTextAlignment(.leading)
                         .shimmering(active)
@@ -175,6 +185,23 @@ private struct ChatToolStep: View {
             .padding(.bottom, isLast ? 0 : 10)
         }
         .accessibilityElement(children: .combine)
+        #if DEBUG
+        .task {
+            guard isFirst, ChatToolChain.debugStepDetails else { return }
+            while !Task.isCancelled {
+                try? await Task.sleep(for: .seconds(2))
+                print("ACTION \(CACurrentMediaTime()) step-details")
+                toggleDetails()
+            }
+        }
+        #endif
+    }
+
+    /// Inside one transaction with the rows below, the chain's height and the transcript's
+    /// scroll: toggled bare, the details appeared at once and the rows below jumped (2026-11-27).
+    private func toggleDetails() {
+        announceResize(ChatToolChain.motion)
+        withAnimation(ChatToolChain.motion) { details.toggle() }
     }
 }
 

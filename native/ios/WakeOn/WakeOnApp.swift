@@ -134,6 +134,18 @@ struct WakeOnApp: App {
                     } else if let index = args.firstIndex(of: "--demo-call"), index + 1 < args.count {
                         // Plays a saved capture into the live call screen, without connecting.
                         VoiceSessionController.shared.demoCall(capture: URL(fileURLWithPath: args[index + 1]))
+                        // -connection-flap: the connection banner comes and goes every 2 s (animation checks).
+                        if args.contains("-connection-flap") {
+                            Task { @MainActor in
+                                var weak = false
+                                while true {
+                                    try? await Task.sleep(for: .seconds(2))
+                                    weak.toggle()
+                                    print("ACTION \(Date().timeIntervalSince1970) connection \(weak ? "weak" : "good")")
+                                    VoiceSessionController.shared.debugShowConnection(weak ? .weak : .good)
+                                }
+                            }
+                        }
                     } else if args.contains("--memory-summarize") {
                         // Writes every summary that's ready now, whatever the memory's length.
                         Task { @MainActor in

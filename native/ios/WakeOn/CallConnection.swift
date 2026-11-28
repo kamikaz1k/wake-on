@@ -95,6 +95,18 @@ final class NetworkPath: ObservableObject {
         // --offline: pretend the phone has no network (screenshots of the offline states).
         let args = ProcessInfo.processInfo.arguments
         if args.contains("--offline") { isUp = false; interface = "none"; return }
+        // -network-flap: offline and back every 3 s (home's network banner, animation checks).
+        if args.contains("-network-flap") {
+            Task { @MainActor in
+                while true {
+                    try? await Task.sleep(for: .seconds(3))
+                    self.isUp.toggle()
+                    self.interface = self.isUp ? "wifi" : "none"
+                    print("ACTION \(Date().timeIntervalSince1970) network \(self.isUp ? "up" : "down")")
+                }
+            }
+            return
+        }
         // --offline-for N: offline at launch, back online N s later (the back-online transition).
         if let index = args.firstIndex(of: "--offline-for"), index + 1 < args.count, let seconds = Double(args[index + 1]) {
             isUp = false

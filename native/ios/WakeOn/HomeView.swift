@@ -97,6 +97,9 @@ struct HomeView: View {
             }
         }
         .safeAreaInset(edge: .bottom, spacing: 0) { talkBar }
+        // The whole idle screen, not just the banner: scoped to the banner, the orb and the chat
+        // jumped 40-54 pt in one frame as it came and went (2026-11-27).
+        .animation(.easeInOut(duration: 0.35), value: network.isUp)
     }
 
     private var suggestions: some View {
@@ -383,11 +386,13 @@ struct LiveCallScreen: View {
                 .padding(.horizontal)
                 .onAppear { withAnimation(.easeOut(duration: 0.4)) { panelShown = true } }
             ConnectionBanner(state: voice.connection)
-                .animation(.easeInOut(duration: 0.25), value: voice.connection)
             ChatTranscriptView(items: transcript.items, call: transcript.call, showsHeader: false)
                 .accessibilityIdentifier("live-chat")
             controls
         }
+        // On the stack, not the banner: scoped to the banner, only it animated and the transcript
+        // under it jumped 36 pt in one frame (2026-11-27).
+        .animation(.easeInOut(duration: 0.25), value: voice.connection)
         .navigationBarTitleDisplayMode(.inline)
     }
 
@@ -464,15 +469,15 @@ struct NetworkStatusBanner: View {
             }
         }
         .transition(.opacity.combined(with: .scale(scale: 0.95)))
-        .animation(.easeInOut(duration: 0.35), value: online)
-        .animation(.easeInOut(duration: 0.5), value: showsBackOnline)
         .onChange(of: online) { _, isOnline in
             hideTask?.cancel()
-            guard isOnline else { showsBackOnline = false; return }
-            showsBackOnline = true
+            // Inside the same animation as the screen's (Home animates network changes).
+            guard isOnline else { withAnimation(.easeInOut(duration: 0.35)) { showsBackOnline = false }; return }
+            withAnimation(.easeInOut(duration: 0.35)) { showsBackOnline = true }
             hideTask = Task {
                 try? await Task.sleep(for: .seconds(2.5))
-                if !Task.isCancelled { showsBackOnline = false }
+                // Fading away later is this view's own change: withAnimation moves the orb with it.
+                if !Task.isCancelled { withAnimation(.easeInOut(duration: 0.5)) { showsBackOnline = false } }
             }
         }
     }

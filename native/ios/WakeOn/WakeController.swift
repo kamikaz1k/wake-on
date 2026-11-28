@@ -293,11 +293,22 @@ final class WakeController: NSObject, ObservableObject, UNUserNotificationCenter
         }
     }
 
+    private static let skipsNotificationPrompt: Bool = {
+        #if DEBUG
+        ProcessInfo.processInfo.arguments.contains("-no-notification-prompt")
+        #else
+        false
+        #endif
+    }()
+
     private func prepare(token: Int) {
-        UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound]) { [weak self] allowed, _ in
-            DispatchQueue.main.async {
-                self?.notificationNote = allowed ? "Tap the wake notification to open the app." :
-                    "Notifications are off. Open the app yourself after a background wake."
+        // -no-notification-prompt (debug): recordings without iOS's permission alert over them.
+        if !Self.skipsNotificationPrompt {
+            UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound]) { [weak self] allowed, _ in
+                DispatchQueue.main.async {
+                    self?.notificationNote = allowed ? "Tap the wake notification to open the app." :
+                        "Notifications are off. Open the app yourself after a background wake."
+                }
             }
         }
         let metric = trace
