@@ -1,6 +1,6 @@
 # Pixie privacy policy
 
-Last updated: November 26, 2026 (contacts, feedback warnings)
+Last updated: November 27, 2026 (app version on server requests)
 
 Pixie is a voice assistant for iPhone. This page explains what
 the app does with your information. In short: your voice goes to OpenAI only while you're
@@ -95,7 +95,9 @@ When a call with an invite code ends, the app sends the server how much it used:
 seconds OpenAI billed and the number of tokens Pixie's lookups used. Nothing else: no
 transcript, audio, notes, call time or device details. The server adds these up per invite
 per day (calls, voice seconds, tokens, memory summaries and saved-app refreshes with their tokens) to see what
-Pixie costs to run, and deletes each day's totals after 90 days. Cloudflare may keep
+Pixie costs to run, and deletes each day's totals after 90 days. Each request to the server also
+says which version of the app sent it (for example "0.1.0 (202611280118)"); the server keeps the
+latest one with that day's totals, so problems can be matched to a version. Cloudflare may keep
 standard request logs under its own privacy policy.
 
 If you use your own OpenAI key, calls go straight to OpenAI under your own account and the
