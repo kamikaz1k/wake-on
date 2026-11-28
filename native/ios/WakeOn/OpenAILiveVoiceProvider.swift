@@ -56,7 +56,7 @@ struct LiveVoiceConfig {
     /// The play_youtube tool (see YouTubePlayer).
     var youtube = true
     /// The control_media tool: pause, resume, skip whatever is playing (see MediaControl).
-    var mediaControl = MediaControl.available
+    var mediaControl = MediaControl.offered
     /// The set_volume tool (see VolumeControl).
     var volume = true
     /// The save_note tool: notes in the user's Obsidian vault (see ObsidianNotes). Only once a
@@ -97,6 +97,7 @@ struct LiveVoiceConfig {
         if spotify { text += " " + SpotifyPlayer.delegationInstructions }
         if youtube { text += " " + YouTubePlayer.delegationInstructions }
         text += " " + (mediaControl ? MediaControl.delegationInstructions : MediaControl.unavailableInstructions)
+        if mediaControl && !MediaControl.available { text += " " + MediaControl.spotifyOnlyInstructions }
         if volume { text += " " + VolumeControl.delegationInstructions }
         if notes { text += " " + ObsidianNotes.delegationInstructions }
         if location { text += " " + CurrentLocation.delegationInstructions }

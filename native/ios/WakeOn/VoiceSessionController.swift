@@ -1063,7 +1063,7 @@ final class VoiceSessionController: ObservableObject {
             result = "Nothing to play: no link and no query."
         } else if name == MediaControl.toolName,
                   let command = (arguments["action"] as? String).flatMap(MediaControl.Command.init) {
-            result = "Sent \(command.rawValue) to whatever is playing; the call is ending."
+            result = "Sending \(command.rawValue) to what's playing; the call is ending."
             pendingMedia = command
             action = ["kind": "media", "command": command.rawValue]
         } else if name == VolumeControl.toolName,
@@ -1734,9 +1734,10 @@ final class VoiceSessionController: ObservableObject {
             pendingMedia = nil
             Task {
                 try? await Task.sleep(for: .milliseconds(800))
-                MediaControl.run(command)
-                laterCapture?.app("media_command", ["command": command.rawValue])
-                guard command.repeatable else { return }
+                let via = await MediaControl.perform(command)
+                laterCapture?.app("media_command", ["command": command.rawValue, "via": via])
+                // Spotify's API is told once; the blind private-API command is sent twice.
+                guard via == "media_remote", command.repeatable else { return }
                 try? await Task.sleep(for: .milliseconds(1000))
                 MediaControl.run(command)
                 laterCapture?.app("media_command", ["command": command.rawValue, "repeat": true])

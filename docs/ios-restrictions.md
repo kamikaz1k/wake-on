@@ -30,6 +30,12 @@ are the Release builds `testflight.sh` uploads; App Store Connect checks them.
 - Since 2026-11-27, TestFlight builds tell both models media control isn't available
   (`MediaControl.unavailableInstructions`), so Pixie says so instead of trying Spotify or
   claiming she paused something.
+- Since 2026-11-28, Settings › Music › Connect Spotify signs in to the user's own Spotify
+  account (OAuth with PKCE, `SpotifyAccount`). Then `control_media` is offered in every build
+  and goes to Spotify's Web API first, on whichever device is playing. Spotify's limits: its
+  app "Pixie" is in Development Mode, so only Premium accounts added under User Management in
+  Spotify's developer dashboard can connect (at most 5). When nothing has played for a while,
+  Spotify has no active device and resume fails; Pixie posts a notification saying so.
 
 ## The microphone and audio session in the background
 

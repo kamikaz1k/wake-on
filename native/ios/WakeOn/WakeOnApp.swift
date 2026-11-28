@@ -123,13 +123,13 @@ struct WakeOnApp: App {
                             if let request = VolumeControl.request(change: "set", level: level) { VolumeControl.apply(request) }
                         }
                     } else if let index = args.firstIndex(of: "--media"), index + 1 < args.count {
-                        // --media pause|play|next|previous: send it without a call (MediaControl).
+                        // --media pause|play|next|previous: send it without a call (MediaControl: Spotify first when connected).
                         let delay = args.firstIndex(of: "--media-delay").flatMap { $0 + 1 < args.count ? Double(args[$0 + 1]) : nil } ?? 0
                         // With the listener on, the app keeps running in the background, so the
                         // command can be tried with the phone locked.
                         if args.contains("--autostart") { controller.start() }
                         DispatchQueue.main.asyncAfter(deadline: .now() + delay) {
-                            if let command = MediaControl.Command(rawValue: args[index + 1]) { MediaControl.run(command) }
+                            if let command = MediaControl.Command(rawValue: args[index + 1]) { Task { await MediaControl.perform(command) } }
                         }
                     } else if let index = args.firstIndex(of: "--demo-call"), index + 1 < args.count {
                         // Plays a saved capture into the live call screen, without connecting.

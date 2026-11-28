@@ -1323,6 +1323,17 @@
 			<key>sourceTree</key>
 			<string>&lt;group&gt;</string>
 		</dict>
+		<key>575846E2B09043144E94BA3A</key>
+		<dict>
+			<key>isa</key>
+			<string>PBXFileReference</string>
+			<key>lastKnownFileType</key>
+			<string>sourcecode.swift</string>
+			<key>path</key>
+			<string>WakeOn/SpotifyAccount.swift</string>
+			<key>sourceTree</key>
+			<string>&lt;group&gt;</string>
+		</dict>
 		<key>575F999A9F416771ED8186A6</key>
 		<dict>
 			<key>isa</key>
@@ -1867,6 +1878,7 @@
 				<string>34DA8C221A8B8B9D3F76A912</string>
 				<string>64A28C2A28BC7F55AA2DDFBB</string>
 				<string>923E56ABEC4022D54E7A5068</string>
+				<string>9E7797048777369D055A9B15</string>
 				<string>8F689865000D2D112E2DF22D</string>
 				<string>63CDF3A8F36B21C7BD7B9408</string>
 				<string>D20988A742E8A10B39F7CB23</string>
@@ -1960,6 +1972,13 @@
 		<dict>
 			<key>fileRef</key>
 			<string>855A9023C1466D93A6F7653A</string>
+			<key>isa</key>
+			<string>PBXBuildFile</string>
+		</dict>
+		<key>721F8C808C9C23F288872883</key>
+		<dict>
+			<key>fileRef</key>
+			<string>575846E2B09043144E94BA3A</string>
 			<key>isa</key>
 			<string>PBXBuildFile</string>
 		</dict>
@@ -2812,6 +2831,13 @@
 			<key>isa</key>
 			<string>PBXBuildFile</string>
 		</dict>
+		<key>9E7797048777369D055A9B15</key>
+		<dict>
+			<key>fileRef</key>
+			<string>E83436608040907724B71654</string>
+			<key>isa</key>
+			<string>PBXBuildFile</string>
+		</dict>
 		<key>9F2F0D7B8211BA8CBE1CF982</key>
 		<dict>
 			<key>isa</key>
@@ -3171,6 +3197,7 @@
 				<string>C096918F71FEAB2E9FC49F58</string>
 				<string>5373CC8CC3E0F75852F1F863</string>
 				<string>D4317A1DC07C5B2CACB8F187</string>
+				<string>721F8C808C9C23F288872883</string>
 				<string>D1659F995F92D85D2ED65EAA</string>
 				<string>A735366E67E1349A675D19BE</string>
 				<string>2A360B901BD7C9951074CD18</string>
@@ -3721,6 +3748,7 @@
 				<string>DCE26BF595E449F720C1CEAD</string>
 				<string>BE46A50C7DB40B32F9FB5D05</string>
 				<string>87105F25CC7CC6DEA9C90E2F</string>
+				<string>575846E2B09043144E94BA3A</string>
 				<string>3C25795FAF8E71C5399FC534</string>
 				<string>44B03283B94CFD4EFE847D7E</string>
 				<string>D901E739FA33909C40A270E5</string>
@@ -3778,6 +3806,7 @@
 				<string>7C0049C4258514821473C407</string>
 				<string>69829DD9579F442FB3CB4ACE</string>
 				<string>23E37AFC95566DEAD09FBB7F</string>
+				<string>E83436608040907724B71654</string>
 				<string>548E5C94CE6D3460317BB2D5</string>
 				<string>2FB39F71DAD294447B28A350</string>
 				<string>D9C92472F248312173947DD4</string>
@@ -4143,6 +4172,17 @@
 			<string>sourcecode.swift</string>
 			<key>path</key>
 			<string>WakeOn/HandoffBuffer.swift</string>
+			<key>sourceTree</key>
+			<string>&lt;group&gt;</string>
+		</dict>
+		<key>E83436608040907724B71654</key>
+		<dict>
+			<key>isa</key>
+			<string>PBXFileReference</string>
+			<key>lastKnownFileType</key>
+			<string>sourcecode.swift</string>
+			<key>path</key>
+			<string>Tests/SpotifyAccountTests.swift</string>
 			<key>sourceTree</key>
 			<string>&lt;group&gt;</string>
 		</dict>

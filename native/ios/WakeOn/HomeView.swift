@@ -290,6 +290,8 @@ struct SettingsView: View {
                     Text("With the browser on, \(Agent.name) can open, search and read websites; it keeps you signed in only to the sites you choose.")
                 }
 
+                SpotifySection()
+
                 if #available(iOS 26.0, *) {
                     Section {
                         NavigationLink("Alarms and Timers") { AlarmsView() }
