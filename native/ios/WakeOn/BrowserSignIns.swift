@@ -6,7 +6,28 @@ import WebKit
 /// You type passwords yourself; Pixie never enters them.
 enum BrowserSignIns {
     static let key = "browser.signInDomains"
+    /// Sites kept by default. When Pixie gains a deep integration with a service (signing in to
+    /// it, like Spotify), add that service's sign-in domain here: people who already edited
+    /// their list get it too (once, see `addingNewDefaults`), and can still remove it.
     static let defaultDomains = ["spotify.com"]
+    /// The defaults already added to a saved list, so one the user removed stays removed.
+    static let seenKey = "browser.signInDefaultsSeen"
+
+    /// A saved list plus the defaults it hasn't been offered yet.
+    static func addingNewDefaults(to saved: [String], seen: [String]) -> [String] {
+        saved + defaultDomains.filter { !seen.contains($0) && !saved.contains($0) }
+    }
+
+    /// Runs once per launch, before the list is first read.
+    @MainActor static func adoptNewDefaults() {
+        let defaults = UserDefaults.standard
+        if let saved = defaults.string(forKey: key) {
+            let seen = defaults.string(forKey: seenKey).map(decode) ?? []
+            let updated = addingNewDefaults(to: decode(saved), seen: seen)
+            if updated != decode(saved) { defaults.set(encode(updated), forKey: key) }
+        }
+        defaults.set(encode(defaultDomains), forKey: seenKey)
+    }
 
     static var domains: [String] {
         get {

@@ -192,4 +192,16 @@ final class BrowserDriverTests: XCTestCase {
                        "No link or button says \"Checkout\".")
         XCTAssertTrue(BrowserTool.delegationInstructions.contains("open the address directly"))
     }
+
+    /// A site added to the defaults later (a new integration) reaches lists people already
+    /// edited, once; a default they removed stays removed (2026-11-28).
+    func testNewDefaultSignInsReachEditedListsOnce() {
+        XCTAssertTrue(BrowserSignIns.defaultDomains.contains("spotify.com"))
+        // Edited before spotify.com was a default: it gets added.
+        XCTAssertEqual(BrowserSignIns.addingNewDefaults(to: ["github.com"], seen: []), ["github.com", "spotify.com"])
+        // Already offered and removed: stays out.
+        XCTAssertEqual(BrowserSignIns.addingNewDefaults(to: ["github.com"], seen: ["spotify.com"]), ["github.com"])
+        // Already there: not doubled.
+        XCTAssertEqual(BrowserSignIns.addingNewDefaults(to: ["spotify.com"], seen: []), ["spotify.com"])
+    }
 }

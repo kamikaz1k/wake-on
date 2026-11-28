@@ -50,6 +50,7 @@ struct WakeOnApp: App {
     init() {
         _ = LatencyTrace.processStart
         ListenerSettings.migrate()
+        BrowserSignIns.adoptNewDefaults()
         VoiceSessionController.appLog("app_launch pid=\(ProcessInfo.processInfo.processIdentifier)")
         // Pay WebRTC's one-time setup while the first screen draws.
         #if DEBUG
